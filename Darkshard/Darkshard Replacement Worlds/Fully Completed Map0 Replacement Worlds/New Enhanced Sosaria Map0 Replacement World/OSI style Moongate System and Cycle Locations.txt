@@ -1,0 +1,92 @@
+OSI STYLE MOONGATE SYSTEM -- CYCLE LOCATIONS
+
+I didn't like the current moongate system, and rather than re-script it I simply used teleporters and added the moongate 
+item on top of the teleporter to make it look like the old OSI style moongate system. This also allows you to decide which of 
+the moongate images you want to use. I used the Black Moongate image. 
+
+
+In-game type [add teleporter <ENTER> then target the ground where you want it placed. 
+Then type [props <ENTER> and set the destination coordinates using the table below.
+
+In-game type [add item 8148 <ENTER> and then just target the teleporter that is already on the ground. This will create the 
+black moongate ontop of the teleporter. Lastly type [props and then target and click on the moongate, then change the name 
+value to the proper description listed below, simply cut and paste the description into the name field. Also set the Movable 
+option to FALSE so that players can't move the moongate image.
+
+
+
+Here is how I linked the teleporters. So they just cycle the player around the map rather than allow a player direct travel.
+
+Britain ==> North of Moon
+North of Moon ==> Clues Island
+Clues Island ==> Meadow south of Dawn
+Meadow south of Dawn ==> Devil Guard
+Devil Guard ==> Montor
+Montor ==> Yew
+Yew ==> Britain
+
+
+
+Britain Teleporter Destination = 963, 514, 4
+North of Moon Teleporter Destination = 3723, 2155, 4
+Clues Island Teleporter Destination = 2548, 2685, 4
+Meadow south of Dawn Teleporter Destination = 1918, 1504, 4
+Devil Guard Teleporter Destination = 3201, 2602, 0
+Montor Teleporter Destination = 2429, 865, 3
+Yew Teleporter Destination = 3009, 1029, 0
+
+
+
+I set the name value of each of the moongate items to state what can be seen when looking into that particular moongate. When the 
+player clicks on the moongate the player will be given a description (a glimps) of what awaits them on the other side. Here are 
+the descriptions I use to describe the destinations. Oh and you will have to copy and paste these descriptions into the name 
+field as you can't type that much and see what you have typed.
+
+
+
+Britain Moongate name value:
+You see to the south the home of Magic, but the Magi are far and few in this town. There is a large swamp to the west.
+
+North of Moon Moongate name value:
+You see a large forest area with a great mountain range to the north, there is an elaborate entrance on one side.
+
+Clues Island Moongate name value:
+You see a open meadow, a mountain to the north with a cave, beyond that is a mystical town shrouded by a jungle.
+
+Meadow south of Dawn Moongate name value:
+You see a hidden mountain lake concealed in a valley surrounded by mountains. A town is scattered among the many island areas.
+
+Devil Guard Moongate name value:
+You see twin towns opposite each other at the mouth of a southern river. They look similar, and can almost be considered one.
+
+Montor Moongate name value:
+You see within a ring of mountains concealed by a great forest, a quiet town. Many visit for contemplation, prayer and wine.
+
+Yew Moongate name value:
+You see magnificent stone buildings, sturdy wood-and-plaster shops and homes with a marvelous castle to the north.
+
+
+
+This system works very well, and gives a hint to the location next travelled but doesn't actually give the town name. For that 
+players will just have to step through and find out for themselves. That's all part of the adventure!
+
+True over time players will memorize the sequence and what description is what town, but for a time they will be awe-struck and 
+adventureous just as we all were when we first started playing the game.
+
+
+Another neat effect of gate travel is that you actually seem to time travel back and forth a few hours between locations. *smiles*
+check your in-game wrist watch or wall clock after each gate travel. hehe
+
+These are not all of the moongate locations, just the ones that are ment to be cycled for player travel. The other locations are 
+ment to be accessed via a certain area or quest. I'll leave that up to you guys to decide how to implement them.
+
+Here are the remaining locations you will need to decide how you want players to reach.
+
+Mountain Passage - 1459, 1419, -10   (this location is ment to have the portal that leads to exodus island).
+Exodus Island - 968, 2726, 4
+Time Awaits Dungeon Entrance - 3831, 1508, 4
+
+
+Regards,
+Carl Hamilton
+www.darkshard.net

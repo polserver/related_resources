@@ -1,0 +1,69 @@
+ENHANCED SOSARIA V2.0 MAP0 REPLACEMENT WORLD SETUP INSTRUCTIONS
+
+
+Implementing the MUL files into your shard. These procedures will differ slightly depending on the version of the Ultima Online Client you are using. I will try and provide the steps for 
+all the clients I have worked with. They are also for RunUO version 1.0 or 2.2 as those are the versions I have worked with and know. However my Map MUL files will work with any EMU that supports 
+the larger Map0 MUL files however you will have to make the needed modifications to the EMU on your own to accept the larger map0 size. I only offer the instructions for the RunUO EMU.
+
+CHANGES NEEDED TO RUNUO (1.0 or 2.2)
+
+1. Open the MapDefinitions.cs script file (should be in the Scripts/Misc folder) and make the following changes.
+
+			RegisterMap( 0, 0, 0, 7168, 4096, 4, "Felucca",		MapRules.FeluccaRules );
+			RegisterMap( 1, 1, 1, 7168, 4096, 0, "Trammel",		MapRules.TrammelRules );
+
+You should see 6144, 4096 which you will change to 7168, 4096 as seen above. This will allow the EMU to use the new larger map size supported by Ultima Online: ML and higher clients.
+
+2. Save the changes made to the MapDefinitions.cs file.
+
+3. If you use a custom folder for RunUO to access the game MUL files then you will need to copy the MAP0.MUL, STAIDX0.MUL, STATICS0.MUL for the Enhanced Sosaria V2.0 Map0 Replacement World into 
+your custom folder for RunUO. Otherwise just copy them into the Ultima Online game folder. 
+
+
+
+ULTIMA ONLINE: ML/AOS CLIENTS
+
+1. With these versions of the client you only need to copy the MAP0.MUL, STAIDX0.MUL, STATICS0.MUL for the Enhanced Sosaria V2.0 Map0 Replacement World into the Ultima Online game folder on the 
+computer you will be playing the game from.
+
+2. If there are any DIF files in the Ultima Online game folder then you will want to remove the ones for the Map0 world as these DIF files add in changes to the default UO world which you 
+are no longer using so you won't want those changes being added into your custom Sosaria world. The files to remove if present are as follows:
+
+Stadifl0.mul
+Stadifi0.mul
+Stadif0.mul
+Mapdifl0.mul
+Mapdif0.mul
+Stadifl1.mul
+Stadifi1.mul
+Stadif1.mul
+Mapdifl1.mul
+Mapdif1.mul 
+
+
+
+ULTIMA ONLINE: SA/HSA CLIENTS (supported up to version 7.0.15.1)
+
+1. With these versions of the client there are seperate MUL files for Felucca (MAP0.MUL, STAIDX0.MUL, STATICS0.MUL) and Trammel (MAP1.MUL, STAIDX1.MUL, STATICS1.MUL), as well as another set of 
+MUL files denoted with a X at the end of the file name. Felucca (MAP0X.MUL, STAIDX0X.MUL, STATICS0X.MUL) and Trammel (MAP1X.MUL, STAIDX1X.MUL, STATICS1X.MUL). You will need to replace all of 
+these files with the MAP0.MUL, STAIDX0.MUL, STATICS0.MUL for the Enhanced Sosaria V2.0 Map0 Replacement World.
+
+2. Simply use the MAP0.MUL, STAIDX0.MUL, STATICS0.MUL for the Enhanced Sosaria V2.0 Map0 Replacement World and copy them into the Ultima Online folder overwriting the existing ones. Then make 
+a copy of the MUL files for the Enhanced Sosaria and rename them to MAP1.MUL, STAIDX1.MUL, STATICS1.MUL and copy them into the Ultima Online folder overwriting the existing ones. Next make 
+a copy of the MUL files for the Enhanced Sosaria and rename them to MAP0X.MUL, STAIDX0X.MUL, STATICS0X.MUL and copy them into the Ultima Online folder overwriting the existing ones. Finally make 
+a copy of the MUL files for the Enhanced Sosaria and rename them to MAP1X.MUL, STAIDX1X.MUL, STATICS1X.MUL and copy them into the Ultima Online folder overwriting the existing ones.
+
+3. The DIF files in the Ultima Online game folder will need to be remove for the Map0 world as these DIF files add in changes to the default UO world which you 
+are no longer using so you won't want those changes being added into your custom Sosaria world. The files to remove if present are as follows:
+
+Stadifl0.mul
+Stadifi0.mul
+Stadif0.mul
+Mapdifl0.mul
+Mapdif0.mul
+Stadifl1.mul
+Stadifi1.mul
+Stadif1.mul
+Mapdifl1.mul
+Mapdif1.mul 
+

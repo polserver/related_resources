@@ -1,0 +1,100 @@
+3
++town: 5720 3273 0 ABANDONED VILLAGE
++town: 4757 1149 0 ALTUS UNDA
++ruins: 3696 526 2 Ancient Temple
++terrain: 2529 2369 0 Area where DAWN use to exist
+-other: 3015 379 0 Bandit Fort
++town: 2992 933 0 CASTLE BRITISH
++town: 875 2670 0 CASTLE EXODUS
++dungeon: 1526 3599 0 Catacombs
++cave: 1003 581 0 Cave
++cave: 2511 946 0 Cave
++cave: 1841 2212 0 Cave
++cave: 1889 1456 0 Cave
++cave: 1559 1406 0 Cave
++cave: 4459 1266 0 Cave
++cave: 4603 1230 2 Cave
++cave: 4877 1236 0 Cave
++cave: 4792 1291 0 Cave
++cave: 5005 1264 0 Cave
++cave: 5066 1204 0 Cave
++cave: 4180 273 0 Cave
++cave: 2589 2624 2 Caves
+-other: 3508 2285 2 Dark Tower
++town: 5957 2883 0 DAWN
++town: 3716 1502 2 DEATH GULCH
++town: 1680 1546 0 DEVIL GUARD
++dungeon: 3006 449 2 Dungeon
++dungeon: 3619 457 0 Dungeon
++dungeon: 3832 1492 0 Dungeon
++dungeon: 3345 1647 0 Dungeon
++dungeon: 3760 2039 0 Dungeon
++dungeon: 1626 2562 0 Dungeon
++dungeon: 1021 1370 0 Dungeon
++dungeon: 4457 1218 0 Dungeon
++dungeon: 4628 1350 0 Dungeon
++dungeon: 4634 1219 0 Dungeon
++dungeon: 4740 1324 0 Dungeon
++dungeon: 4809 1275 0 Dungeon
++dungeon: 5049 1220 0 Dungeon
++dungeon: 4386 1224 0 Dungeon
++town: 3288 2610 0 EAST MONTOR
++farm: 953 644 0 Farm
++farm: 999 669 0 Farm
++farm: 920 781 0 Farm
++farm: 2984 1276 0 Farm
++farm: 2948 1201 0 Farm
++farm: 2830 994 0 Farm
++farm: 2783 924 0 Farm
++farm: 2798 605 0 Farm
++farm: 2697 606 0 Farm
++farm: 2639 526 0 Farm
++town: 2099 275 0 FAWN
+-graveyard: 3082 1030 0 Graveyard
+-graveyard: 3074 964 0 Graveyard
+-graveyard: 2168 361 0 Graveyard
+-graveyard: 3254 2805 0 Graveyard
+-graveyard: 1758 1618 0 Graveyard
+-graveyard: 959 1992 0 Graveyard
+-graveyard: 1003 3428 0 Graveyard
+-graveyard: 1819 3311 2 Graveyard
++town: 855 2090 0 GREY
++house: 1905 919 0 house
++house: 3320 2065 0 House
+-other: 2314 1806 0 Large Orc Fort
++scenic: 3196 513 0 Lighthouse
++town: 3000 1061 2 LORD BRITISH TOWN
++cave: 4519 1239 0 Mine
++town: 788 724 0 MOON
+-graveyard: 819 617 0 Moon Graveyard
++scenic: 964 515 0 MoonPortal
++scenic: 3832 1511 0 MoonPortal
++scenic: 2548 2686 0 MoonPortal
++scenic: 1919 1506 0 MoonPortal
++scenic: 968 2727 0 MooonPortal
++town: 4545 1290 0 MOUNTAIN CREST
+-other: 1405 3656 0 MOUNTAIN STRONGHOLD
++farm: 986 1044 0 Old Farm
++farm: 997 1104 0 Old Farm
+-graveyard: 2913 1980 0 Old Graveyard
+-other: 572 489 0 Orc Fort
+-other: 3401 1176 0 Orc Fort
+-other: 1811 2240 0 Pirates Isle
+-other: 1160 474 0 Pyramid
+-shop: 1306 3855 0 Roadside Inn
++ruins: 1828 759 0 Ruins
++ruins: 1700 1821 0 Ruins
++ruins: 1865 3626 0 Ruins
++ruins: 1093 3386 0 Ruins
++shrine: 5746 3886 0 Shrine
++shrine: 5219 3602 0 Shrine
++shrine: 5905 3570 0 Shrine
++shrine: 5175 3111 0 Shrine
++shrine: 3880 2847 0 Shrine
+-other: 1292 1449 0 Stronghold Ruins
++ruins: 520 203 0 Temple
+-other: 3800 1863 2 Undead Fortress
++town: 1447 3785 0 UNKNOWN VILLAGE
++town: 4335 1171 0 VILLAGE NIVEUS
++town: 3099 2612 0 WEST MONTOR
++town: 2432 876 0 YEW

@@ -1,0 +1,87 @@
+3
++town: 1782 2216 0 CASTLE
++cave: 3104 3594 0 Cave  7 Entrance
++cave: 5704 1928 0 Cave 1
++cave: 4181 1367 0 Cave 1 Entrance
++cave: 5220 2124 0 Cave 10
++cave: 2200 3634 0 Cave 10 Entrance
++cave: 6030 2048 0 Cave 11
++cave: 3196 3320 0 Cave 11 Entrance
++cave: 5674 2490 0 Cave 12
++cave: 2944 3098 0 Cave 12 Entrance
++cave: 5247 1572 0 Cave 2
++cave: 1380 983 0 Cave 2 Entrance
++cave: 5777 1715 0 Cave 3
++cave: 1195 920 0 Cave 3 Entrance
++cave: 5574 1984 0 Cave 4
++cave: 960 2668 0 Cave 4 Entrance
++cave: 5180 1762 0 Cave 5
++cave: 3984 1210 0 Cave 5 Entrance
++cave: 5352 1712 0 Cave 6
++cave: 3256 900 0 Cave 6 Entrance
++cave: 5462 1704 0 Cave 7
++cave: 5808 1790 0 Cave 8
++cave: 2254 854 0 Cave 8 Entrance
++cave: 1278 1854 0 Cave 8 Entrance
++cave: 6040 1740 0 Cave 9
++cave: 1922 2500 0 Cave 9 Entrance
++town: 2004 2238 0 CITY
++dungeon: 4153 2941 0 Crypt
++dungeon: 5212 1843 0 Crypt
++dungeon: 5360 910 0 D1 D3
++dungeon: 5340 708 0 D1 L2
++dungeon: 5776 390 0 D2 L2
++dungeon: 5398 300 0 D3 L2
++dungeon: 5984 444 0 D4 L2
++dungeon: 5562 924 0 D5 L2
++dungeon: 5364 1350 0 D7 L2
++dungeon: 5608 1314 0 D7 L3
++dungeon: 5916 1318 0 D8 L2
++dungeon: 5702 1474 0 D8 L3
++dungeon: 5556 2182 0 D9 L2
++cave: 5990 2186 0 D9 L3
++town: 910 918 0 Desert Town
++dungeon: 5330 574 0 Dungeon 1
++dungeon: 850 948 0 Dungeon 1 Entrance
++dungeon: 5999 797 0 Dungeon 10
++dungeon: 2520 860 0 Dungeon 10 Entrance
++dungeon: 5698 54 0 Dungeon 2
++dungeon: 748 632 0 Dungeon 2 Entrance
++dungeon: 5326 72 0 Dungeon 3
++dungeon: 3766 1094 0 Dungeon 3 Entrance
++dungeon: 5975 76 0 Dungeon 4
++dungeon: 1630 2808 0 Dungeon 4 Entrance
++dungeon: 5631 603 1 Dungeon 5
++dungeon: 2370 3548 0 Dungeon 5 Entrance
++dungeon: 5996 644 0 Dungeon 6
++dungeon: 3052 3024 0 Dungeon 6 Entrance
++dungeon: 5332 1292 0 Dungeon 7
++dungeon: 2524 756 1 Dungeon 7 Entrance
++dungeon: 5898 1226 0 Dungeon 8
++dungeon: 2812 996 0 Dungeon 8 Entrance
++dungeon: 5313 2278 0 Dungeon 9
++dungeon: 1406 2338 0 Dungeon 9 Entrance
++farm: 2877 1107 0 Farm
++farm: 2763 1216 0 Farm
++farm: 2098 2446 0 Farm
++farm: 2082 2046 0 Farm
+-graveyard: 1882 2382 0 Graveyard
+-graveyard: 4168 2946 0 Graveyard
+-graveyard: 2344 3198 0 Graveyard
++house: 2826 1932 0 House
+-graveyard: 4366 1738 0 Large Graveyard
++terrain: 2952 3474 0 Lava Pool
++scenic: 1164 2874 0 Lighthouse
++ruins: 612 2404 0 Ruins
++ruins: 2708 2158 0 Ruins
++ruins: 2140 2692 0 Ruins
++ruins: 4262 3416 0 Ruins
++scenic: 2176 2778 0 ShipYard
++ruins: 1556 2264 0 Temple Ruins
++town: 2982 1351 0 TOWN
++town: 4181 1494 0 TOWN
++town: 2848 2268 0 TOWN
++town: 844 2046 0 TOWN
++town: 2380 3162 0 TOWN
++town: 2688 3224 0 TOWN
++town: 4252 2984 0 VILLAGE

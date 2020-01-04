@@ -1,0 +1,11 @@
+Contained here-in are the Darkshard custom maps and graphic enhancements created by Carl Hamilton. They are organized as they were on the Darkshard Dev drive which Carl used to sell. He has graciously granted permission to the POL Community to make them publicly available for free. We wish to thank him for the generous gift to the POL Community and the wider UO community.
+
+Note: We, the POL Developers, cannot provide support for the use of these files. They are presented as is. We are not responsible for any corruption of game files or data by using the files.
+
+That being said, I, Yukiko, and many other shard developers, have used Carl's maps in my server with no problems.
+
+There are two subdirectories under the Darkshard directory: Darkshard Custom GUIs and Darkshard Replacement Worlds.
+
+The Darkshard Custom GUIs directory contains graphic modifications to the client files used in the canned gumps of the client.
+
+The Darkshard Replacement Worlds directory contains custom map replacements for map0 (Felucca)which can be used for map1 (Trammel)as well. There are also replacements for map2 and map3. There is also a collection of "dungeon sets". These contain sections that can be cut and pasted into a map to add new dungeon areas.
