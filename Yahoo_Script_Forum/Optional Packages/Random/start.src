@@ -1,0 +1,16 @@
+// initializes and tries to add some randomization to the PRNG
+
+use os;
+use uo;
+
+var seed:=GetGlobalProperty("randomseed");
+if(!seed)
+	seed:=0;
+endif
+syslog("Random Seed was "+seed);
+seed:=seed^getpid()^(polcore().systime);
+if(seed=0)
+	seed:=1;
+endif
+SetGlobalProperty("randomeroseed", seed);
+syslog("Random Seed is now "+seed);

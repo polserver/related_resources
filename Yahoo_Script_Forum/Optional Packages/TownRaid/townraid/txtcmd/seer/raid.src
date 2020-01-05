@@ -1,0 +1,272 @@
+//v0.7c
+
+use uo;
+use os;
+use util;
+
+include "include/math"; // Used for Mod
+include "include/raidconsts";
+
+
+var originallayout := array(
+	"page 0",
+	"nodispose",
+	"resizepic  50   0 2600 540 305",
+
+	"text 235 20 80 0", //title
+	"text 80 45 45 1", //raid
+	"text 210 45 45 2", //group
+	"text 300 45 90 3",//remaining 
+	"text 405 45 90 4", //gold left
+	"text 460 45 60 5",//goto
+	"text 510 45 60 6", //stop
+
+	"text 250 215 80 7", //admin ops
+
+	"text 110 240 60 8", //start new raid
+	"text 110 260 60 9", //stop all raids
+	"text 280 240 60 10", //raid bcast
+	"text 280 260 60 11", //refresh
+	"text 430 240 60 12", //warn
+
+
+	"button 230 242 2117 2118 1 0 996", // start
+	"button 230 262 2117 2118 1 0 997", // wipe
+
+	"button 400 242 2117 2118 1 0 998", // bcast
+	"button 400 262 2117 2118 1 0 999", // refresh
+
+	"button 540 242 2117 2118 1 0 995" // punish
+
+);
+
+var originaldata := array(
+       "TownRaid v0.7c Menu",
+       "[id] Raidname",
+       "Raiders",
+       "Killed/Total",
+       "Gold",
+       "Goto",
+       "Stop",
+       "Admin Options",
+       "Start new raid",
+       "Wipe all data",
+       "Raid Broadcast",
+       "Refresh Stats",
+       "Warn Player"
+);
+
+
+var raidsonnow := { };
+var raidamount := 0;
+var user;
+
+program raidmenu(who)
+
+	user:=who;
+
+	var refresh:=1;
+	var result := FillInArrays();
+	var txt;
+	var raidPiD;
+	var sets;
+
+	while(refresh=1)
+		refresh:=0;
+		
+		case (result[0])
+		0:
+			return;
+		995:
+			punishment();
+			return;
+		996:
+			start_script(TXTCMD_PATH,user);
+			return;
+		998:
+			txt := Sendtextentrygump( user, 
+				   "What would you like to say to the Players?", 
+				   TE_CANCEL_DISABLE, TE_STYLE_NORMAL,
+				   36, "Townraid Broadcast");
+			if (txt)
+				playermessage(txt);
+			endif
+			return;
+		997:
+			sendsysmessage(user, "Wiping all current raid data.");
+			WipeAll();
+			result := FillInArrays();
+			refresh:=1;
+		999:
+			result := FillInArrays();
+			refresh:=1;
+		default:
+			raidPiD := mod(result[0], raidamount);
+			if (mod(result[0], raidamount)=0)
+				raidPiD:=raidamount;
+			endif
+			raidPiD := raidsonnow[raidPiD];
+			print (cstr(raidpid));
+			if ( result[0] > raidamount) //stop
+				sendsysmessage(user, "Stopping " + GetGlobalProperty("raidname"+raidPiD) + "raid.");
+				EraseGlobalProperty("raidname"+raidPiD);
+				result := FillInArrays();
+				refresh:=1;
+			else //goto
+				sendsysmessage(user, "Going to " + GetGlobalProperty("raidname"+raidPiD) + "raid.");
+				sets := getglobalproperty("raidsettings"+raidPiD);
+				MoveCharactertoLocation(user, sets[SET_XGOAL]+1, sets[SET_YGOAL], GetWorldHeight(sets[SET_XGOAL]+1,sets[SET_YGOAL]));
+				return;
+			endif
+
+		endcase
+
+	endwhile
+
+endprogram
+
+
+
+function FillInArrays( )
+
+	raidsonnow := GetGlobalProperty("raidsonnow");
+
+	if (raidsonnow)
+		raidamount := len(raidsonnow);
+	else
+		raidamount := 0;
+	endif
+
+	var layout := originallayout;
+	var data := originaldata;
+
+	if (raidamount=0)
+		layout.append("text 205 110 32 " + len(data));
+		if (randomint(5000)>1)
+			data.append("No raids happenin at the moment");
+		else
+			data.append("Scull!Scull!Scull!Scull!");
+		endif
+	else
+
+		var prev_y := cint(55);
+		var datindx := 2;
+		var buttonret := 1;
+		var i;
+		var count:=0;
+		var sets;
+		var pagecount := 1;       // The current developing page
+		var raidupdateinfo := { };
+
+
+		for( i := 1 ; i <= raidamount; i := i + 1  )
+
+			count := count + 1;
+
+			if (mod(count, 7) = 1)
+
+			  // Forward
+			  if (count >= 7)
+				layout.append("button 530 240 5540 5541 0 " + (pagecount));
+			  endif
+
+			  // Set Page Number
+			  layout.append("page " + pagecount);
+			  pagecount := pagecount + 1;
+			  prev_y := 55;
+
+			  if (count > 7)
+				// Back
+				if( i > 7)
+				  layout.append("button 510 240 5537 5538 0 " + (pagecount - 2));
+				endif
+			  endif
+			endif
+
+			sets := getglobalproperty("raidsettings"+raidsonnow[i]);
+			
+
+			layout.append("text 80 " + cstr(prev_y + 20) + " 40 " + len(data));
+			var name:=GetGlobalProperty("raidname"+raidsonnow[i]);
+			if (!name or name="error")
+				name:="Raid Halting";
+			endif
+			data.append( "[" + raidsonnow[i] + "] " + name);  //name
+
+			layout.append("text 200 " + cstr(prev_y + 20) + " 40 " + len(data));
+			if (!sets[SET_RAIDERTYPE])
+				sets[SET_RAIDERTYPE] := "N/A";
+			endif
+			data.append( cstr(sets[SET_RAIDERTYPE]));  //raiders
+			
+
+			var dead := GetGlobalProperty("raiddead"+raidsonnow[i]);
+			layout.append("text 320 " + cstr(prev_y + 20) + " 89 " + len(data));
+			data.append( dead + "/" + cint(sets[SET_TOTALRAIDERS]));  //dead
+
+
+			raidupdateinfo := getglobalproperty("raidupdateinfo"+raidsonnow[i]);
+			if (!raidupdateinfo[UPD_GOLDLEFT])
+				raidupdateinfo[UPD_GOLDLEFT] := 0;
+			endif
+
+			layout.append("text 410 " + cstr(prev_y + 20) + " 89 " + len(data));
+			data.append(cstr(raidupdateinfo[UPD_GOLDLEFT]));  //gold left
+			sets:={};
+			raidupdateinfo:={};
+
+			layout.append("button 467 " + cstr(prev_y + 20) + " 2117 2118 1 0 " + cstr(((buttonret+1) / 2))); // Goto
+			if (name!="Raid Halting")
+				layout.append("button 512 " + cstr(prev_y + 20) + " 2117 2118 1 0 " + cstr((((buttonret+1) / 2) + raidamount))); // Stop
+			endif
+
+			prev_y := prev_y + 20;
+
+		  buttonret := buttonret + 2;
+		endfor
+	endif
+
+	return SendDialogGump( user, layout, data );
+
+endfunction
+
+
+
+function playermessage(text)
+	foreach guy in EnumerateOnlineCharacters()
+		SendSysMessage(guy, "TownRaid: "+text);
+	endforeach
+endfunction
+
+function WipeAll()
+set_critical(1);
+
+	foreach raid in GetGlobalProperty("raidsonnow")
+		EraseGlobalProperty("raidname"+cint(raid));
+		EraseGlobalProperty("raidsettings"+cint(raid));
+		EraseGlobalProperty("raiddead"+cint(raid));
+		EraseGlobalProperty("raidwaypoints"+cint(raid));
+		EraseGlobalProperty("raidsonnow"+cint(raid));
+	endforeach
+
+	EraseGlobalProperty("raidsonnow");
+set_critical(0);
+endfunction
+
+
+//from Sigismunds quest tools, thought it might come in handy
+function punishment()
+
+	sendsysmessage(user, "Warn whom?");
+	var who := target(user);
+	
+	if ((!who.acct) or (!who))
+		sendsysmessage(user, "You can only warn players.");
+		return;
+	endif
+
+	PrintTextAbove(who, "The gods do not tolerate such foolishness.");
+	PlaySoundEffect(who, 0x002a);
+	PlayLightningBoltEffect(who);
+
+endfunction

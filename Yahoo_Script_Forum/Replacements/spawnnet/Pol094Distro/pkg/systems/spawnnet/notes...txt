@@ -1,0 +1,59 @@
+Notes about spawnnet 0.9.5
+
+Due this is a test version I can't garantee that anything will even work, but should without  showing problems.
+
+After instal remember to edit pkg.cfg and set enable to 1, the cmd folder are is the current comand tree.
+Remember too that you need to edit death.src and tamed.src. Just use the spawnnet_clear(param) function, use corpse with death and self() with tamed.
+
+
+
+The main purpoise of this release is to have better testing since my test shard is showing some problems.
+
+The major new features are:
+
+-New code layout, the core will run twice as fast in the worst case.
+-NPC spawn is finished and is working 100%.
+-Item and container spawn got revamped and are working pretty well
+-The gump menu was updated, the check function too
+
+Item spawn changes:
+
+Now there are 4 flags:
+-grouping, alike NPC's one, it makes the spawner creates multiple items at the same time, this amount is set by the Max Amount field (the one below template)
+-Container spawn, this one is intended to be used by a rune inside a container, the diference is that the items are created on the container and not on the world. Due some limitations right now you can't use grouping and container spawn together.
+-use itemgroup, allow you to use item groups, exactly like npc groups, difering that the cfg is igroup.cfg and the entries must be the hexa num of the item.
+-leave b item, this works only if container spawn is disabled; by default all itens under the spawned one are deleted (special items like gs, spawn runes and such are not), setting this flag avoid this
+
+
+Issues: 
+-The new start-up code is not tested, but it's commented on the source, soo ig you want to give it a try just comment the old and uncomment the new one :-)
+-I must change the way runes are hidden, soo we can abuse of item.invisible, thanks to pol 88
+
+
+Container spawn changes:
+-now it works very diferent, each rune controls a single container and will be spawning loot inside it until it decays, then creates another one.
+
+-moving spawn, use this if you want containers bot to be created allways above the rune.
+-don't check for old items, set this if you want it to allway make new loot, even if the container is filled
+-clean old items, delete everything (special items not) on the container before spawning new ones
+-leave base items, by default it will delete all items under the new container upon spawn, check this to avoid this.
+
+
+
+Other/minor Issues: It's impossible to compile using -i and I have not change the code to use 087 new functions, talking about set_script_options, since set_critical and set_debug will be deprecated.
+
+
+What's coming with next test release:
+-more config options
+-possibility of seting a group as a spawn type on cfgs.
+-cfg caching, to allow better performance and memory use due new features.
+-fast start
+-system cmds, that change on-the-fly some configurations.
+-new cmds, hopefully I'll finish the gump interface.
+
+
+
+===FeedBack===
+Anything you think about this pkg that may be a bug or a nice new feature drop me an email at louds@geocities.com. Please be the best detailed as possible. If you know how to reproduce the bug it will be very userfull.
+
+

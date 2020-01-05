@@ -1,0 +1,70 @@
+///////////////////////////////////////////////////////////
+// SpawnPointManager.src
+//
+// Manages all the spawn points.
+// This script runs on startup.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+use os;
+use uo;
+
+include "SpawnPoint";
+include "include/eventid";
+
+///////////////////////////////////////////////////////////
+// CONSTS
+///////////////////////////////////////////////////////////
+const WAIT_FOR_EVENT_TIME	:= 60 * 5; // 5 min
+
+program SpawnPointManager()
+	// Store the PID for other scripts.
+	SetGlobalProperty("#SpawnPointManagerPID", GetPid());
+	print("[SPAWN POINT MANAGER] started.  PID = " + GetPid());
+
+	SpawnAllPoints();
+
+	var ev;
+	while (1)
+		ev := wait_for_event(WAIT_FOR_EVENT_TIME);
+
+		// Got event.
+		if (ev)
+			case (ev.type)
+				EVID_SPAWNPOINT_CREATED:
+					// ev.source = point object
+					AddSpawnPoint(ev.source.serial);
+					Spawn(ev.source);
+
+				EVID_SPAWNPOINT_DESTROYED:
+					// ev.source = point serial
+					RemoveSpawnPoint(ev.source);
+
+				EVID_SPAWNPOINT_CHANGED:
+					// ev.source = point serial.
+					Spawn(ev.source);
+
+				EVID_SPAWN_DEATH:
+					// ev.source = corpse obj
+					// ev.npcserial = NPCs serial
+					// ev.pointserial = point's serial
+					var point := SystemFindObjectBySerial(ev.pointserial);
+					RemoveSerialFromPoint(point, ev.npcserial);
+					Spawn(ev.source);
+
+			endcase
+
+			continue;
+		endif
+
+		// Timed out.
+		SpawnAllPoints();
+	endwhile
+endprogram
+

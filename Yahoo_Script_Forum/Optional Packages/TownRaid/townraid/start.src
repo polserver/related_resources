@@ -1,0 +1,19 @@
+use uo;
+Use os;
+
+set_critical(1);
+	foreach raid in GetGlobalProperty("raidsonnow")
+		EraseGlobalProperty("raidname"+cint(raid));
+		EraseGlobalProperty("raidsettings"+cint(raid));
+		EraseGlobalProperty("raiddead"+cint(raid));
+		EraseGlobalProperty("raidwaypoints"+cint(raid));
+		EraseGlobalProperty("raidupdateinfo"+cint(raid));
+	endforeach
+	EraseGlobalProperty("raidsonnow");
+set_critical(0);
+
+EraseGlobalProperty("RaidcfgOK");
+
+
+print("TownRaid v0.7c active");
+

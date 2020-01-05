@@ -1,0 +1,9 @@
+use uo;
+program ctrlReg()
+	var zlink := {};
+	zlink.+sName := "Sith Speech";
+	zlink.+sVer := "1.0";
+	zlink.+bCtrl := 0;
+	zlink.+sScript := "";
+	return zlink;
+endprogram

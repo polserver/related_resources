@@ -1,0 +1,5 @@
+use os;
+
+program guardas(who)
+	start_script("guardscontrol", who);
+endprogram

@@ -1,0 +1,52 @@
+include "include/modules";
+include "include/coreconstants";
+include "include/attributes";
+
+program textcmd_massdeath ( who, params )
+	var what, range;
+	if( params )
+		var params := SplitWords( params );
+		what := CStr(params[1]);
+		range := CInt(params[2]);
+	else
+		what := SendTextEntryGump( who, "What type of critter to kill? (pc, npc or all)" );
+		range := SendTextEntryGump( who, "What range to kill them in?" );
+		range := CInt( range );
+	endif
+	var mobiles := ListMobilesNearLocation( who.x, who.y, who.z, range );
+	foreach mobile in mobiles
+		if( mobile.isA(POLCLASS_NPC) )
+			SendSysMessage( who, mobile.name + " is in range and is an NPC." );
+		else
+			SendSysMessage( who, mobile.name + " is in range and is a PC." );
+		endif
+		if ( !mobile.dead )
+			if( Kill_Em( who, mobile, what ) )
+				RevokePrivilege( mobile, "invul" );
+				SetObjProperty( mobile, "guardkill", 1 );
+                        Damage( mobile, GetVitalMaximumValue( mobile, VITALID_LIFE ) + 10 );
+			endif
+		endif
+	endforeach
+endprogram
+
+function Kill_Em( who, mobile, which )
+	case ( which )
+		"all":	if( mobile.cmdlevel )
+					return 0;
+				else
+					return 1;
+				endif
+		"pc":		if (mobile.isA(POLCLASS_NPC))
+					return 0;
+				else
+					return 1;
+				endif
+		"npc":	if (mobile.isA(POLCLASS_NPC))
+					return 1;
+				else
+					return 0;
+				endif
+ 		default: return 1;
+	endcase
+endfunction

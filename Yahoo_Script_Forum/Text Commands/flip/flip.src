@@ -1,0 +1,162 @@
+//////////////////////////////////////////////////////////////////////
+//
+//   .flip        - changes the orientation of a piece of furniture
+//
+//////////////////////////////////////////////////////////////////////
+
+use uo;
+use basic;
+
+program flip (me)
+    sendsysmessage(me, "Select the furniture you wish to re-orient.");
+    local targetFurniture := target(me);
+
+    if (!targetFurniture.objtype)
+          sendsysmessage(me, "You must select an item!");
+          return;
+    endif
+
+    if (targetFurniture.movable = 0)
+          sendsysmessage(me, "That item is locked down.");
+          return;
+    endif
+
+    case (targetFurniture.graphic)
+        0xa97:
+            targetFurniture.graphic := 0xa9a;   // bookshelves
+        0xa9a:
+            targetFurniture.graphic := 0xa97;
+        0xa98:
+            targetFurniture.graphic := 0xa99;
+        0xa99:
+            targetFurniture.graphic := 0xa98;
+        0xa9b:
+            targetFurniture.graphic := 0xa9c;
+        0xa9c:
+            targetFurniture.graphic := 0xa9b;
+        0xa9d:
+            targetFurniture.graphic := 0xa9e;
+        0xa9e:
+            targetFurniture.graphic := 0xa9d;
+        0xe3c:
+            targetFurniture.graphic := 0xe3d;   // Large crate
+        0xe3d:
+            targetFurniture.graphic := 0xe3c;
+        0xe3e:
+            targetFurniture.graphic := 0xe3f;   // Medium crate
+        0xe3f:
+            targetFurniture.graphic := 0xe3e;
+        0x9a9:
+            targetFurniture.graphic := 0xe7e;   // Small crate
+        0xe7e:
+            targetFurniture.graphic := 0x9a9;
+        0x9a8:
+            targetFurniture.graphic := 0xe80;   // Metal box
+        0xe80:
+            targetFurniture.graphic := 0x9a8;
+        0x9aa:
+            targetFurniture.graphic := 0xe7d;   // Wooden box
+        0xe7d:
+            targetFurniture.graphic := 0x9aa;
+        0x9ab:
+            targetFurniture.graphic := 0xe7c;   // Metal chest, plain
+        0xe7c:
+            targetFurniture.graphic := 0x9ab;
+        0xe40:
+            targetFurniture.graphic := 0xe41;   // Metal chest, gold lining
+        0xe41:
+            targetFurniture.graphic := 0xe40;
+        0xe42:
+            targetFurniture.graphic := 0xe43;   // Wooden chest
+        0xe43:
+            targetFurniture.graphic := 0xe42;
+        0x9b2:
+            targetFurniture.graphic := 0xe75;   // Backpack
+        0xe75:
+            targetFurniture.graphic := 0x9b2;
+        0x9b0:
+            targetFurniture.graphic := 0xe79;   // Beltpouch
+        0xe79:
+            targetFurniture.graphic := 0x9b0;
+        0xb7d:
+            targetFurniture.graphic := 0xb90;   // Plank table
+        0xb90:
+            targetFurniture.graphic := 0xb7d;
+        0xb7c:
+            targetFurniture.graphic := 0xb85;   // fancy table
+        0xb85:
+            targetFurniture.graphic := 0xb7c;
+        0xb2c:
+            targetFurniture.graphic := 0xb2d;   // Bench
+        0xb2d:
+            targetFurniture.graphic := 0xb2c;
+        0xb5b:
+            targetFurniture.graphic := 0xb5a;   // Poor chair
+        0xb5a:
+            targetFurniture.graphic := 0xb5c;
+        0xb5c:
+            targetFurniture.graphic := 0xb5d;
+        0xb5d:
+            targetFurniture.graphic := 0xb5b;
+        0xb57:
+            targetFurniture.graphic := 0xb56;   // Chair
+        0xb56:
+            targetFurniture.graphic := 0xb58;
+        0xb58:
+            targetFurniture.graphic := 0xb59;
+        0xb59:
+            targetFurniture.graphic := 0xb57;
+        0xb4f:
+            targetFurniture.graphic := 0xb4e;   // Fancy Chair
+        0xb4e:
+            targetFurniture.graphic := 0xb50;
+        0xb50:
+            targetFurniture.graphic := 0xb51;
+        0xb51:
+            targetFurniture.graphic := 0xb4f;
+        0xb2e:
+            targetFurniture.graphic := 0xb2f;   // Throne
+        0xb2f:
+            targetFurniture.graphic := 0xb30;
+        0xb30:
+            targetFurniture.graphic := 0xb31;
+        0xb31:
+            targetFurniture.graphic := 0xb2e;
+        0xb32:
+            targetFurniture.graphic := 0xb33;   // Magician's Throne
+        0xb33:
+            targetFurniture.graphic := 0xb32;
+        0xa4f:
+            targetFurniture.graphic := 0xa53;  // Armoire
+        0xa53:
+            targetFurniture.graphic := 0xa4f;
+        0xa4d:
+            targetFurniture.graphic := 0xa51;  // Cherry wood armoire
+        0xa51:
+            targetFurniture.graphic := 0xa4d;
+        0xa2c:
+            targetFurniture.graphic := 0xa34;  // Dressor
+        0xa34:
+            targetFurniture.graphic := 0xa2c;
+        0xa30:
+            targetFurniture.graphic := 0xa38;  // Dressor, bright handles
+        0xa38:
+            targetFurniture.graphic := 0xa30;
+        0xec6:
+            targetFurniture.graphic := 0xec7;  // Dress form
+        0xec7:
+            targetFurniture.graphic := 0xec6;
+	0x14f5:
+	    targetFurniture.graphic := 0x14f6; // Spyglass
+	0x14f6:
+	    targetFurniture.graphic := 0x14f5;
+	0x1f14:
+	    targetFurniture.graphic := 0x1f15;
+	0x1f15:
+	    targetFurniture.graphic := 0x1f14;
+        default:
+            sendsysmessage(me, "That item cannot be reoriented.");
+    endcase
+                
+    
+endprogram

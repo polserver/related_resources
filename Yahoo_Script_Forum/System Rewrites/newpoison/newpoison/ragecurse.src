@@ -1,0 +1,21 @@
+use uo;
+use os;
+use util;
+include "include/eventid";
+program rage(parms)
+local who := parms[1];
+	
+while(1)
+	local ev := struct;
+	ev.+type;
+	ev.+source;
+	ev.type := EVID_ENGAGED;
+	ev.source := who;
+	local c;
+	foreach c in listmobilesnearlocation(who.x, who.y, who.z, 15)
+		sendevent(c, ev);
+	endforeach
+	sleep((randomint(60) * 30) + 30);
+endwhile
+
+endprogram

@@ -1,0 +1,19 @@
+// Thunder Cantrip
+use uo;
+use os;
+use util;
+include "spellinc";
+include "include/client";
+
+program thunder(caster)
+
+	const THISSPELL := 107;
+	
+	if (DoCast(caster, THISSPELL))
+		CleanUp(caster);
+		return;
+	endif
+
+	PlaySoundEffect(caster, 0x0029);
+	CleanUp(caster);
+endprogram

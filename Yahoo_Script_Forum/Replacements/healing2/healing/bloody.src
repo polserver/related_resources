@@ -1,0 +1,79 @@
+use cfgfile;
+use uo;
+use os;
+use util;
+include "include/client";
+include "include/objtype";
+include "include/dist";
+include "include/res";
+include "include/respenalty";
+Global config;
+Global elem;
+const GFX_UNSHORN_SHEEP := 0xcf;
+const GFX_SHORN_SHEEP := 0xdf;
+const UOBJ_BARREL := 0x154d;
+const UOBJ_TUB := 0x0e7b;
+const UOBJ_TROUGHA := 0x0b41;
+const UOBJ_TROUGHB := 0x0b42;
+const UOBJ_TROUGHC := 0x0b43;
+const UOBJ_TROUGHD := 0x0b44;
+
+include "include/skillpoints";
+
+program use_bloody( user, bloody )
+
+
+    	SendSysmessage( user, "Onde voce gostaria de lavar esta bandagem usada, " + user.name + "?" );
+
+Local use_on := TargetCoordinates( user );
+
+Local thepoints := get_default_points(SKILLID_TAILORING);
+
+    if (! use_on)
+        return;
+    endif
+
+    if (CheckSkill( user, SKILLID_TAILORING, -1, thepoints ))
+
+	if(use_on.item.objtype = UOBJ_BARREL)
+        		Carvetree( user, use_on.item );
+			SubtractAmount(Bloody, 1);
+	elseif(use_on.item.objtype = UOBJ_TUB)
+        		Carvetree( user, use_on.item );
+			SubtractAmount(Bloody, 1);
+	elseif(use_on.item.objtype = UOBJ_TROUGHA)
+        		Carvetree(user, use_on.item);
+			SubtractAmount(Bloody, 1); 
+	elseif(use_on.item.objtype = UOBJ_TROUGHB)
+        		Carvetree(user, use_on.item);
+			SubtractAmount(Bloody, 1); 
+	elseif(use_on.item.objtype = UOBJ_TROUGHC)
+        		Carvetree(user, use_on.item);
+			SubtractAmount(Bloody, 1); 
+	elseif(use_on.item.objtype = UOBJ_TROUGHD)
+        		Carvetree(user, use_on.item); 
+			SubtractAmount(Bloody, 1);
+    	else
+        		SendSysmessage( user, " Voce destruiu a bandagem usando como um pano qualquer!." );
+			SubtractAmount(Bloody, 1);
+
+    	endif
+else
+        SendSysmessage( user, " Voce estragou a bandagem por nao ter conhecimento de como se lava um tecido!." );
+
+	SubtractAmount(Bloody, 1);
+		
+endif
+	
+endprogram
+
+
+function CarveTree(user, use_on)
+
+ 	Local bandages := 0x0e21;
+
+		CreateItemInBackpack(user, bandages, 1);
+
+		SendSysmessage(user, "Voce lavou a bandagem e a colocou em sua mochila.");
+
+endfunction

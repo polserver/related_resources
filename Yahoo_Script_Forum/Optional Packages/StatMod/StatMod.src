@@ -1,0 +1,50 @@
+///////////////////////////////////////////////////////////
+// StatMod.src
+//
+// Script that handles stat modifications.
+//
+// Creator: Oroborous
+// Contact: mkow@sympatico.ca
+//
+// Created: Dec-2000
+///////////////////////////////////////////////////////////
+
+include "include/client";
+include "statmod";
+
+const SLEEP_TIME	:= 5;
+const STAT_MOD_PID := "#StatModPID";
+
+program StatMod(who)
+	set_critical(1);
+	if (GetObjProperty(who, STAT_MOD_PID))
+		return 0;
+	endif
+
+	SetObjProperty(who, STAT_MOD_PID, GetPid());
+	set_critical(0);
+	
+	while (who.ip)
+		var statmods := EnumerateStatMods(who);
+		//print("statmods = " + statmods);
+		if (statmods.size() < 1)
+			break;
+		endif 
+		
+		var stat;
+		var statmod;
+		foreach mod in statmods
+			stat := GetStatFromModProp(mod);
+			//print("checking stat: " + stat);
+			if (CheckStatModExpire(who, stat))
+				//print("unmodifying stat: " + stat);
+				statmod := GetObjProperty(who, mod);
+				UnmodifyStat(who, stat, statmod[2]);
+			endif
+		endforeach
+		
+		Sleep(SLEEP_TIME);
+	endwhile
+	
+	EraseObjProperty(who, STAT_MOD_PID);
+endprogram

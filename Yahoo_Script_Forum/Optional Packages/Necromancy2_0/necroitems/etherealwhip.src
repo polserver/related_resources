@@ -1,0 +1,36 @@
+use uo;
+use os;
+
+program use_etherealwhip(who, whip)
+
+	local charges := Cint( GetObjProperty(whip, "charges") );
+
+	if (charges = 0)
+		SendSysMessage(who, "Nothing happens.");
+		return;
+	endif
+
+	charges := charges - 1;
+	SetObjProperty(whip, "charges", CStr(charges) );
+
+	SendSysMessage(who, "Select Target.");
+	local victim := target(who);
+
+	if (!victim)
+		SendSysMessage(who, "Cancelled.");
+		return;
+	endif
+
+	PlaySoundEffect(victim, 0x202);
+        PlayObjectCenteredEffect(victim, 0x375a, 1, 0x10);
+	
+	local oldscript := victim.script;
+	SetObjProperty(victim, "Master", who.serial);
+	victim.script := "tamed";
+	RestartScript(victim);
+	sleep(60);
+	victim.script := oldscript;
+	RestartScript(victim);
+	EraseObjProperty(victim, "Master");	
+
+endprogram

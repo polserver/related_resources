@@ -1,0 +1,34 @@
+use datafile;
+use os;
+use uo;
+
+include "../../inc/datatypes";
+
+program RemoveManagers(who)
+
+   var destroyed := 0;
+   
+   var regionfile := OpenDataFile(REGION_DATAFILE);
+   var elem;
+   var keys := regionfile.keys();
+   var serial;
+   var ref;
+   
+   foreach key in keys
+      elem := regionfile.FindElement(key);
+      serial := elem.GetProp("serial");
+      if(!serial)
+         continue;
+      endif
+      ref := SystemFindObjectBySerial(serial);
+      if(ref)
+         destroyed := destroyed + Cint(DestroyItem(ref));
+      endif
+      elem.SetProp("serial", 0);
+   endforeach
+
+   var cout := "Destroyed "+destroyed+" out of "+keys.size()+" managers.";
+   Syslog(who.name + " "+cout);
+   SendSysMessage(who, cout);
+
+endprogram

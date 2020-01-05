@@ -1,0 +1,19 @@
+use uo;
+use os;
+use util;
+
+program textcmd_runewipe(who)
+
+local counter := 0;
+
+foreach obj in ListObjectsInBox(0, 0, -128, 10000, 10000, 128)
+if (obj.objtype = 0xa300)
+destroyitem(obj);
+counter:=counter+1;
+endif
+
+endforeach
+
+SendSysMessage(who, "Ihr habt " +counter+ " Runen geloescht.");
+
+endprogram

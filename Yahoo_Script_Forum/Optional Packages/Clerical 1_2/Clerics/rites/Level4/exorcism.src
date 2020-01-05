@@ -1,0 +1,103 @@
+use uo;
+use cfgfile;
+use os;
+
+include "../../cleric";
+include "include/poisons";
+
+program dispelmagic(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif
+	
+	var targ := ClericalTarget(who, info.npctarget);
+	
+	if (!targ.ip && !targ.npctemplate)
+		SendSysMessage(who, "Cancelled");
+		return;
+	elseif (distance(who, targ) > piety)
+		SendSysMessage(who, "Too far away");
+		return;
+	endif
+	
+	foreach item in ListEquippedItems(targ)
+		checkitem(targ, item);
+	endforeach
+	
+	foreach item in EnumerateItemsInContainer(targ.backpack.serial)
+		checkitem(targ, item);
+	endforeach
+
+	foreach curse in ListPoisonsByType(targ, "C")
+		curespecific(targ, curse, -1);
+	endforeach
+
+	PlayObjectCenteredEffect(targ, 0x376a, 10, 30);
+endprogram
+
+function checkitem(who, item)
+	var show := 0;
+	if (cdbl(item.quality) > 1.2 && !GetObjProperty(item, "exceptional"))
+		item.quality := 1.2;
+		show := 1;
+	endif
+	if (hitscripts(item))
+		show := 1;
+	endif
+	if (GetObjProperty(item, "charges"))
+		SetObjProperty(item, "charges", 0);
+		show := 1;
+	endif
+	if (item.hp > item.maxhp)
+		item.hp := item.maxhp;
+		show := 1;
+	endif
+	if (item.maxhp_mod)
+		item.maxhp_mod := 0;
+		show := 1;
+	endif
+	if(item.ar_mod)
+		item.ar_mod := 0;
+		show := 1;
+	endif
+	if (item.dmg_mod)
+		item.dmg_mod := 0;
+		show := 1;
+	endif
+	if (show)
+		SendSysMessage(who, "The magical properties of " + item.desc + " fade.");
+		PlayObjectCenteredEffect(who, 0x374a, 20, 20);
+	endif
+	
+	if (GetObjProperty(item, "cursed"))
+		SendSysMessage(who, item.desc + " is destroyed in the process of lifting the curse.");
+		DestroyItem(item);
+	endif
+endfunction
+
+function hitscripts(item)
+	var show := 0;
+	if (!GetObjProperty(item, "OnHit"))
+		return 0;
+	endif
+	var hitscript := {};
+	foreach effect in GetObjProperty(item, "OnHit");
+		if (effect["silver"] || effect["poison"])
+			hitscript.append(effect);
+		else
+			show := 1;
+		endif
+	endforeach
+	SetObjProperty(item, "OnHit", hitscript);
+	if (show)
+		return 1;
+	else
+		return 0;
+	endif
+endfunction

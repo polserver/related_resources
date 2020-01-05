@@ -1,0 +1,194 @@
+****************************
+Making your own enchantments
+****************************
+v0.2
+
+Open up senchantedhit.cfg
+
+Whaddya see? Jumble garbage crap, yer.
+This is the core of all the magic enchantments.
+
+At the top there are a few elements of the levels,
+
+ level1
+ level2
+ level3
+ level4
+ level5
+
+Your magical enchantments *must* be listed here, unless they are counted as .npc (the config element contains 'npc 1')
+
+The levels are rarity levels, 1 being the lowest and 5 being the highest. Rarity is controlled in the part you modified in scripts\include\starteqp.inc
+
+----------------------------------------
+
+If you scroll down a bit more, you will start to see the example & test enchantments.
+Heres an enchantment template:
+
+Enchantment [name]
+{
+	Name		[name]
+	Strengths
+	Weaknesses
+	StrengthMulti	1
+	StrengthAdd	0
+	WeaknessDiv	1
+	WeaknessSub	0
+
+	NormAdd		0
+	NormSub		0
+	NormMulti	1
+	NormDivis	1
+
+	Prefix
+	Suffix
+
+	#Magic Item Props
+	WasHitScript
+	DidHitScript
+
+	noNormalMods	0
+	ocArmourMod	0
+	toColour	0
+	conflicts
+	unique		0
+	npc		0
+	level		1
+	AddRanProp
+	idstring
+	toStat
+	toSkill
+
+	spellBonus
+	spellResist
+}
+
+Of course props which are 0 dont need to even be there, but are included in the template for examples. A list of what each prop does is at the top of the CFG.
+The element name and the property of "Name" should be the same. This is the definition of the enchantment that is used to identify it on weapons, armour, clothes, monsters etc. If your enchantment is only for magic items, and has no damage mods, weaknesses / strengths - then put "noNormalMods" to 1.
+
+
+
+
+Heres a basic rundown of what goes on for most events, until i get better documentation:
+
+A) The enchantment is on a weapon and the weapon hits someone:
+   If it has a "DidHitScript", then the script is run with the following parameters passed:
+     {attacker, defender, weapon, armor, basedamage, rawdamage }
+     The core script checks if a new damage property was applied to the CProp "returnDmg", and if so - replaces the old damage with this one.
+
+   Assuming the enchantment has noNormalMods set to 0:
+    If the enchantment has strengths / weaknesses (to the armour/defender), then they are applied to the damage:
+	 If its a strength, then the damage = damage * StrengthMulti
+                                then damage = damage + StrengthAdd
+
+         If its a weakness, then the damage = damage / WeaknessDiv
+			        then damage = damage - WeaknessSub
+
+    The normal damage mods are applied in the following order: Multi Div Add Sub
+
+B) The enchantment is on a monster and the monster hits someone:
+   Basically the same as a weapon, except the hitscript receives these parameters:
+     {attacker, defender, attacker, armor, basedamage, rawdamage }
+     (attacker replaces weapon so wep scripts will work on NPCs - SWOIT!)
+
+C) The enchantment is on armour (well, a wearable item) and someone hits the armour:
+   The person who got hit will probably get pretty angry :P
+   If it has a 'WasHitScript' then the script is run and the following parameters passed:
+     {attacker, defender, weapon, armor, basedamage, rawdamage, armourPeice }
+     The core script checks to see if a new damage property was applied to the CProp "returnDmg" and if so - replaces the old damage with this one.
+
+   Assuming the enchantment has noNormalMods set to 0:
+      The damage mods are applied, *exactly* like the weapon ones cept inverse: Multis become Divs and Adds become Subs etc.
+
+D) The enchantment is on a defender and someone hits the defender:
+   Just like armour, cept the hitscript receives the following paramters:
+     {attacker, defender, weapon, armor, basedamage, rawdamage, defender }
+     (defender replaces armour so arma scripts will work on NPCs)
+
+
+To get the description of enchantments in the ItemID gump, put your enchantment in the case statement of the last function in the new itemid.src
+
+
+NOTES:
+*******************
+1.11
+*******************
+Now supports multiple IDstrings,
+ -New spell config elements, see history.txt, 1.11 entry.
+
+*******************
+1.10
+*******************
+New config stuff for non runestone + non natural enchantments
+ -New ItemID button: "Enchant With"
+  +This works through the senchantedhit.cfg (like everything,)
+  +In the "Data" element, you can add "Enchant With" scripts - format is:
+  [ItemID] [Script]
+  Theres some examples there,
+
+ -New 'socketAlignments' element in CFG
+  +This is for un-dwarven-runestone socketed items using the "Enchant With" button
+  +Format is:
+  [ItemID] [X-Offset] [Y-Offset]
+  +They are pixel offsets for the little picture of the item when you select its socket
+
+ -Couple of new sench.inc functions:
+  sortEnchantments( item )
+  isSocketedIn( enchantment, item )
+  +USE sortEnchantments, after you have added an enchantment that doesnt socket (with the "Enchant With" button)
+   ++That way, the socketed enchantments will be @ the bottom, and the non-socketed at the top.
+
+*******************
+1.08 (and above)
+*******************
+New config elements:
+
+ toStat [statid] [amount]
+  -statid is str, dex, or int
+ toSkill [skillid] [amount]
+  -skillid is the numerical value of the skill (core092)
+
+ More than one of either of the above (or both) in 1 enchantment works fine :) see the m_wizards example.
+
+*******************
+Pre-1.08 (and above)
+*******************
+WasHitScript's and DidHitScript's now use run_script_to_completion, so the base script should *NEVER* have any noticable sleeps. If you want to sleep for a while, then start another script from the Was/Did HitScript using start_script, or combat dmg will take longer to affect the victim (how long you sleep for!).
+
+unique enchantments will only ever exist once in a world. If it is destroyed then another is allowed to be created. This includes through GM scripts etc,
+
+conflicts is string array of other enchantments that cannot be on the same thing, eg:
+conflicts enchOne enchTwo
+would disallow adding that enchantment to a thing with "enchOne" or "enchTwo"
+
+Strengths + Weaknesses use the same format as conflicts to list enchantments.
+
+stuff is only effected by "toColour" by the FIRST enchantment that has "toColour" set and is added to the item/mobile.
+
+Suffixes do not need "of lala" etc, the of's and and's are controlled via the scripts.
+
+WasHitScript and DidHitScript can include directory structure etc.
+
+level *MUST* be the same as the level defined in the "magikool level1" etc elements, unless its an NPC-only enchantment.
+
+ocArmourMod adds to the .ar_mod of the item when the enchantment is added to it, this effect is removed upon removal of the enchatnment.
+
+noNormalMods GREATLY increases the speed at which enchantments are processed if they do not use the normal damage mods.
+
+Multiple enchantments on one runestone are extremely dodgy, the system is not designed to handle it effectively but could be modified pretty easily to.
+
+Other stuff can have as many enchantments as you want on there.
+
+Slots are filled depending on the level of the enchantment, level1 enchantment fills 1 slot. level2 enchantment fills two slots, etc.
+
+**************************************************
+TO GET YOUR ENCHANTMENT ID STRING WORKING ON 1.05+
+**************************************************
+the format is
+
+idstring [string]
+
+To get a Cprop in there, use 
+$cprop_name#
+The entire section will be replaced with the value of the Cprop name enclosed between those two symbols.
+Yes, you can have more than one CProp.

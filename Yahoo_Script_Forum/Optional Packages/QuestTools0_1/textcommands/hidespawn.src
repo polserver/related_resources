@@ -1,0 +1,21 @@
+// .hidespawn
+//
+// This command will "hide" a spawnpoint by setting it's graphic to
+// 0x0001, which is a "nodraw" title.
+
+use uo;
+
+// Change this if you change the objtype for the spawnpoint.
+const UOBJ_SPAWNPOINT := 0xA401;
+
+program textcmd_hidespawn(who)
+   
+	local spawnpoint := target(who);
+	if (spawnpoint.objtype != UOBJ_SPAWNPOINT)
+		SendSysMessage(who, "Invalid target.");
+		return;
+	endif
+
+	spawnpoint.graphic := 0x0001;
+
+endprogram

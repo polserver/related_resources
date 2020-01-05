@@ -1,0 +1,10 @@
+use uo;
+use os;
+
+program logon(who)
+if (!getobjproperty(who, "poisons"))
+	local p := dictionary;
+	setobjproperty(who, "poisons", p);
+endif
+start_script(":newpoison:poisonwatcher", {who});
+endprogram

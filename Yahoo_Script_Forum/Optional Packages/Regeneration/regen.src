@@ -1,0 +1,68 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+*
+*        _______________________________________________________regen.src
+*	/______________________________________________________________
+*      /     -->    Desc:  Ability to, somewhat, control regen rates  /
+*     /    -->   ToDo:  Make items for boosting regen rates	     /
+*    /   -->   Bugs:  None so far (if any, report to email below)   /
+*   /  -->  Made:  Porthios <inferno_13_86@yahoo.ca>  	   	   /
+*  /______________________________________________________________/
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+use uo;
+use os;
+
+program regeneration_rate( who )
+   
+while (1)
+
+    foreach char in EnumerateOnlineCharacters();
+
+      if(char.cmdlevel)
+
+        set_critical(1);
+
+	var h_regen := GetObjProperty(char, "h_regen");
+	var m_regen := GetObjProperty(char, "m_regen");
+	var s_regen := GetObjProperty(char, "s_regen");
+
+	if(!h_regen)		
+	    h_regen := 0;
+	endif
+
+	if(!m_regen)		
+	    m_regen := 0;
+	endif
+
+	if(!s_regen)		
+	    s_regen := 0;
+	endif	
+
+	char.hp := char.hp + Cint(h_regen);
+	char.mana := char.mana + Cint(m_regen);
+	char.stamina := char.stamina + Cint(s_regen);
+
+	if(char.hp > char.maxhp)
+	    char.hp := char.maxhp;
+	endif
+
+	if(char.mana > char.maxmana)
+	    char.mana := char.maxmana;
+	endif
+
+	if(char.stamina > char.maxstamina)
+	    char.stamina := char.maxstamina;
+	endif
+
+      endif	
+
+        set_critical(0);
+
+    endforeach
+
+    sleep(5);
+
+endwhile
+
+endprogram

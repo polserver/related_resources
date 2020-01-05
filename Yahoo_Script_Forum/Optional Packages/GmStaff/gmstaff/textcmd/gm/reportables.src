@@ -1,0 +1,111 @@
+//////////////////////////////////////////////
+// reportables.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+//////////////////////////////////////////////
+//
+// - view a mobiles reportables in a gump
+//
+//////////////////////////////////////////////
+// TODO:
+// - selective editing/clearing of details
+
+use uo;
+use os;
+
+const PAGE_LENGTH:=20;
+const MAX_PAGES:=10;
+
+program view_reportables(gm)
+    
+  var char:=Target(gm,TGTOPT_NOCHECK_LOS);
+  if (!char.acctname)
+    sendsysmessage(gm,"That isn't a character!");    
+    return;
+  endif
+  var Vreportables:=char.reportables;
+
+  var report_layout:={
+  "page 0",
+  "nodispose",
+  "resizepic 0 0 3600 650 520",
+  "text 190 10 63 0",
+  "text 40 30 63 1",
+  "text 210 30 63 2",
+  "text 380 30 63 3",
+  "text 450 30 63 4",
+  };
+
+  var report_data:={
+  "Reportables for "+char.name,
+  "Name",
+  "Account",
+  "Status",
+  "Time",
+  };
+
+  var pagenum:=1;
+  var i,y,thischar;
+  while (pagenum and pagenum<MAX_PAGES)
+    var start_build:=((pagenum-1)*PAGE_LENGTH)+1;
+    var end_build:=((pagenum)*PAGE_LENGTH);  
+    var report_len:=len(Vreportables);
+    report_layout.append("page "+pagenum);
+    if (pagenum>1)
+      report_layout.append("button 620 120 250 251 "+pagenum-1);
+    endif
+    if (end_build<report_len)
+      report_layout.append("button 62 470 252 253 "+pagenum+1);
+      pagenum:=pagenum+1;
+    else
+      pagenum:=0;
+    endif
+    for (i:=start_build; i<=end_build; i:=i+1)
+      y:=((i-start_build)*20)+40;
+      var detail:=Vreportables[i];
+      if (detail)
+        report_layout.append("button 20 "+(y+4)+" 2103 2104 1 0 "+(i+200));
+        var this_char:=GetChar(detail);
+        if (this_char)
+          report_layout.append("text 390 "+y+" 63 "+len(report_data));
+          report_data.append("online");
+        else
+          this_char:=detail[2];
+          report_layout.append("text 390 "+y+" 33 "+len(report_data));
+          report_data.append("online");
+        endif
+        report_layout.append("text 40 "+y+" 63 "+len(report_data));
+        report_data.append(this_char.name);
+  
+        report_layout.append("text 200 "+y+" 63 "+len(report_data));
+        report_data.append(this_char.acctname);
+  
+        report_layout.append("text 450 "+y+" 63 "+len(report_data));
+        report_data.append(detail[3]);
+      endif
+    endfor
+  endwhile
+
+  var retval:=SendDialogGump(gm,report_layout,report_data);
+
+  for (i:=1; i<=len(Vreportables); i:=i+1)
+   if (retval[i+200])
+     var details:=Vreportables[i];
+     char.RemoveReportable(details[1],details[3]);
+   endif
+  endfor
+endprogram
+
+function GetChar(byref details)
+  var checkchar;
+  foreach checkchar in EnumerateOnlineCharacters()
+    if (checkchar.serial=details[1])
+      return checkchar;
+    endif
+  endforeach
+  return 0;
+endfunction
+ 
+ 

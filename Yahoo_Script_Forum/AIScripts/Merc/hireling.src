@@ -1,0 +1,2622 @@
+//Personal Mercanary dude - By GM Scull v0.6
+//Base code from warrior.src
+
+use npc;
+use os;
+use uo;
+use cfgfile;
+use math;
+
+
+global me := Self();
+
+include "include/myutil";
+include "include/client";
+include "include/eventid";
+include "include/randname";
+include "include/anchors";
+include "include/npcbackpacks";
+include "include/dotempmods";
+include "include/yesno";
+include "mercutil";
+include "npctrain";
+
+
+global HIRE_GP := 2000; //0 for totally free
+const MAX_FRIENDS := 5;
+const MAX_ENEMYS := 3;
+const MAX_MERCS_PER_PLAYER := 3; //0 for unlimited
+const STATCAP := 250;
+const INVUL_WHILE_NOT_HIRED := 0;
+
+const BUILD := 40;
+
+
+
+
+const ITEM_BANDAGES := 0x0e21;
+const ITEM_BLOODYBANDAGES := 0x0e20;
+
+const EVID_ALL_GUARD_CMD := 0x13;
+const EVID_ALL_HEAL_CMD := 0x14;
+
+const UOBJ_GOLDCOIN   := 0x0EED;
+Const SOUND_EFFECT_DRINK := 0x32;
+Const SOUND_EFFECT_HEAL	:= 0x1f3; 
+Const SOUND_EFFECT_CURE	:= 0x1e1;
+Const EFFECT_SPARKLE  := 0x374a;
+
+Const STARTHAIR := 0x2030;
+Const ENDHAIR := 0x2060;
+
+
+global configfile := ReadConfigFile("::npcdesc");
+
+global lastbark := ReadGameClock();
+global masterserial := 0;
+global master;
+
+global mastername;
+
+global chaseloop := 0;
+global following := 0;
+global guarding := 0;
+global nextwatch := ReadGameClock();
+global laststatgain := ReadGameClock();
+
+global camping := 0;
+global camploc := { }; //camping coords
+
+global MountTemplate;
+
+if (!getobjproperty(me,"serial"))
+	setobjproperty(me, "serial", me.serial);
+endif
+
+program Hireling()
+
+	if( me.name["<random>"] )
+		SetMeUp();
+	endif
+
+	me.graphic := 400+me.gender;
+	me.title_suffix := " the Mercenary";
+
+	DropCamp();
+
+	if (getproperty("frozen"))
+		me.frozen := 1;
+	else
+		me.frozen := 0;
+	endif
+
+	masterserial := GetProperty("master");
+	if ( (masterserial = 0) or (!masterserial) or (masterserial = "<error>") )
+		masterserial := 0;
+		master := 0;
+		mastername := 0;
+		EnableEvents(EVID_SPEECH,2);
+		EnableEvents(EVID_ENTEREDAREA, 3);
+	else
+		master := SystemFindObjectBySerial(masterserial);
+		if (master)
+			EnableEvents(EVID_SPEECH,12);
+			EnableEvents(EVID_ENTEREDAREA, 6);
+			mastername := master.name;
+			me.setmaster(master);
+			if (distance(me, master) < 10)
+				following := master;
+				guarding := master;
+			endif
+		endif
+	endif
+
+	SetWarMode( 0 );
+	Drop_Anchor();
+
+	local next_wander := ReadGameClock() + 10;
+	local wanders := 9;
+
+	EnableAllEvents();
+	
+	// ** MainLoop **
+
+	while (1)
+
+		if (me.poisoned)
+			if (!DrinkPotion(2))
+				ApplyHealing(me);
+			endif
+		elseif ( me.hp < (me.maxhp-5))
+			ApplyHealing(me);
+		endif
+
+		if ( me.frozen )
+			sleep(10);
+		else
+			if (masterserial = 0)
+				ProcessMasterlessEvents(HirelingMovementMasterless(wanders, next_wander), wanders, next_wander);
+			else
+				ProcessMasterEvents(HirelingMovement(wanders, next_wander));
+			endif
+		endif
+
+	endwhile
+
+endprogram
+
+
+
+function sleepmode()
+
+	foreach critter in ListMobilesNearLocation( me.x,me.y,me.z, 32 )
+          if (!critter.npctemplate)
+				return 0;
+          endif
+	endforeach
+
+	local ev;
+	while (1)
+		ev := os::wait_for_event( 120 );
+		repeat
+		if (ev)
+		case (ev.type)
+            EVID_ENGAGED:
+			EVID_DAMAGED:
+				return ev;
+			EVID_ENTEREDAREA:
+			EVID_SPEECH:
+				if ((!ev.source.npctemplate) or (ev.source.script = "hireling"))
+					return ev;
+				endif
+		endcase
+		endif
+		until (! (ev := os::wait_for_event(120)) );
+	endwhile      
+
+endfunction       
+
+
+function SetMeUp()
+
+	me.gender := RandomInt(2);
+	me.graphic := 400+me.gender;
+	me.name := RandomName( me );
+	me.title_suffix := " the Mercenary";
+
+	me.setstr( RandomInt(30)+40 );
+	me.setint( RandomInt(20)+20 );
+	me.setdex( RandomInt(60)+20 );
+
+	SetRawSkill(me, SKILLID_SWORDSMANSHIP ,BaseSkillToRawSkill(RandomInt(200)+200));
+	SetRawSkill(me, SKILLID_MACEFIGHTING ,BaseSkillToRawSkill(RandomInt(200)+200));
+	SetRawSkill(me, SKILLID_FENCING ,BaseSkillToRawSkill(RandomInt(200)+200));
+	SetRawSkill(me, SKILLID_WRESTLING ,BaseSkillToRawSkill(RandomInt(200)+200));
+	SetRawSkill(me, SKILLID_BATTLE_DEFENSE ,BaseSkillToRawSkill(RandomInt(200)+200));
+	SetRawSkill(me, SKILLID_HEALING ,BaseSkillToRawSkill(RandomInt(200)+200));
+	SetRawSkill(me, SKILLID_TACTICS ,BaseSkillToRawSkill(RandomInt(200)+200));
+	SetRawSkill(me, SKILLID_ARCHERY ,BaseSkillToRawSkill(RandomInt(200)+200));
+
+	if (HIRE_GP)
+		HIRE_GP := HIRE_GP + EquiptMerc(me);
+	else
+		EquiptMerc(me);
+	endif
+
+	master := 0;
+	mastername := 0;
+	masterserial := 0;
+	SetProperty("master",masterserial);
+
+	me.hp := me.maxhp;
+
+	if (INVUL_WHILE_NOT_HIRED)
+		  GrantPrivilege( me, "invul" );
+		  me.enable( "invul" );
+	endif
+
+endfunction
+
+
+function ProcessMasterlessEvents(ev, byref wanders, byref next_wander)
+
+	if (!ev)
+		return;
+	endif
+
+	case (ev.type)
+		EVID_SPEECH:
+			if (!ev.source.npctemplate)
+				wanders := 0;
+				next_wander := readgameclock()+60;
+				local evtext := lower(ev.text);
+				if ( evtext[ lower(me.name) ] )
+					TurnToward(ev.source);
+					say ("Hail, " + ev.source.name);
+				elseif ( evtext[ "join"] or evtext["hire"])
+					HireThem(ev.source);
+				elseif ( evtext[ "skill"] or evtext["anatomy"])
+					TurnToward(ev.source);
+					say (anatomy());
+				elseif ( evtext[ "version"])
+					TurnToward(ev.source);
+					if (ev.source.cmdlevel)
+						say ("Build: " + BUILD);
+					endif
+				else
+					AskToHire(ev.source);
+				endif
+			endif
+		EVID_ENGAGED:
+		EVID_DAMAGED:
+			AddToHitList(ev);
+			wanders := 0;
+			next_wander := readgameclock()+60;
+			say("I need no GUARDS! to kill you!");
+			if ( (ev.source) and (!ev.source.dead) )
+				Fight( ev.source );
+			endif
+		EVID_ENTEREDAREA:
+				wanders := 0;
+				next_wander := readgameclock()+30;
+			return;
+		EVID_ITEM_GIVEN:
+			wanders := 0;
+			next_wander := readgameclock()+30;
+			TakeItem(ev.source,ev.item);
+	endcase
+
+endfunction
+
+
+function fight(opponent)
+
+	if (!opponent)
+		return;
+	endif
+
+	if (me.dexterity_mod >= 5000)
+		me.dexterity_mod := me.dexterity_mod - 5000;
+	endif
+
+	turntoward( opponent );
+
+	if (master)
+
+		if (!camping and !following and !guarding)
+			following := master;
+		endif
+
+		if ((opponent.cmdlevel > 0) or (opponent = me) )
+			say("Cant do that.");
+			sleep(1);
+			return;
+		endif
+
+		if( !opponent.dexterity)
+			say("I cant attack " + opponent.name + "!");
+			sleep(1);
+			return;
+		endif
+
+		if ( opponent = master )
+			turntoward(master);
+			say("I dont like sparing! why dont we go and kill some monsters?");
+			TurnAwayFrom( master );
+			sleep(1);
+			return;
+		endif
+
+	endif
+
+	if (opponent.multi.serial)
+		if (me.multi.serial != opponent.multi.serial)
+			flee(opponent);
+			return;
+		endif
+	endif
+
+	//check for fire
+	//foreach item in listitemsnearlocation(me.x, me.y, me.z, 1)
+	//	local firecreator := getobjproperty(item, "creater");
+	//	if (GetObjProperty(item , "f"))
+	//		say("Ill remember you " + firecreator + "!");
+	//		flee(item);
+	//	endif
+	//endforeach
+
+	local wasfollowing := following;
+	following := 0;
+        
+	lastbark := ReadGameClock() + 30;
+
+	if ( randomInt(4) = 1)
+		if (opponent.strength > me.strength) DrinkPotion(3); endif //str gain
+	endif
+
+	if ( GetProperty( "keywordbattlecry") )
+		Say ( GetProperty( "keywordbattlecry") );
+	endif
+
+	SetOpponent( opponent );
+	turntoward( opponent );
+
+	chaseloop := 0;
+	local ev := 0;
+	local loops := 1;
+	local lasthp := opponent.hp;
+	local waittime := 0;
+	local wasmoving:=1;
+
+    while ( (opponent) and not (opponent.dead or opponent.hidden or opponent.concealed) and (distance(me,opponent) < 20))
+	
+		case ( CloseDistance(opponent) )
+		0:		//Need to run towards the opponent
+			waittime := 0;
+			wasmoving := 1;
+			loops := loops + 1;
+			if (loops > 25)
+				if ( HasBow() ) ChangeWeapons(); endif
+				chaseloop := chaseloop + 1;
+				loops := 0;
+				RunRandom(opponent, chaseloop);
+				if (chaseloop > 5)
+					sleep(1);
+					loops := 0;
+					chaseloop := 0;
+					if (!camping)
+						flee(opponent,5);
+					else
+						SetWarmode( 0 );
+						following := wasfollowing;
+						return;
+					endif
+				endif
+			endif
+		1:  //Melee fighting
+			waittime := 1;
+			if (wasmoving) TurnToward(opponent); 
+				if (!CheckLineOfSight(me,opponent))
+					say("I cant see it!");
+//					SetWarMode(0);
+//					following := wasfollowing;
+//					if ( distance(following,me)>15 ) 
+//						if (following)
+//							say("Oh crap.  Where is " + following.name + "?");
+//							following:=0;
+//						endif
+//					endif
+//					return;
+				endif
+			endif
+
+			if (opponent.hp + 5 < lasthp) //Decent hit
+				lasthp := opponent.hp;
+				GainStat(opponent);
+			endif
+
+			loops := 0;
+			chaseloop := 0;
+			wasmoving := 0;
+
+		2: // Peace has been made
+			SetWarMode(0);
+			following := wasfollowing;
+			if ( distance(following,me)>25 ) 
+				if (following)
+					say("Damnit.  Where is " + following.name + "?");
+					following:=0;
+				endif
+			endif
+			return;
+		endcase
+
+		ev := wait_for_event( waittime );
+		case (ev.type)
+		EVID_SPEECH:
+			if(master)
+				local evtext := lower(ev.text);
+				if (ev.source.serial = masterserial)
+					if ( evtext["stop"] )
+						say("Okay");
+						setwarmode(0);
+						opponent := 0;
+						sleepms(500);
+						following := wasfollowing;
+						if ( distance(following,me)>25 ) following:=0;endif
+						chaseloop := 0;
+						return;
+					elseif ( evtext["run"] )
+						say("Retreating!!");
+						following := wasfollowing;
+						RunLikeHell(opponent);
+						if ( distance(following,me)>25 ) following:=0;endif
+						chaseloop := 0;
+						return;
+					elseif (evtext[(lower(me.name)) + " rearm"] )
+						Say("Okay");
+						ChangeWeapons();
+						if (HasBow())
+							RunAwayFrom(opponent);
+							RunAwayFrom(opponent);
+							RunAwayFrom(opponent);
+							turntoward( opponent );
+						endif
+					else
+						if (following and ObeyCommand(ev))
+						say ("bla");
+							setwarmode(0);
+							opponent := 0;
+							chaseloop := 0;
+							return;
+						endif
+					endif
+				endif
+			endif
+		EVID_DAMAGED:
+		EVID_ENGAGED:
+			if (ev.source)
+				if (me.poisoned)
+					if (!DrinkPotion(2))
+						ApplyHealing(me);
+					endif
+				elseif ( me.hp < me.maxhp-10)
+					ApplyHealing(me);
+				elseif (me.hp < 15)
+					say ("Help!");
+					RunLikeHell(opponent);
+					following := wasfollowing;
+					return;
+				endif
+				if (ev.source = master)
+					say("Ahhh, my master is attacking me!");
+					flee(master, 10,20);
+				endif
+				AddToHitList(ev);
+				if (ev.source != opponent)
+					if ( (RandomInt(6)=1) or 
+					     (distance(ev.source,me) < distance(me, opponent)) )
+						cleareventque();
+						opponent := ev.source;
+						SetOpponent( opponent );
+						lasthp := opponent.hp;
+						turntoward( opponent );
+					endif
+				endif
+			endif
+		EVID_PEACEMADE:
+			say("peace");
+			setwarmode(0);
+			opponent := 0;
+			sleep(1);
+			following := wasfollowing;
+			if ( distance(following,me)>25 ) following:=0;endif
+			chaseloop := 0;
+			return;
+		EVID_ENTEREDAREA:
+		EVID_ITEM_GIVEN:
+		endcase
+
+		OpenDoors(opponent);
+
+	endwhile
+
+	if (GetProperty("autoloot")=1)
+		Grabloot(0);
+	endif
+
+	SetWarMode(0);
+
+	if (master)
+		following := wasfollowing;
+		if ( distance(following,me)>25 ) 
+			if (following)
+				say("Oh crap.  Where is " + following.name + "?");
+				following:=0;
+			endif
+		endif
+	endif	
+
+
+endfunction
+
+function CloseDistance( opponent )
+
+	if (master)
+		if (distance(me,master) > 30)
+			say("Damn, where did " + master.name + " go!");
+			return 2;
+		endif
+	endif
+
+	if (guarding) 
+		local gd := distance(me,guarding);
+
+		if ( gd > 20 )
+			say("Damn, Ive lost " + guarding.name + "!");
+			guarding := 0;
+		elseif ( gd > 12 )
+			RunToward( guarding );
+			say("Ill guard you, " + guarding.name);
+			return 2;
+		endif
+	endif
+
+	local d := distance(me, opponent);
+
+
+	if (!HasBow())
+		if ( d > 1 )
+			RunToward( opponent );
+			return 0;
+		else
+			return 1;
+		endif
+	else
+		if (d = 1)
+			ChangeWeapons();
+		elseif ( d < 4 )
+			RunAwayFrom(opponent);
+			return 0;
+		else
+			return 1;
+		endif
+	endif
+
+endfunction
+
+function HasBow()
+
+	local ammotype := 0;
+//	local bowarmed := 0;
+	local weapon := me.weapon;
+	if (!weapon.objtype)
+		say("I don't have a weapon!");
+		ChangeWeapons();
+		return 0;
+	endif
+	case (weapon.objtype)
+		0x13B2:
+//			bowarmed := 1;
+			ammotype := 0xf3f;//bow and arrows
+		0x0f4f:
+		0x13fd:
+//			bowarmed := 1;
+			ammotype := 0x1bfb;//xbow and bolts
+		0x6050:
+//			bowarmed := 1;
+			ammotype := 0x6051;//firebow and firearrows
+		default: return 0;
+	endcase
+//	if (!bowarmed) return 0; endif
+
+//	local myammo := ;
+
+	if (!len(EnumerateItemsInContainerOfObjtype(me.backpack, ammotype)))
+		say("No ammo!");
+		ChangeWeapons();
+		return 0;
+	else
+		return 1;
+	endif
+
+endfunction
+
+
+function ChangeWeapons()
+
+	local weapon := GetEquipmentByLayer(me,LAYER_HAND1);
+	local shield := GetEquipmentByLayer(me,LAYER_HAND2);
+
+	if (weapon)
+		MoveItemToLocation(weapon, me.x, me.y, me.z, MOVEITEM_FORCELOCATION);
+	endif
+	if (shield)
+		MoveItemToLocation(shield, me.x, me.y, me.z, MOVEITEM_FORCELOCATION);
+	endif
+	foreach item in ListRootItemsInContainer(me.backpack)
+		EquipItem(me,item);
+	endforeach
+	if (weapon)
+		MoveItemToContainer(weapon, me.backpack);
+	endif
+	if (shield)
+		MoveItemToContainer(shield, me.backpack);
+	endif
+
+endfunction
+
+
+function AddToHitList(ev)
+
+	if ( (ev.type != EVID_DAMAGED) or (ev.source.npctemplate) ) return; endif
+	local hitlist := GetProperty("hitlist");
+	if (!hitlist) hitlist := {}; endif
+	foreach mob in hitlist
+		if (mob = ev.source.serial) return; endif
+	endforeach
+	hitlist.append(ev.source.serial);
+	SetProperty("hitlist",hitlist);
+
+endfunction
+
+
+function flee(opponent, runamount := 50, dist := 20)
+
+	EraseObjProperty(me,"killme");
+	if ( (me.frozen) or (me.paralyzed) )
+		say("Help!");
+		sleep(1);
+		return;
+	endif
+	local runs := 0;
+	local ev;
+
+	say("Im outa here!");
+
+	while ( (distance(me, opponent) < dist) and (runs < runamount) )
+		runawayfrom(opponent);
+		runs := runs +1;
+		ev := wait_for_event(0);
+		if (ev)
+			AddToHitList(ev);
+		endif
+	endwhile
+
+	RestartScript( me );
+
+endfunction
+
+function cleareventque()
+	local ev;
+	repeat
+	until (! (ev := os::wait_for_event(0)) );
+endfunction
+
+
+function EnableAllEvents()
+
+	EnableEvents(EVID_ITEM_GIVEN + EVID_ENGAGED + EVID_DAMAGED);
+	EnableEvents( EVID_DOUBLECLICKED );
+	EnableEvents( EVID_PEACEMADE );
+
+endfunction
+
+
+function AskToHire(you)
+
+	if ( lastbark > ReadGameClock() ) return 0; endif
+	lastbark := ReadGameClock()+60;
+
+	say("Hail Warrior");
+	sleep(1);
+	say("My skills are hireable for " + GetMyPrice() + " gold peices.");
+	sleep(1);
+	return 1;
+
+endfunction
+
+
+function HireThem(you)
+
+
+	TurnToward(you);
+
+	if (MercCount(you) >= MAX_MERCS_PER_PLAYER)
+		say ("You already have " + MAX_MERCS_PER_PLAYER + " followers.");
+		return;
+	endif
+
+	local myprice := GetMyPrice();
+
+	say("That'll be " + myprice + " gold peices.");
+
+	if (!YesNo(you,"Hire " + me.name + "?"))
+		say("Begone then.");
+		return;
+	endif
+
+	if (MercCount(you) >= MAX_MERCS_PER_PLAYER)
+		say ("You already have " + MAX_MERCS_PER_PLAYER + " followers.");
+		return;
+	endif
+
+	if (you.cmdlevel or (!HIRE_GP))
+			say("I shall work for free.");
+	else
+		if (you.spendgold( myprice ))
+			say("I am at your service " + you.name);
+		else
+			say ( "You do not have enough gold to hire me!");
+   			return 0;
+ 		endif
+	endif
+
+	if (INVUL_WHILE_NOT_HIRED)
+		  RevokePrivilege( me, "invul" );
+	endif
+
+	setproperty("master",you.serial);
+	masterserial := you.serial;
+	master := you;
+	mastername := you.name;
+	me.SetMaster(you);
+	following := master;
+	guarding := master;
+
+endfunction
+
+
+//quick fix, setting cprops doesent seem to work
+function MercCount(who)
+
+	if (MAX_MERCS_PER_PLAYER > 0)
+
+		local merclist := { };
+		local newmerclist := { };
+		merclist := GetObjProperty(who,"mercs");
+		local tempmerc;
+
+		local i;
+		local count := 1;
+
+		if (merclist)
+			for (i := 1; i < len(merclist)+1; i:=i+1)
+				tempmerc := SystemFindObjectBySerial(merclist[i]);
+				if ( (tempmerc) and (getobjproperty(tempmerc,"master") = who.serial) ) 
+					newmerclist[count] := merclist[i];
+					count:=count+1;
+				endif
+				tempmerc := 0;
+			endfor
+		endif
+
+		newmerclist[count] := me.serial;
+
+		EraseObjProperty(who,"mercs");
+		setobjproperty(who,"mercs",newmerclist);
+
+		return (count-1);
+	endif
+
+endfunction
+
+
+
+
+function ProcessMasterEvents(ev)
+
+	if (!ev)
+		return;
+	endif
+
+	if ( (!master) and (ev.source.serial = masterserial) )
+		master := ev.source;
+		mastername := master.name;
+		me.setmaster(master);
+		following := master;
+		guarding := master;
+	endif
+
+	case (ev.type)
+	EVID_SPEECH:
+		if (!ev.source.npctemplate)
+			local evtext := lower(ev.text);
+			if ( (evtext[ "version"]) and (ev.source.cmdlevel))
+				say ("Build: " + BUILD);
+			elseif (ev.source.serial = masterserial)
+				nextwatch := readgameclock()+5;
+				ObeyCommand(ev);
+			elseif ( ((evtext[ "hire"]) or (evtext[ "hail"])) and (ev.source != master) and (mastername) )
+				if (lastbark < ReadGameClock())
+					lastbark := ReadGameClock() + 20;
+					say (ev.source.name + ", I am already working for " + mastername + ".");
+				endif
+			else
+				if (camping=1)
+					GuardArea(1);
+				endif
+			endif
+		endif
+	EVID_ENGAGED:
+		if (ev.source = master)
+			say("Ahhh, my master is attacking me!");
+			flee(master, 10,20);
+			return;
+		endif
+
+		nextwatch := readgameclock()+10;
+		if ( (ev.source) and (!ev.source.dead) and (!guarding))
+			Fight( ev.source );
+		endif
+	EVID_DAMAGED:
+		if (ev.source = master)
+			say("Ahhh, my master is attacking me!");
+			flee(master, 10,20);
+			return;
+		endif
+		AddToHitList(ev);
+		nextwatch := readgameclock()+10;
+		if ( (ev.source) and (!ev.source.dead) )
+			Fight( ev.source );
+		endif
+	EVID_ENTEREDAREA:
+		if (camping=1)
+			nextwatch := readgameclock()+2;
+			GuardArea(1);
+		else
+			local elem:= configfile[ev.source.npctemplate];
+            if (elem)  
+				if ((!elem.guardignore) and (ev.source.script != "tamed") and (ev.source.alignment != "good"))
+					Fight(ev.source);
+				endif
+            else
+				if (CheckList(ev.source.name,0))
+					lastbark := ReadGameClock()-1;
+					sayrandomthing(1,ev.source.name);
+					Fight(ev.source);
+					lastbark := ReadGameClock()-1;
+					if ((mastername) and (!ev.source))
+						say("Thatl teach u for messing with " + mastername + "!");
+					endif
+				elseif (CheckList(ev.source.name,1))
+					sayrandomthing(2,ev.source.name);
+				endif
+            endif
+		endif
+		return;
+	EVID_ALL_ATTACK_CMD:
+		nextwatch := readgameclock()+10;
+		Fight(ev.target);
+	EVID_ITEM_GIVEN:
+		if (ev.source.serial = masterserial)
+			say("Thanks, I'll put that in my backpack");
+			local it := ev.item;
+			MoveItemToContainer( it, me.backpack);
+		else //say i dont take bribes
+			TakeItem(ev.source,ev.item);
+		endif
+	EVID_DOUBLECLICKED:
+		if (randomint(20)=1) say("hehe"); endif
+		if (ev.source.serial = masterserial) 
+			OpenMyPack(); 
+			nextwatch := readgameclock()+10;
+		endif
+	EVID_ALL_FOLLOW_CMD:
+		if (ev.target != me)
+			nextwatch := readgameclock()+5;
+			following := ev.target;
+			camping := 0;
+			say("Im with " + ev.target.name);
+		else
+			say("I cant follow myself!");
+		endif
+	EVID_ALL_GUARD_CMD:
+		nextwatch := readgameclock()+2;
+		guarding := ev.target;
+		camping := 0;
+	EVID_ALL_HEAL_CMD:
+		TurnToward(ev.target);
+		nextwatch := readgameclock()+10;
+		if (!ApplyHealing(ev.target))
+			say("I can't heal again yet.");
+		endif
+	endcase
+
+endfunction
+
+
+function HirelingMovementMasterless(byref wanders, byref next_wander)
+
+	if ( ReadGameClock() >= next_wander )
+		wanders:=wanders+1;
+		wander();
+		next_wander := ReadGameClock() + 10;
+		if (wanders>30)
+			wanders := 0;
+			return (sleepmode());
+		else
+			return (wait_for_event(6));
+		endif
+	else
+		return (wait_for_event(6));
+	endif
+
+endfunction
+
+
+function HirelingMovement(byref wanders, byref next_wander)
+
+	if ( (following) and (master) )
+		//SetAnchor( me.x, me.y, 20, 0 );
+		Follow();
+		camping := 0;
+		return (wait_for_event(0));
+	elseif ( (guarding) and (master) )
+		//SetAnchor( me.x, me.y, 20, 0 );
+		Guard();
+		camping := 0;
+		return (wait_for_event(7));
+	elseif (camping)
+		sleep(1);
+		return (GuardArea(0));
+	elseif (master)
+		return (wait_for_event(2));
+	else
+		DropCamp();
+		camping := 1;
+		following := 0;
+		guarding := 0;
+		GuardArea(1);
+		return (wait_for_event(30));
+	endif
+
+	return (wait_for_event(2));
+
+endfunction
+
+function GuardArea(override)
+
+	local dist_to_walk := 0;
+	local olddistance := 0;
+	chaseloop := 0;
+
+	if (!camploc)
+		DropCamp();
+		return (wait_for_event(2));
+	else
+
+		if ( nextwatch <= readgameclock() or (override = 1)) 
+			nextwatch := readgameclock()+10;
+
+		
+			if (lastbark < ReadGameClock() )
+				lastbark := ReadGameClock()+45;
+				case (randomint(8))
+					2:	me.facing := me.facing + 1;
+					4:	me.facing := me.facing - 1;
+					6:	if (GetProperty("autoloot"))
+							Grabloot(0);
+						endif
+					7:  
+						if (GetProperty("myquote"))
+							say(GetProperty("myquote"));
+						endif	
+				endcase
+			endif
+		
+			// *** WALKHOME ***
+			chaseloop := 0;
+			while ((me.x != camploc[1]) or (me.y != camploc[2]))
+				dist_to_walk := DistanceToLocation( me , camploc[1], camploc[2] );
+
+				if ((dist_to_walk > 40) or (ReadGameClock() > nextwatch+30) or (olddistance = dist_to_walk))
+					say ("Rel Por");
+					PerformAction( me, 0x00011 ); //spellcast upwards
+					Sleep(2);
+					if (!MoveCharacterToLocation( me, camploc[1], camploc[2], camploc[3], MOVECHAR_FORCELOCATION ))
+						DropCamp();
+						nextwatch := ReadGameClock();
+					else
+						PlaySoundEffect( me, SFX_SPELL_TELEPORT );
+						PlayObjectCenteredEffect( me, FX_SMOKE, 16, 16);
+					endif
+
+					olddistance := 0;
+				elseif (dist_to_walk < 10)
+					WalkTowardLocation(camploc[1], camploc[2]);
+				elseif (dist_to_walk <= 40)
+					RunTowardLocation(camploc[1], camploc[2]);
+				endif
+
+				sleepms(GetSleepDelayms());
+				chaseloop := chaseloop + 1;
+				if (chaseloop > 6)
+					olddistance := dist_to_walk;
+					chaseloop := 0;
+					return (wait_for_event(1));
+				endif
+
+			endwhile
+
+			// *** ENDWALKHOME ***
+			
+			if (DistanceToLocation( me , camploc[1], camploc[2] ) < 6)
+				FindEnemy();
+			endif
+
+			return (wait_for_event(7));
+
+		endif
+
+		return (wait_for_event(10));
+
+	endif		
+
+endfunction
+
+
+function Guard()
+
+	if ( nextwatch <= readgameclock() ) 
+		nextwatch := readgameclock() + 7;
+		if ( randomint(60)=1 )
+			say("I've got your back, " + guarding.name);
+		endif
+
+		//FindEnemy(2);
+
+		foreach mob in ListHostiles( guarding, 9, LH_FLAG_LOS );
+			Fight(mob);
+		endforeach
+
+	endif
+
+	if ( (!guarding.strength) or (guarding.dead) or (distance(me,guarding) > 15) )
+		guarding := 0;
+	endif
+
+endfunction
+
+function Follow()
+
+	local d := Distance( me, following );
+	if (d < 3)
+
+		foreach mob in ListHostiles( following, 3, LH_FLAG_LOS );
+			Fight(mob);
+		endforeach
+
+		sleep(1);
+		chaseloop := 0;
+		return;
+	elseif (( d > 15 ) or ( chaseloop > 50 ))
+		MoveCharacterToLocation( me, following.x, following.y, following.z, MOVECHAR_FORCELOCATION );
+		chaseloop := 0;
+		sleep(1);
+		return;
+	endif
+
+	if (d < 5)
+		WalkToward(following);
+		chaseloop := chaseloop + 1;
+	else
+		me.dexterity_mod := me.dexterity_mod + 5000;
+		RunToward(following);
+		chaseloop := chaseloop + 1;
+		me.dexterity_mod := me.dexterity_mod - 5000;
+	endif
+
+
+	if ( (!following.strength) or (following.dead) )
+		following := 0;
+	endif
+
+	if (me.dexterity_mod >= 5000)
+		me.dexterity_mod := me.dexterity_mod - 5000;
+	endif
+
+//	if ( (master) and (!guarding) )
+//		guarding := master;
+//	endif
+
+	if (guarding)
+		Guard();
+	endif
+
+endfunction
+
+function ObeyCommand(ev)
+
+	local command := SplitWords(lower(ev.text));
+
+	//first check all the  non-name commands	
+	case(command[1])
+	  "brb":
+	  "afk":
+		say("Ok.");
+		cleareventque();
+		sleep(5);
+		return;
+	  "skill":
+		TurnToward(ev.source);
+		say (anatomy());
+		return;
+	  "help":
+	  "ah":
+		FindEnemy(4);
+	  "run":
+		RunLikeHell();
+		return;
+	endcase
+
+
+	if(command.size() <2)
+		return;
+	endif
+
+	local allcmd := 0, mecmd := 0;
+
+	if (!master)
+		master := ev.source;
+		mastername := master.name;
+		me.setmaster(ev.source);
+		following := master;
+		guarding := master;
+		say("You da boss");
+		camping := 0;
+	endif
+
+	if (master != ev.source)
+		say("Funny, I thought you were my master...");
+		return;
+	endif
+
+	local evtext := lower(ev.text);
+
+	if (command[1] = "all")
+		allcmd := 1;
+	elseif (command[1] != lower(me.name))
+		return;
+	endif
+
+	local what := 0;
+
+	if (command[3] = "me")
+		what := me;
+	endif
+
+
+	if (!allcmd)
+		case(command[2])
+
+		 "dismount":
+			local mount := GetEquipmentByLayer( me, 25 );
+			if (mount) 
+				if ( dismountme(me,mount) )
+					say("all transfer");
+				endif
+			endif		
+			return 1;	
+		 "ride":
+		 "mount":
+			local alreadymounted := GetEquipmentByLayer( me, 25 );
+			if (alreadymounted) 
+				say("I already have a mount, thanks");
+			else
+				say("Ride what?");
+				local horse := Target(ev.source);
+				if (horse)
+					MountHorse(horse);
+				endif
+			endif
+			return 1;	
+		 "release":
+			TurnToward(ev.source);
+			say("You're firing me?");
+			if (YesNo(ev.source,"Fire them?")) Release(); endif
+		 "wear":
+			TurnToward(ev.source);
+			say ("Wear what?");
+			local it := target(ev.source);
+			WearItem(it, ev.source);
+			return 1;	
+		 "friend":
+			TurnToward(ev.source);
+			AddTofriendList();
+			return 1;	
+		 "enemy":
+			TurnToward(ev.source);
+			AddToEnemyList();
+			return 1;	
+		 "quote":
+			TurnToward(ev.source);
+			EraseObjProperty(me,"myquote");
+			SetProperty("myquote", 
+						cstr(Sendtextentrygump( ev.source, 
+					   "What would you like me to say to passers by?", 
+					   TE_CANCEL_DISABLE,
+					   TE_STYLE_NORMAL,
+					   12,              
+					   "Quote")));
+			say("Got it.");
+			return 1;	
+		 "battlecry":
+			TurnToward(ev.source);
+			EraseObjProperty(me,"keywordbattlecry");
+			SetProperty("keywordbattlecry", 
+						cstr(Sendtextentrygump( ev.source, 
+					   "What would you like my battlecry to be?", 
+					   TE_CANCEL_DISABLE,
+					   TE_STYLE_NORMAL,
+					   12,              
+					   "Battlecry")));
+			say("Got it.");
+			return 1;	
+		 "throwpot":
+			if (DrinkPotion(4))
+				local what := Target( ev.source , TGTOPT_CHECK_LOS );
+				
+				if ((!what) or (!what.strength) or (what = me) or (what = master))
+					say ("No can do!");
+					return;
+				endif	
+
+				say ("Eat this!");
+				turntoward(what);
+				ThrowPotion(what);
+				sleep(1);
+			else
+				say ("No potion to throw!");
+			endif
+		endcase
+	endif
+
+	case(command[2])
+		"kill":
+		"attack":
+		"fight":
+			what := Target( ev.source , TGTOPT_HARMFUL + TGTOPT_CHECK_LOS );
+			if (what)
+
+				guarding := 0;
+				if (allcmd)
+					AllCommand(EVID_ALL_ATTACK_CMD, what);
+					return;
+				endif
+
+				case (what.graphic)
+					4208:
+					4212:
+						trainondummy(what);
+					4106:
+					4107:
+						trainonbutte(what);
+					default:
+						Fight( what );	
+				endcase
+			endif
+	     "stop":
+			guarding := 0;
+			following := 0;
+			camping := 0;
+			say ("k.");
+		 "heal":
+			if (what)
+				what := ev.source;
+			else
+				what := Target( ev.source , TGTOPT_HELPFUL + TGTOPT_CHECK_LOS );
+			endif
+
+			if ((!what) or (!what.strength))
+				return;
+			endif
+
+			if (allcmd)
+				AllCommand(EVID_ALL_HEAL_CMD, what);
+			else
+				TurnToward(what);
+				if (!ApplyHealing(what))
+					say("I can't heal again yet.");
+				endif
+			endif
+
+		 "follow":
+			camping := 0;
+			if (what)
+				what := ev.source;
+			else
+				what := Target( ev.source , TGTOPT_HELPFUL + TGTOPT_CHECK_LOS );
+			endif
+
+			if ((!what) or (!what.strength) or (what = me))
+				return;
+			endif	
+
+			if (allcmd)
+				AllCommand(EVID_ALL_FOLLOW_CMD, what);
+			else
+				say("I'll follow " + what.name);
+				following := what;
+			endif
+
+	     "come":
+			camping := 0;
+			local done := 0;
+			local lchaseloop := 0;
+
+			while( done = 0 )
+				local d := Distance( me, following );
+				if (d < 2)
+					done := 1;
+				elseif (( d > 15 ) or ( lchaseloop > 50 ))
+					MoveCharacterToLocation( me, following.x, following.y, following.z, MOVECHAR_FORCELOCATION );
+					done := 1;
+				else
+					me.dexterity_mod := me.dexterity_mod + 5000;
+					RunToward(following);
+					lchaseloop := lchaseloop + 1;
+					me.dexterity_mod := me.dexterity_mod - 5000;
+				endif
+			endwhile
+
+			sleep(1);
+
+		 "guard":
+			camping := 0;
+			if (what)
+				what := ev.source;
+			else
+				what := Target( ev.source , TGTOPT_HELPFUL + TGTOPT_CHECK_LOS );
+			endif
+
+			if ((!what) or (!what.strength))
+				return;
+			endif
+
+			if (allcmd)
+				AllCommand(EVID_ALL_GUARD_CMD, what);
+			else
+				guarding := what;
+				if (what = me)
+					say("Ill defend myself, " + master.name);
+				else	
+					say("Gotcha covered, " + guarding.name);
+				endif
+			endif
+		 "drop":
+			TurnToward(ev.source);
+			say("Okay");
+			DropEverything();
+		 "rearm":
+			Say("Okay");
+			ChangeWeapons();
+		 "removeall":
+			RemoveAllFromList();
+			say ("Done.");
+		 "remove":
+			RemoveFromList();
+		 "report":
+			TurnToward(ev.source);
+			SayList();
+		 "loot":
+			say ("k.");
+			grabloot(1);
+		 "autoloot":
+			if (GetProperty("autoloot")=1)
+				EraseObjProperty(me, "autoloot");
+				say ("I will not loot anything I kill");
+			else
+				SetProperty("autoloot", 1);
+				say ("I will loot everything I kill.");
+			endif
+		 "carve":
+			carve_corpse();
+		 "wash":
+			WashMyBandages();
+		 "camp":
+			TurnToward(ev.source);
+			say("Camping here, " + master.name);
+			camping := 1;
+			DropCamp();
+			following := 0;
+			guarding := 0;	
+		 "undress":
+			say("Okeedokee");
+			sleep(1);
+			Undress();
+		 default:
+			return 0;	
+		endcase
+
+endfunction
+
+
+function AllCommand(evtype,what)
+
+	var mobs := ListMobilesNearLocation( master.x, master.y, master.z, 9 );
+	var eve array;
+	eve.+type := evtype;
+	eve.+source := me;
+	eve.+target := what;
+	SendEvent( me , eve );
+	foreach mob in mobs 
+		if( GetObjProperty( mob , "master" ) = me.master.serial )
+			SendEvent( mob , eve );
+		endif
+	endforeach
+
+endfunction
+
+function ApplyHealing(who)
+
+	if (!GetProperty("#heal"))
+		SetProperty("#heal", ReadGameClock()-20);
+	endif
+
+	if ( GetProperty("#heal") > ReadGameClock())
+		return 0;
+	endif
+
+	if ((who.hp = who.maxhp) and (who != me))
+		say(who.name + " looks ok to me.");
+		return 1;
+	endif
+
+	if ((who != me) and (distance(me,who) > 3))
+		say(who.name + " is too far away!");
+		return 1;
+	endif
+
+	if (me.hp < (me.maxhp/2)) DrinkPotion(1); endif
+
+	SetProperty("#heal", ReadGameClock()+20);
+
+	if (me.poisoned)
+		if (!DrinkPotion(2))
+			return 1;
+		endif
+		say("Help, I'm poisoned!"); 
+	endif
+
+	local bandage := FindObjinBackpack(ITEM_BANDAGES);
+	if ((!bandage) and (camping = 0) and (me.hp < me.maxhp - 20))
+		if (lastbark < ReadGameClock() )
+			lastbark := ReadGameClock() + 30;
+			say("I could use some bandages!");
+		endif
+		return 1;
+	endif
+
+	local parms := {};
+	parms[1] := me;
+	parms[2] := (20 - cint(GetSkill(me,SKILLID_ANATOMY)/10));
+	parms[3] := bandage;
+	parms[4] := who;
+
+	start_script(":healing:bandageheal",parms);
+
+	CreateItemInBackpack( me, ITEM_BLOODYBANDAGES, 1 );
+
+	return 1;
+
+endfunction
+
+
+function WashMyBandages()
+
+	local amount := 0;
+	var BloodyBandages := EnumerateItemsInContainerOfObjType(me.backpack, ITEM_BLOODYBANDAGES );
+
+	amount := BloodyBandages.size();
+
+	if (!amount)
+		say ("I have no bloody bandages.");
+		return;
+	endif
+	
+	if (LookforWater())
+
+		amount := cint(amount/2);
+
+		PlaySoundEffect(me, SFX_12);
+
+		foreach item in BloodyBandages
+			destroyitem(item);
+		endforeach
+
+		PerformAction( me, ANIM_FIDGET_2 );
+		sleep(2);
+		CreateItemInBackpack( me, 0x0e21, amount );
+		say ("Done.");
+
+	endif
+
+endfunction
+
+
+function LookforWater()
+
+ //first look at items around us to see if theres a barrle of water...
+
+	foreach item in listitemsnearlocation(me.x, me.y, me.z, 4)
+		if (item.objtype >=0x154D)
+			return 1;
+		elseif ((item.objtype >=0x346E) and (item.objtype <= 0x3485))
+			return 1;
+		elseif ((item.objtype >= 0x3494) and (item.objtype <= 0x34AB))
+			return 1;
+		elseif ((item.objtype >= 0x0B41) and (item.objtype <= 0x0B44))
+			return 1;
+		elseif ((item.objtype >= 0x34B8) and (item.objtype <= 0x34CA))
+			return 1;
+		elseif ((item.objtype >= 0x1796) and (item.objtype <= 0x17B2))
+			return 1;
+		endif
+	endforeach
+
+	say("Hmm, I cant find any water.");
+	return 0;
+
+ //Otherwise to ocean (make this do a full sweep search around npc)
+/*
+  local tries := 0;
+  local x, y, z;
+
+  while (tries < 20)
+	tries:=tries+1;
+     x := randomInt(6) + me.x;
+     y := randomInt(6) + me.y;
+
+	TurnTowardLocation(x,y);
+
+     if (check_for_water(getmapinfo(x, y).landtile))
+	   say ("Har, This be lookin like a good spot to fish arg");
+           TurnTowardLocation(x,y);
+			z := me.z;
+			//splash(x,y,z);
+           return(1);
+     endif
+  sleepms(100);
+  endwhile
+
+  say ("Arg, i gots to catch meself some fish");
+*/
+endfunction
+/*
+function check_for_water (theobj)
+
+	//static water tiles
+	if ((theobj.objtype >= 0x1796) and (theobj.objtype <= 0x17b2) )
+		return 1;
+	//more static water tiles
+	elseif ((theobj.objtype >= 0x346e) and (theobj.objtype <= 0x3530))
+		return 1;
+	else
+		return 0;
+	endif
+endfunction
+*/
+
+
+function WearItem(it, you)
+
+	local mygear := {};
+	foreach thing in listequippeditems(me)
+		if ( RemoveIt(thing) ) mygear.append(thing); endif
+	endforeach
+
+	set_critical(1);
+	foreach thing in mygear
+		if ( RemoveIt(thing) )
+			moveitemtocontainer(thing, me.backpack);
+		endif
+	endforeach
+
+	if (!equipitem(me, it))
+		if (it.strrequired > me.strength)
+			say("I not strong enough to wear that.");
+		else
+			say("I can't wear that.");
+		endif
+	endif
+	
+	foreach thing in mygear
+     	  	if (!EquipItem(me, thing))
+			MoveItemToContainer(thing,you.backpack);
+		endif
+	endforeach
+
+	set_critical(0);
+
+endfunction
+
+function DropEverything()
+
+	foreach item in ListRootItemsInContainer(me.backpack)
+		MoveItemToLocation(item, me.x, me.y, me.z, 0);
+	endforeach
+
+endfunction
+
+function MountHorse(horse)
+
+	if (horse.script != "tamed")
+		say("I don't know... looks kind of wild, to me.");
+		return;
+	elseif ( (GetObjProperty(horse,"master") != masterserial) and (GetObjProperty(horse,"master") != me.serial))
+		say("Howzabout you lemme ride YOUR horse?");
+		return;
+	endif
+
+	local mounttype := 0;
+	case (horse.graphic)
+	0xcc: //dark brown/horse
+			mounttype := 0x3ea2;
+	0xc8: //lightbrown/horse2
+			mounttype := 0x3e9f;
+	0xe2: //light grey/horse3
+			mounttype := 0x3ea0;
+	0xe4: //greybrown/horse4
+			mounttype := 0x3ea1;
+	0xdc: //Llama:
+			mounttype := 0x3ea6;
+	0xd2: //desert
+			mounttype := 0x3ea3;
+	0xda: //frenzied
+			mounttype := 0x3ea4;
+	0xdb: //forest
+			mounttype := 0x3ea5;
+	0x23d: //vortex
+			mounttype := 0x3ea7;
+	endcase
+
+
+	if (!mounttype)
+		say("Well how am I supposed to right THAT?");
+		return;
+	else
+		local i;
+		RunToIt(horse);
+		if ( MoveCharacterToLocation(me,horse.x,horse.y,horse.z,0) )
+			me.facing := horse.facing;
+			MountTemplate := horse.npctemplate;
+			set_critical(1);
+				local mount := CreateItemAtLocation(5288 , 1176 , 0, 0xF021,1);
+				mount.color := horse.color;
+				setobjproperty(mount,"petname",horse.name);
+				setobjproperty(mount,"pethp",horse.hp);
+				setobjproperty(mount,"petmana",horse.mana);
+				setobjproperty(mount,"freetime",ReadGameClock()+1200);
+				mount.graphic := mounttype;
+				MoveCharacterToLocation(horse, 5288 , 1176 , 0, MOVECHAR_FORCELOCATION);
+				setobjproperty(horse,"guardkill",1);
+				applyrawdamage(horse,horse.maxhp+3);
+				EquipItem(me,mount);
+			set_critical(0);
+		endif
+
+	endif
+
+endfunction
+
+function OpenMyPack()
+
+	if (!master)
+		master := SystemFindObjectBySerial( masterserial );
+		mastername := master.name;
+		me.setmaster( master );
+		following := master;
+		guarding := master;
+	endif
+
+	if (distance(me,master) > 2)
+		return;
+	endif
+
+	if (!me.backpack)
+		local newbackpack := CreateItemAtLocation(5288 , 1176 , 0, 0xe75,1);
+		EquipItem(me, newbackpack);
+	endif
+
+	SendOpenSpecialContainer( master, me.backpack );
+
+endfunction
+
+function GainStat(opponent) //fixme, make this based upon action NPC is doing
+
+	if ( laststatgain > ReadGameClock() )
+		return;
+	else
+		laststatgain := ReadGameClock() +  RandomInt(500-opponent.strength) + (me.strength+me.dexterity);
+	endif
+
+	if (!master) return; endif
+
+	if (npc_statcap())
+		return;
+	endif
+
+	local basestr := me.strength - me.strength_mod;
+	local baseint := me.intelligence - me.intelligence_mod;
+	local basedex := me.dexterity - me.dexterity_mod;
+
+	if ( basestr < master.strength + 5)
+		if ( RandomInt(20+opponent.strength)+1 > (basestr) )
+			me.setstr(basestr + 1);
+			say("Woohoo!  I'm getting stronger!");
+		endif
+	endif
+	if ( baseint < master.intelligence + 5)
+		if ( RandomInt(10+opponent.intelligence)+1 > (baseint) )
+			me.setint(baseint + 1);
+			say("I feel more inteligent!");
+		endif
+	endif
+	if ( basedex < master.dexterity + 5)
+		if ( RandomInt(20+opponent.dexterity)+1 > (basedex) )
+			me.setdex(basedex + 1);
+			say("I feel more energetic.");
+		endif
+	endif
+
+endfunction
+
+function npc_statcap()
+
+	local unmod_str := me.strength - me.strength_mod;
+    local unmod_dex := me.dexterity - me.dexterity_mod;
+    local unmod_int := me.intelligence - me.intelligence_mod;
+
+    local total := (unmod_str + unmod_dex + unmod_int);
+    if (total > STATCAP)
+		me.setstr( (unmod_str * STATCAP) / total );
+        me.setdex( (unmod_dex * STATCAP) / total );
+        me.setint( (unmod_int * STATCAP) / total );
+		return 1;
+    endif
+
+endfunction
+
+
+function runrandom(opponent, numruns := 2)
+
+	local stepstotake := (numruns)+4;
+	local tox := me.x;
+	local toy := me.y;
+	local highx := tox - opponent.x;
+	if ( highx < 0 ) highx := 0 - highx; endif
+	local highy := tox - opponent.y;
+	if ( highy < 0 ) highy := 0 - highy; endif
+
+	case ( highy > highx )
+	0:	//run along the x access
+		case ( RandomInt(2) )
+		0:	//to the right
+			toy := (me.y - stepstotake);
+			if (randomint(2)) tox := opponent.x; endif //to his x
+		1:	//to the left
+			toy := (me.y + stepstotake);
+			if (randomint(2)) tox := opponent.x; endif //to his x
+		endcase
+	1:
+		//run along the y access
+		case( randomint(2) )
+		0:	//to the right
+			tox := (me.x - stepstotake);
+			if (randomint(2)) toy := opponent.y; endif //to his y
+		1:	//to the left
+			tox := (me.x + stepstotake);
+			if (randomint(2)) toy := opponent.y; endif //to his y
+		endcase
+	endcase
+
+	local runs := 0;
+	local ev;
+	while ( (distance(me, opponent) > 0) and (runs <= stepstotake) )
+		RunTowardLocation( tox, toy );
+		OpenDoors(opponent);
+		runs := runs +1;
+		ev := wait_for_event(0);
+		if (ev)
+			case (ev.type)
+			EVID_PEACEMADE: return 1;
+			EVID_DAMAGED:
+				AddToHitList(opponent);
+				if (ev.source.serial = opponent.serial)
+					flee(opponent,20,10);
+				endif
+			endcase
+		endif
+		if ( (me.x = tox) and (me.y = toy) )
+			return 0;
+		endif
+	endwhile
+
+	return 0;
+
+endfunction
+
+function OpenDoors(opponent)
+
+	//only check once per 5 seconds:
+	local nextbreath := GetProperty("#lastbreath");
+	if ( (nextbreath) and (nextbreath > ReadGameClock() ) )
+		return;
+	endif
+
+	if ( distance(me,opponent) < 2 )
+		SetProperty("#lastbreath",ReadGameClock() + 20 );
+		return;
+	endif
+
+	var itemdesc := ReadConfigFile( ":doors:itemdesc" );
+	local doorstoopen := 0;
+	local tox, toy;
+	local Doors := ListItemsNearLocation( me.x,me.y,me.z,3 );
+	foreach door in Doors
+			if (itemdesc[door.objtype].doortype)
+				doorstoopen := 1;
+				tox := door.x;
+				toy := door.y;
+				break;
+			endif
+	endforeach
+
+	if ( doorstoopen )
+		start_script("::/misc/npcdoor", me);
+		SetProperty("#lastbreath",ReadGameClock() + 20 );
+		sleepms(GetSleepDelayms());
+		RunTowardLocation(tox, toy);
+		sleepms(GetSleepDelayms());
+		RunTowardLocation(tox, toy);
+	else
+		SetProperty("#lastbreath",ReadGameClock() + 5 );
+	endif
+
+endfunction
+
+
+function Release()
+
+	if (MAX_MERCS_PER_PLAYER)
+		local merclist := { };
+		local newmerclist := { };
+		merclist := GetObjProperty(master,"mercs");
+
+		local i;
+		local count := 1;
+
+		if (merclist)
+			for (i := 1; i < len(merclist); i:=i+1)
+				if (SystemFindObjectBySerial(merclist[i]) or (merclist[i] = me.serial)) 
+					newmerclist[count] := merclist[i];
+					count:=count+1;
+				endif
+			endfor
+			
+		endif
+
+		EraseObjProperty(master,"mercs");
+
+		if (len(newmerclist) > 0)
+			setobjproperty(master,"mercs",newmerclist);
+		endif
+	endif
+
+	if (INVUL_WHILE_NOT_HIRED)
+		GrantPrivilege( me, "invul" );
+		me.enable( "invul" );
+	endif
+
+	me.setmaster( 0 );
+	SetProperty("master", 0);
+	say("It was good working for you.");
+	flee(master,40,20);
+	SetAnchor(me.x,me.y,10,1 );
+
+	EnableEvents(EVID_SPEECH,2);
+	EnableEvents(EVID_ENTEREDAREA, 3);
+
+
+	RemoveAllFromList();
+	EraseObjProperty(me,"myquote");
+	EraseObjProperty(me,"keywordbattlecry");
+
+	RestartScript(me);
+
+endfunction
+
+
+function Undress()
+
+	say("Wooh!");
+
+	set_critical(1);
+	foreach thing in listequippeditems(me)
+		if (RemoveIt(thing))
+			moveitemtocontainer(thing, me.backpack);
+		endif
+	endforeach
+	set_critical(0);
+
+endfunction
+
+function RemoveIt(it)
+
+	if ( it = GetEquipmentByLayer( me, LAYER_BEARD ) )
+		return 0;
+	elseif ( it = GetEquipmentByLayer( me, LAYER_HAIR ) )
+		return 0;
+	elseif ( it = GetEquipmentByLayer( me, LAYER_MOUNT ) )
+		return 0;
+	elseif ( it.objtype = 0x204E) 
+		return 0;
+	elseif ( it = (me.backpack) )
+		return 0;
+	endif
+
+	return 1;
+
+endfunction
+
+//there must be a better way?!
+function DrinkPotion(type)
+
+	if ( cint(getproperty("#potion")) > ReadGameClock()  )
+        	return 0;
+	endif
+
+	foreach item in EnumerateItemsInContainer(me.backpack)
+
+		case type
+			1: //*HealME*
+			if ( ( item.objtype = 0xDC01 ) or ( item.objtype = 0xDC02 ) or ( item.objtype = 0xDC03 ) or ( item.objtype = 0xDC18 ))
+				DoDrinkStuff(0);
+
+				case(item.objtype)
+					0xDC01: HealDamage(me, (RandomInt(7)  + 3));
+					0xDC02: HealDamage(me, (RandomInt(14) + 6));
+					0xDC03: HealDamage(me, (RandomInt(21) + 9));
+					0xDC18: HealDamage(me, (RandomInt(1) + 99));
+				endcase
+
+				DestroyItem(item);
+				DoDrinkStuff(1);
+				return 1;
+			//else
+			//	return 0;	
+			endif
+			2: //*CureME*
+			if ( ( item.objtype = 0xdc14 ) or ( item.objtype = 0xdc15 ) or ( item.objtype = 0xdc16 ))
+				DoDrinkStuff(0);
+
+				sleep(1);
+				CurePoison(me,0,me.name + " has CURED you!"); //a bit of a hack
+				PlaySoundEffect(me, SOUND_EFFECT_CURE);
+				PlayObjectCenteredEffect( me, EFFECT_SPARKLE, 10,10);
+				say("Im Cured!");	
+
+				DestroyItem(item);
+				DoDrinkStuff(1);
+				return 1;
+			//else
+			//	return 0;	
+			endif
+			3: // *Random Stat Gain potion
+
+			if (randomInt(2)=1)
+				if ( ( item.objtype = 0xdc0c ) or ( item.objtype = 0xdc0d )) //agility
+					DoDrinkStuff(0);
+
+					if(!CanMod(me, "dex"))
+						return 0;
+					endif
+
+					case(item.objtype)
+						0xdc11:  DoTempMod(me, "dex", 10,  60);
+						0xdc12:  DoTempMod(me, "dex", 20, 180);
+					endcase
+
+					DestroyItem(item);
+					DoDrinkStuff(1);
+					return 1;
+			//	else
+			//		return 0;	
+				endif
+			else
+				if ( ( item.objtype = 0xdc11 ) or ( item.objtype = 0xdc12 )) //strength
+					DoDrinkStuff(0);
+	
+					if(!CanMod(me, "str"))
+						return 0;
+					endif
+
+					case(item.objtype)
+						0xdc11:  DoTempMod(me, "str", 10,  60);
+						0xdc12:  DoTempMod(me, "str", 20, 180);
+					endcase
+
+					DoDrinkStuff(1);
+					return 1;
+			//	else
+			//		return 0;	
+				endif
+			endif
+			4: // *Throw Explode Pot
+			if ( (item.objtype = 0xdc08) or (item.objtype = 0xdc09) or (item.objtype = 0xdc07))
+				DestroyItem(item);
+				return 1;
+			//else
+			//	return 0;
+			endif
+
+		endcase
+
+	endforeach
+
+	return 0;
+
+endfunction
+
+
+function DoDrinkStuff(after)
+
+	if (after)
+		PlaySoundEffect( me,  SOUND_EFFECT_HEAL );
+		setproperty("#potion", (ReadGameClock() + 20));
+	else
+		EraseObjProperty(me, "IsMeditating");
+		PlaySoundEffect (me, SOUND_EFFECT_DRINK);
+		PerformAction(me, ANIM_EAT);
+		sleep(1);
+		CreateItemInBackpack(me, UOBJ_EMPTY_BOTTLE, 1);
+	endif
+
+endfunction
+
+
+
+//Adds a person to the friend list (says hello)
+function AddTofriendList()
+
+	say ("Who do you want added to my friend list?");
+	local who := Target( master , TGTOPT_HELPFUL);
+
+	if (!who.acctname)
+		say ("I cannot Befriend that!");
+		return;
+	elseif (who = master)
+		say ("You are already me friend, u gave me money.");
+		return;
+	elseif (who = me)
+		say ("err..");
+		return;
+	endif
+
+	if (CheckList(who.name, 0))
+		say ("That person is already an Enemy, you need to Remove them.");
+		return;
+	endif
+	if (CheckList(who.name, 1))
+		say ("That person is already Befriended.");
+		return;
+	endif
+
+	local Frlist := { };
+
+	if (!GetProperty("frlist")) //If we got no friends
+		Frlist[1] := lower(who.name);
+		SetProperty("frlist",Frlist);
+		say (who.name + " has been added to my friend list.");
+		return;
+	else
+		Frlist := GetProperty("frlist");
+	endif
+
+	if (len(Frlist)>MAX_FRIENDS)
+			say ("You have to many friends already.");
+	else
+		Frlist[ len(Frlist)+1 ] := lower(who.name);
+		say (who.name + " has been added to my friend list.");
+	endif
+
+	SetProperty("frlist",Frlist);
+
+endfunction
+
+//Adds a person to the hate list (attacks onsight)
+function AddToEnemyList()
+
+//	local who := select_player();
+
+	say ("Who do you want added to my enemy list?");
+	local who := Target( master , TGTOPT_HELPFUL);
+//    local who := lower(cstr(Sendtextentrygump( master, 
+//                  "Whom do you want added to my enemy list?", 
+//                   TE_CANCEL_DISABLE,
+//                   TE_STYLE_NORMAL,
+//                   10,        
+//                   "Name")));
+
+
+	if ((who.npctemplate) or (!who.dexterity))
+		say ("That cannot be my enemy!");
+		return;
+	elseif (who = master)
+		say ("Do you want me to leave or somethin?");
+		return;
+	elseif (who = me)
+		say ("err..");
+		return;
+	elseif (who.cmdlevel)
+		say ("I cannot attack such a great being.");
+		return;
+	endif
+
+	local Enlist := { };
+
+	if (CheckList(who.name, 1))
+		say ("That person is already an friend, you need to Remove them.");
+		return;
+	endif
+	if (CheckList(who.name, 0))
+		say ("That person is already an enemy.");
+		return;
+	endif
+
+	if (!GetProperty("enlist")) //If we got no enemys
+		Enlist[1] := lower(who.name);
+		SetProperty("enlist",Enlist);
+		say (who.name + " has been added to my enemy list.");
+		return;
+	else
+		Enlist := GetProperty("enlist");
+	endif
+
+
+	if (len(Enlist)>MAX_ENEMYS)
+		say ("You have to many enemys already.");
+	else
+		Enlist[ len(Enlist)+1 ] := lower(who.name);
+		say (who.name + " has been added to my enemy list.");
+	endif
+
+	SetProperty("enlist",Enlist);
+
+endfunction
+
+
+//Removes off both lists
+function RemoveFromList()
+
+    local name := lower(cstr(Sendtextentrygump( master, 
+                   "Whom do you wish to remove?", 
+                   TE_CANCEL_DISABLE,
+                   TE_STYLE_NORMAL,
+                   10,        
+                   "Name")));
+
+	local Frlist := GetProperty("frlist");
+	local Enlist := GetProperty("enlist");
+	local count:=0;
+
+	if (CheckList(name, 0))
+		local NewEnlist := { };
+		local i;
+		for (i := 1; i <= len(Enlist); i := i + 1)
+			if (lower(Enlist[i]) != lower(name))
+				count:=count+1;
+				NewEnlist[ count ] := cstr(Enlist[ i ]);
+			else
+				say (name + " removed from my enemy list.");
+			endif
+
+		endfor
+
+		EraseObjProperty(me,"enlist");
+		SetProperty("enlist",NewEnlist);
+		return;
+	endif
+
+	count:=0;
+
+	if (CheckList(name, 1))
+		local NewFrlist := { };
+		local i;
+		for (i := 1; i <= len(Frlist); i := i + 1)
+			if (lower(Frlist[i]) != lower(name))
+				count:=count+1;
+				NewFrlist[ count ] := Frlist[i];
+			else
+				say (name + " removed from my friend list.");
+			endif
+		endfor
+		EraseObjProperty(me,"frlist");
+		SetProperty("frlist",NewFrlist);
+		return;
+	endif
+
+	say (name + " isent on either of my lists.");
+
+endfunction
+
+//Removes all off both lists
+function RemoveAllFromList()
+	EraseObjProperty(me,"frlist");
+	EraseObjProperty(me,"enlist");
+endfunction
+
+//Reads out who is on the lists
+function SayList()
+
+	local Frlist := GetProperty("frlist");
+	local Enlist := GetProperty("enlist");
+
+	if (following)
+		Say("I am currently following "+following.name+".");
+		sleep(2);
+	elseif  (guarding)
+		Say("I am currently guarding "+ guarding.name + ".");
+		sleep(2);
+	elseif (camping)
+		Say("I am currently camping.");
+		sleep(1);
+	endif
+
+	Say("I have " + me.ar + " armour at the moment.");
+	sleep(2);
+
+	if (!Enlist and !Frlist)
+		Say("You have no friends or enemys listed with me.");
+		return;
+	endif
+
+	if (Frlist)
+		Say("In your friend list are:");
+		sleep(1);
+		foreach friend in Frlist;
+			Say(friend);
+			sleepms(500);
+		endforeach
+		sleep(1);
+	endif
+
+	if (Enlist)
+		Say("In your enemy list are:");
+		sleep(1);
+		foreach enemy in Enlist;
+			Say(enemy);
+			sleepms(500);
+		endforeach
+	endif
+
+endfunction
+
+
+function CheckList(name, whichlist)
+	local List;
+	if (whichlist) //Freind
+		List := GetProperty("frlist");
+	else
+		List := GetProperty("enlist");
+	endif
+	if (List[lower(name)])
+		return 1;
+	endif
+endfunction
+
+
+function FindEnemy(radius := 6)
+
+	foreach critter in listmobilesnearlocation(me.x, me.y, me.z, radius)
+		if (!critter.acctname)
+			local elem:= configfile[critter.npctemplate];
+			if ((critter != me) and (!elem.guardignore) and (critter.script != "tamed") and (elem.alignment != "good")) //Kill anything and everything
+				Fight(critter);
+			endif
+		else
+			if ( critter != master)
+				if (CheckList(critter.name,0))
+					lastbark := ReadGameClock()-1;
+					sayrandomthing(1,critter.name);
+					Fight(critter);
+					lastbark := ReadGameClock()-1;
+					if ((mastername) and (!critter))
+						say("Thatl teach u for messing with " + mastername + "!");
+					endif
+				elseif (CheckList(critter.name,1))
+					sayrandomthing(2,critter.name);
+				else
+					sayrandomthing(3,critter.name); //players choice of words
+				endif
+			endif
+		endif
+	endforeach
+
+	sleepms(500);
+
+endfunction
+
+function sayrandomthing(speechgroup, name)
+
+	if (lastbark < ReadGameClock() )
+		lastbark := ReadGameClock()+45;
+
+		if (!master)
+			lastbark := ReadGameClock()+300;
+		endif
+
+		if (speechgroup=1)  //In Enemy list
+			case (randomInt(6))
+				1:  say("Die in the name of " + master.name + "!");
+				2:  say("Begone " + name +", this is " + master.name + " land!");
+				3:  say("You are the sworn enemy of " + master.name + " " + name + "! you shall die!");
+				4:  say("He who opposes " + master.name + " dies!");
+				default: say("Die, enemy of " + master.name + "!");
+			endcase
+		elseif (speechgroup=2)  //In friends list
+			case (randomInt(3))
+				1:  say("You are most welcome here " + name);
+				2:  say( master.name + " welcomes you, " + name);
+				default: say("Hail " + name + ", friend of " + master.name + "!");
+			endcase
+		elseif (speechgroup=3)  //Players quote
+			local quote := GetProperty("myquote");
+
+			if (quote)
+				say(quote);
+			else
+				say("Hail " + name);
+			endif
+
+		endif
+
+	endif
+
+endfunction
+
+
+
+function grabloot(report)
+
+	local numitems := 0;
+
+	foreach item in ListItemsNearLocation(me.x, me.y, me.z,6)
+
+	    if ((GetObjProperty(item,"houseserial")) or (item.multi) or  (item.movable<>0)) return; endif
+
+		if( CheckLineOfSight( me, item ) )
+
+			local sh := GetStandingHeight( item.x, item.y, item.z );
+			if (sh.multi or sh.multi.serial)
+						break;
+			endif
+			local info := cint(GetMapInfo( item.x , item.y ).landtile);
+			if ((info > cint(0x405)) and (info < cint(0x456)))
+						break;
+			endif
+	
+			if (item.objtype = UOBJ_CORPSE)
+				if (!cint(GetObjProperty(item,"#ignoreit")) )
+					local Items := { };
+
+					foreach thingie in EnumerateItemsIncontainer(Item)
+						if (    (thingie.objtype < STARTHAIR or thingie.objtype > ENDHAIR) 
+						 and (!cint(GetObjProperty(thingie,"#ignoreit"))) )
+							Items[ len(Items)+1 ] := thingie;
+						endif
+					endforeach
+
+					numitems := 0;
+					if ( len(Items) )
+						RunToIt(item);
+						if (distance(me, item) < 2)
+							foreach thingie in Items
+								if (!GetObjProperty(thingie,"#ignoreitem"))
+									if ( moveitemtocontainer(thingie, me.backpack))
+										say( "*yoink*" );
+										numitems:=numitems+1;
+										SetObjProperty(thingie,"#ignoreitem",1);
+										sleepms(GetSleepDelayms()*2);
+										if (numitems >= len(Items))
+											if (report)
+												say( "Ive got it all." );
+											endif
+											return;
+										endif
+									else
+										numitems:=numitems+1;
+										SetObjProperty(thingie,"#ignoreitem",1);
+									endif
+								else
+									numitems:=numitems+1;	
+								endif
+							endforeach
+						endif 
+					else
+						SetObjProperty(item,"#ignoreit",1);
+					endif
+				endif
+			endif
+		endif
+
+	endforeach
+
+	if (report)
+		say ("Theres nothing to loot.");
+	endif
+
+endfunction
+
+
+
+function carve_corpse()
+
+	//check for something to carve body with...
+//	if (me.weapon.script != "bladed")
+//		say ("i need a bladed weapon");
+//	endif
+
+
+
+	foreach item in ListItemsNearLocation(me.x, me.y, me.z,6)
+
+		if (item.objtype = UOBJ_CORPSE)
+		
+			local conf := ReadConfigFile("corpses");
+			local c_type := item.corpsetype;
+			local elem := FindConfigElem(conf,c_type);
+
+			RunToIt(item);
+
+			if ( distance(me, item) > 2 )
+				say("I cant reach it.");
+				return;
+			endif
+
+			if (!elem or GetObjProperty(item, "nocut")=1)
+				return;
+			endif
+
+			if (GetObjProperty(item, "cut"))
+        
+				local can_chop := GetConfigInt(elem, "cut");
+
+				if (can_chop)
+					foreach thing in enumerateitemsincontainer(item)
+						if (thing.objtype>=STARTHAIR and thing.objtype<=ENDHAIR)
+							destroyitem(thing);
+						elseif (thing.container.serial = item.serial)
+							moveitemtolocation(thing, item.x, item.y, item.z,0);
+							sleep(1);
+						endif
+					endforeach
+
+					local myhead := CreateItemInContainer(me.backpack, UOBJ_HEAD, 1);
+					Setobjproperty(myhead, "serial", hex(cint(GetObjProperty(item, "serial"))));
+					Setobjproperty(myhead, "corpsetype", c_type );
+					local aname := item.name;
+					aname["A corpse of"] := "";
+					myhead.name := "The head of" + aname;
+					say("mmm, decapitated head.");
+					destroyitem(item);
+					sleep(1);
+				else
+				   say("This corpse looks a bit too mutilited already.");
+				endif
+
+			else
+
+				SetObjProperty(item, "cut",1);
+				local item1 := GetConfigString(elem, "item1");
+				local amount1 := GetConfigint(elem, "amount1");
+				local item2 := GetConfigString(elem, "item2");
+				local amount2 := GetConfigint(elem, "amount2");
+
+				if (amount1)
+				   CreateItemInContainer(me.backpack, item1, amount1);
+					sleep(1);
+				   say("Got it.");
+				endif
+
+				if (amount2)
+					sleep(1);
+				   CreateItemInContainer(me.backpack, item2, amount2);
+				endif
+
+			   local theblood:= CreateItemAtLocation(item.x, item.y, item.z, UOBJ_BLOOD, 1);
+			   item.saveonexit :=0;
+			   theblood.saveonexit :=0;
+
+				item.decayat := ReadGameClock() + 120;
+				theblood.decayat := ReadGameClock() + 200;
+
+			endif
+		
+			return;
+
+		endif
+
+	endforeach
+
+	say ("There are no bodys around here.");
+        
+endfunction
+
+
+
+//function returns 0 if the animal couldn't be created and/or
+//if the mount wasn't destroyed
+
+function dismountme( me, mount )
+
+	if (!mount)
+		if (!me)
+			return 0;
+		else
+			if (!me.corpsetype)
+				mount := GetEquipmentByLayer( me, 25 );
+			else
+				foreach item in ListRootItemsInContainerOfObjtype(me, 0xF021)
+					mount := item;
+				endforeach
+			endif
+		endif
+	endif
+
+	if (!mount)	return 0; endif
+
+	local animal := CreateNPCFromTemplate (MountTemplate, me.x, me.y, me.z);
+	if (!animal) return 0; endif
+
+	animal.color := mount.color;
+
+	if (GetObjProperty (mount, "petname"))
+		animal.name := GetObjProperty (mount, "petname");
+	endif
+	if (Getobjproperty(mount,"pethp"))
+		animal.hp := Getobjproperty(mount,"pethp");
+	endif
+	if (Getobjproperty(mount,"petmana"))
+		animal.mana := Getobjproperty(mount,"petmana");
+	endif
+
+	if ((me) and (masterserial))
+		SetObjProperty (animal, "master", masterserial);
+		animal.script := "tamed";
+		animal.facing := me.facing;
+		RestartScript (animal);
+	else
+		SetObjProperty(animal,"killme",1);
+	endif
+
+	if (DestroyItem( mount )) return 1; else return 0; endif
+
+endfunction
+
+
+function ThrowPotion(you)
+
+	if (!GetProperty("#lastbreath"))
+		SetProperty("#lastbreath",ReadGameClock() + 5);
+	endif
+
+	if (GetProperty("#lastbreath") > ReadGameClock() )
+		say ("I cant throw another potion yet!");
+		return;
+	endif
+
+	SetProperty("#lastbreath",ReadGameClock() + 5);
+
+	local counter := 0;
+	while (distance(me,you) < 2 and counter < 10)
+			counter := counter + 1;
+			RunAwayFrom(you);
+	endwhile
+
+	if ( counter < 11 )
+
+		var parms := {};
+		parms[1] := me;
+		parms[2] := you;
+
+		start_script( ":alchemy:explosion", parms ); 
+	else
+		say ("I cant get far enough away!");
+	endif
+
+endfunction
+
+function TakeItem(you,it)
+
+	TurnToward(you);
+	say ("I am in no need of this.");
+
+endfunction
+
+function DropCamp()
+	camploc[1] := me.x;
+	camploc[2] := me.y;
+	camploc[3] := me.z;
+endfunction

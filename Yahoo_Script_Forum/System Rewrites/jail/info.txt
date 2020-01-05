@@ -1,0 +1,45 @@
+*****************************************************************
+*								*
+*      		     Simple Jail System 1.1			*
+*			   by bzagh				*
+*			bzagh@bzagh.de				*
+*								*
+*****************************************************************
+
+
+***Description:
+This script is really simple, it has only one advantage than jailing normally a player: it can jail the whole account(TUS Style)
+
+
+***Installation:
+compile all files and move
+logon.ecl in scripts/misc and
+jail.ecl and forgive.ecl in a textcmd folder
+
+add this to your regions.cfg: (thx zulu)
+
+Region Jail
+{
+    Range       5269 1157 5313 1193
+    Guarded     0
+    NoCast      1
+}
+
+
+***Todo List:
+- jailing player for a certain time
+- add a jail-locations gump, in which you can choose between different jail-locations
+- forgive: send the player back to his old location
+
+if you have more points for this list, then email me
+
+
+***History
+1.1  - It uses now the new account-cprops, you _need_ POL89 to run these scripts
+1.01 - fixed some bugs(thx zulu)
+     - you can't jail clients with a higher cmdlevel anymore
+1.0  - First Release
+
+***Thx goes to:
+The POL Dev Team
+Racalac - who is always willing to help me :-)

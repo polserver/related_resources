@@ -1,0 +1,48 @@
+use uo;
+use npc;
+
+const CID_SHEEP_SHEARED	:= 0x00df;
+const CID_SHEEP_UNSHEARED	:= 0x00cf;
+
+program herding_skill_FFS ( who, crook )
+
+         SendSysMessage(who, "Select a sheep to move");
+         local animaltomove := Target(who);
+         local destination;
+
+             if (!animaltomove)
+                 SendSysMessage(who, "Cancelled.");
+                  return;
+             elseif (checksheep(animaltomove))
+                 SendSysMessage(who, "You can only use this on sheep");
+                 return;
+             elseif (CheckLineOfSight( who, animaltomove ))
+                 SendSysMessage(who, "You can't see that");
+             endif
+    
+        SendSysMessage(who, "to where?");
+       destination := TargetCoordinates( who );
+  
+         if (!CheckLosAt( animaltomove, destination.x, destination.y, destination.z ))
+            SendSysMessage(who, "The sheep can't see that");
+             return;
+         endif
+
+ 
+          SetObjProperty(animaltomove, "destinationx", destination.x);
+          SetObjProperty(animaltomove, "destinationy", destination.y);
+          SetObjProperty(animaltomove, "oldscript", animaltomove.script);
+          animaltomove.script := ":herding:herdingai";
+          RestartScript(animaltomove);
+
+endprogram
+           
+         
+function checksheep (sheep)
+  if (sheep.graphic := CID_SHEEP_SHEARED)
+     return 1;
+  elseif (sheep.graphic := CID_SHEEP_UNSHEARED)
+     return 1;
+  endif
+  return 0;
+endfunction

@@ -1,0 +1,42 @@
+// Glimmer Cantrip
+// Creates a ramdom spell effect on the target
+
+use uo;
+use os;
+use util;
+include "include/client";
+include "spellinc";
+
+program melody(caster)
+
+	const THISSPELL := 102;
+
+	local x := caster.x;
+	local y := caster.y;
+
+	local cast_on :=  target(caster, TGTOPT_CHECK_LOS );
+	if (!cast_on)
+		CleanUp(caster);
+		return;
+	endif
+	if ((caster.x != x) or (caster.y != y) or (BrokeCon(caster)))
+		SendSysMessage(caster, "You have lost your concentration.");
+		CleanUp(caster);
+		return;
+	endif
+
+	if (DoCast(caster, THISSPELL))
+		CleanUp(caster);
+		return;
+	endif
+
+	case (RandomInt(4))
+	0:	PlayObjectCenteredEffect(cast_on, FX_GLOW, 0x0a, 0x1e );
+	1:	PlayObjectCenteredEffect(cast_on, FX_SPARK_EFFECT,0x0a, 0x1e );
+	2:	PlayObjectCenteredEffect(cast_on, FX_BLESS_EFFECT,0x0a, 0x1e );
+	3:	PlayObjectCenteredEffect(cast_on, FX_HEAL_EFFECT, 0x0a, 0x1e ); 	
+	endcase
+	PlaySoundEffect(cast_on, 0x001d4);
+
+	CleanUp(caster);
+endprogram

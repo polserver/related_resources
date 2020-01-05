@@ -1,0 +1,50 @@
+
+use uo;
+use os;
+use cfgfile;
+
+include "include/client";
+include "spellinc";
+
+
+program castspell(parms)
+
+   var who := parms[1];
+   var magicid := parms[2];
+
+	local casterops := GetObjProperty(who, "casterops");
+
+	local spellcfg := ReadConfigFile("::spells");
+	local elem := FindConfigElem(spellcfg, magicid);
+	local circle := GetConfigInt(elem,"Circle");
+
+	local circfg := ReadConfigFile("::circles");
+	local cirelem := FindConfigElem(circfg,circle);
+	local delay := GetConfigInt(cirelem, "Delay");
+
+	SetObjProperty(who, "#casting", 1);
+
+	if (!casterops["NOSPEAK"])
+		SpeakPowerWords(who,magicid);
+	endif
+
+	SetObjProperty(who, "#casthp", who.hp);
+
+	PerformAction(who,ANIM_CAST_DIR);
+	who.frozen := 1;
+	sleepms( delay );
+	who.frozen := 0;
+
+	if (BrokeCon(who))
+		PlayObjectCenteredEffect(who, FX_SPELL_FAIL, 7, 7);
+		PlaySoundEffect(who, SFX_5B);
+		SendSysMessage(who, "You lost your concentration.");
+		CleanUp(who);
+		return;
+	endif
+
+	set_critical(1);
+	Detach();
+	StartSpellEffect(who,magicid);
+
+endprogram

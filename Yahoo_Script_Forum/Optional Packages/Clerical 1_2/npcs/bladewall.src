@@ -1,0 +1,11 @@
+use uo;
+use os;
+use npc;
+
+var me := self();
+
+program bladewall()
+	//They only last 30 seconds
+	sleep(30);
+	ApplyRawDamage(me, 5000);	
+endprogram

@@ -1,0 +1,38 @@
+//
+//
+//
+//
+//
+
+use basic;
+use basicio;
+use npc;
+use uo;
+
+program txtcmd_setnpcpath ( me, pathname )
+
+    local who := Target( me, TGTOPT_NOCHECK_LOS );
+
+var gprop := GetGlobalProperty( pathname );
+var pathprop := GetObjProperty( who, "NPCPath" );
+
+	if ( !gprop )
+		Print ( "Global Prop Warning: " + pathname + " does not exist - NPC not set!" );
+		SendSysMessage( who, "Global Prop Warning: " + pathname + " does not exist - NPC not set!" );
+		return;
+	else
+		if ( !pathprop )
+			Print ( "CProp: " + pathname + " does not exist - Initiating!" );
+			SendSysMessage( who, "CProp: " + pathname + " does not exist - Initiating!" );
+			SetObjProperty( who, "NPCPath", pathname );
+			RestartScript( who );
+		else
+			Print ( "CProp:" + pathname + " exists - Resetting! who.name=" + who.name + " PathProp=" + pathprop );
+			SendSysMessage( me, "CProp:" + pathname + " exists - Resetting!" );
+			SetObjProperty( who, "NPCPath", pathname );
+			SetObjProperty( who, "NpcPathRule", 1);
+			RestartScript( who );
+		endif
+	endif
+
+endprogram

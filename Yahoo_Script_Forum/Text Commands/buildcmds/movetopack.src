@@ -1,0 +1,9 @@
+use uo;
+
+program movetopack(who)
+	SendSysMessage( who, "Select item to move" );
+	var what := Target( who );
+	SendSysMessage( who, "To whom's pack shall we move this?" );
+	var whom := Target( who );
+	MoveItemToContainer( what, whom.backpack );
+endprogram

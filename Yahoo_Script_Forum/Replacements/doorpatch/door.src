@@ -1,0 +1,71 @@
+///////////////////////////////////
+//
+// created by Syzygy
+// modified 2/4/00 by Madman Across the Water
+//    madman@well.com
+// -replaces the std pkg doors, adding functionality for
+//   some of the gates that were impossible to make work
+//   under that code.
+// -Mostly a hack of the doors.src code with the changes.src
+//   code. Removes the core function calls door.open() and door.close()
+// modified 8/22/00 by Madman Across the Water
+// -Significant rewrite of the package. Moved most of the functionality into the
+// open_door and close_door scripts, so they could be called independantly. 
+// Doors will no longer close on mobs (thanks Ebonhand for the code and idea.)
+// Double doors now work, if the second door was already unlocked.
+// Doors will still open on mobs, as it will become a quick exploit if you can 
+//   prevent a door from opening by standing on the tile it will open to.
+
+use uo;
+use os;
+use cfgfile;
+
+include "doors";
+
+program use_door( chr , door)
+
+    var doordesc := ReadConfigFile("itemdesc");
+    var dooroptions := ReadConfigFile("door");
+
+    var configuration := FindConfigElem(dooroptions, "doors");
+    var refresh := GetConfigString(configuration, "DoorsRefresh");
+    var flowoption := lower(GetConfigString(configuration, "OpenFromInside"));
+    var closelocked := lower(GetConfigString(configuration, "CloseLocked"));
+
+    if ((chr.multi) and (!GetObjProperty(door, "Flow")) and (flowoption != "no"))
+        run_script_to_completion(":doors:set_flow",chr.multi);
+    endif
+    
+    if ( IsLocked (chr, door, flowoption, closelocked) )
+        PrintTextAbovePrivate( door, "That is locked.", chr );
+    else
+        Detach();
+        if (GetObjProperty( door, "WhenOpened" ))
+            start_script(":doors:close_door", door);
+        else
+            start_script(":doors:open_door", door);
+            foreach potentialdoor in ListObjectsInBox((door.x-1),(door.y-1),(door.z),(door.x+1),(door.y+1),(door.z))
+                  if (!potentialdoor.hp)
+                     var doortype := doordesc[potentialdoor.objtype].doortype;
+                     if ((doortype) and (door != potentialdoor))
+                           if ((!potentialdoor.locked) and (!GetObjProperty(potentialdoor, "WhenOpened")))
+                                 start_script(":doors:open_door", potentialdoor);
+                           endif
+                     endif
+                  endif
+            endforeach
+
+            if (refresh["yes"])
+                   var param := array;
+                   param[0] := chr;
+                   param[1] := door;
+                   start_script(":housing:refresh",param);
+                   // Note that this calls the function every time a door is opened.
+                   // If you want to limit it, add the limitations yourself.
+                   // I would have limited it to when the opener is in a multi, but that
+                   // would have excluded the static housing some shards use.
+            endif
+        endif
+    endif
+endprogram
+

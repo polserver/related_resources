@@ -1,0 +1,105 @@
+use uo;
+use os;
+
+include "include/eventid";
+
+//I believe 50 is enough, whatcha think?
+Set_Priority(50);
+
+//Structured array with all online guards
+var guards array;
+
+program GuardsNerve ()
+	var ev;
+	while (1)
+		ev := Wait_For_Event(120);
+		if (ev)
+			case (ev.type)
+				EVID_GUARD_CALL:
+					HandleCall(ev);
+				EVID_GUARD_AVAILABLE:
+					SetAvailable(ev.guard);
+				EVID_GUARD_REGISTER:
+					AddGuard(ev.guard);
+			endcase
+		endif
+	endwhile
+endprogram
+
+//Adds a new guard to the database (per guards' request).
+function AddGuard(byref guard)
+	var guardstruct := struct;
+	guardstruct.+objref := guard;
+	guardstruct.+hunting := 0;
+	guards.append(guardstruct);
+endfunction
+
+//Sets a guard that was on duty once again available for calls.
+function SetAvailable(byref who)
+	foreach guard in guards
+		if (guard.objref = who)
+			guard.hunting := 0;
+			return;
+		endif
+	endforeach
+endfunction
+
+//This function will validate the call: is the target really a criminal? Is it under a guarded area?
+//If it's a valid call then it will forward the call to one of our guards.
+function HandleCall (byref event)
+	if (IsBeingHunted(event.criminal) or !Guarded(event.criminal.x, event.criminal.y))
+		return;
+	endif
+
+	if (!ForwardCall(event))
+		print("FATAL ERROR: No enough guards!");
+		//If no available guards were found, it returns an error.
+		//My shard will have about 200 guards. More than sufficient.
+		//I Guess you all will always have enough guards. However...
+		//ApplyRawDamage(event.criminal, event.criminal.hp); might be useful...
+		//for the paranoids out there ;)
+	endif
+endfunction
+
+//This function will check if a criminal is being hunted by any of our guards.
+//It will check the database for a guard that has the criminal as it's target.
+function IsBeingHunted (byref criminal)
+	foreach guard in guards
+		if (guard.hunting = criminal)
+			return 1;
+		endif
+	endforeach
+	return 0;
+endfunction
+
+//This function will forward a call: it will find the next available guard, and check if it's alive.
+//If the guard is gone, this function will remove it's record from the database. Otherwise this function
+//will send it an event - and the guard should take the call.
+function ForwardCall (byref event)
+	var num, total := len(guards);
+	for (num:=1; num<=total; num:=num+1)
+		if (!guards[num].hunting)
+			if (guards[num].objref)
+				guards[num].hunting := event.criminal;
+				SendEvent(guards[num].objref, event);
+				return 1;
+			else
+				guards.erase(num);
+			endif
+		endif
+	endfor
+endfunction
+
+//Okay, I know this is not the most practical way, but I'm a performance lover.
+//This is the fatest method to check if a locating is under a guarded area.
+//Put in the box coords for the guarded areas in your Shard.
+function Guarded (x, y)
+	if (
+	//A box is a squere. You must have the square's top left vertex coordinates, as well as it's botton right.
+	(x>=topleftX and y>=topleftY and x<=bottonrightX and y<=bottonrightY) or //Town Name
+	//... more boxes ...
+		)
+		return 1;
+	endif
+	return 0;
+endfunction

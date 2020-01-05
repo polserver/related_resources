@@ -1,0 +1,16 @@
+use uo;
+use os;
+use cfgfile;
+
+include "include/newpoisons";
+
+program poisonhim(who)
+
+local what := target(who, TGTOPT_NOCHECK_LOS);
+if (!what)
+	return;
+endif
+
+addpoison(what,"commoncold",300);
+sendsysmessage(who, what.name + " been infected with a cold virus");
+endprogram

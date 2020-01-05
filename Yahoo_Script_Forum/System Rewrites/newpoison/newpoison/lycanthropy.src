@@ -1,0 +1,60 @@
+use uo;
+use os;
+use util;
+
+program lycanthropy(parms)
+
+local who := parms[1];
+
+while(1)
+	checkem(who);
+	sleep(60);
+endwhile
+endprogram
+
+function checkem(who)
+if (who.dead)
+	return;
+endif
+local stuff := getglobalproperty("Nature");
+if (!stuff)
+	return;
+endif
+local light := cint(getglobalproperty("lightlevel"));
+
+if (light.errortext)
+	return;
+endif
+
+if (light > 20)
+	//it's dark
+	if (who.graphic <> 0xe1)
+		sendsysmessage(who, "You feel hair growing all over your body");
+		sleep(3);
+		sendsysmessage(who, "Your teeth feel like they're pulling out of your head");
+		sleep(3);
+		sendsysmessage(who, "The moon seems to call to you");
+		sleep(3);
+		sendsysmessage(who, "You fall to the ground and a change comes upon you");
+		playsoundeffect(who, 231);
+		setobjproperty(who, "color", who.color);
+		who.SetMurderer(1);
+		setobjproperty(who, "name", who.name);
+		setobjproperty(who, "graphic", who.graphic);
+		who.name := "a dire wolf";
+		setobjproperty(who, "lyc", 1);
+		who.graphic := 0xe1;
+		who.color := 0x0455;
+	endif
+else
+	if (who.graphic = 0xe1)
+		who.SetMurderer(0);
+		who.graphic := getobjproperty(who, "graphic");
+		who.name := getobjproperty(who, "name");
+		who.color := getobjproperty(who, "color");
+	endif
+endif
+	
+
+
+endfunction

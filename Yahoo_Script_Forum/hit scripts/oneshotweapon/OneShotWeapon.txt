@@ -1,0 +1,21 @@
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
+// Author: Admin ShRuD[Dharma]  
+//      -The Dragonlance UO Shard-      www.gamearena.it/drl
+// Date: 1/dec/00
+// Version: 1.0
+// Last Update: 
+// Email: ShRuD@galactica.it    Uin: 38209689
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
+
+
+This is a Hitscript for a singleshot/itemdesc defined Weapon.
+You can add it to all the new weapon you like, the example of a "OneShot Bardiche" is in the itemdesc.cfg
+You can configure damage, speed etc. and also attach other special effect (OnHit cprop)
+
+
+How to install:
+
+Append itemdesc.cfg to \pol\pkg\std\combat\itemdesc.cfg
+Copy other files to \pol\pkg\std\combat\
+Compile oneshothit.src & oneshothitscript.src
+Restart your server

@@ -1,0 +1,77 @@
+use uo;
+use os;
+
+include "include/client";
+include "include/spellrestrictions";
+include "include/statmod";
+
+//const UOBJ_REACTIVE_ROBE;
+
+program reactivearmor( caster, cast_on )
+	local circle := 1;
+	var last_res;
+	if (caster = "#MOB")
+		caster := caster;
+		cast_on := cast_on;
+	else
+		SendSysMessage( caster, "Select your target." );
+		cast_on := Target( caster);
+		last_res := GetObjProperty( caster, "lastres" );
+		if( last_res > readgameclock() )
+			SendSysMessage( caster, "Your mind is too weak to cast this spell." );
+			return;
+		endif
+		if (!Can_Cast(caster,circle))
+			return;
+		endif
+	endif
+	PlaySoundEffect(cast_on, SFX_SPELL_REACTIVE_ARMOR);
+	PlayObjectCenteredEffect( cast_on, FX_BLESS_EFFECT, 5,5);
+   	if (GetObjProperty(cast_on, "#reactive"))
+		SendSysMessage(caster,"Already under the influence!");
+		return;
+	endif
+	local magery := GetSkill(caster, SKILLID_MAGERY);
+	local duration := GetModDuration( magery );
+	var hitscript := "reactivearmor_hitscript";
+	sethitscript(cast_on, magery, hitscript);
+	detach();
+	sleep(duration);
+	removeprops(cast_on, hitscript);
+	SendSysMessage( cast_on, "You feel less protected without your invisible shield" );
+endprogram
+
+function sethitscript(who, magery,hitscript)
+	var amt_react := cdbl(magery)/100;
+	SetObjProperty( who, "#reactive", 1 );
+	SetObjProperty( who, "reactive_amt", amt_react );
+	var my_onhit := {};
+	my_onhit := GetObjProperty( who, "OnHit" );
+	if( !my_onhit )
+		SetObjProperty( who, "OnHit", hitscript );
+	else
+		my_onhit.append(hitscript);
+		SetObjProperty( who, "OnHit", my_onhit );
+	endif
+endfunction
+
+function removeprops(who,hitscript)
+	EraseObjProperty( who, "#reactive" );
+	EraseObjProperty( who, "reactive_amt" );
+	var my_new_onhit := {};
+	my_new_onhit := GetObjProperty( who, "OnHit" );
+	my_new_onhit := SplitWords(my_new_onhit);
+	var length_onhit := len(my_new_onhit);
+	if( length_onhit > 1 )
+		my_new_onhit := my_new_onhit.erase(hitscript);
+	else
+		EraseObjProperty( who, "OnHit" );
+		my_new_onhit := GetObjProperty( who, "OnHit" );
+	endif
+endfunction
+
+function output( who, msg )
+	if( who.cmdlevel )
+		SendSysMessage( who , msg );	
+	endif
+endfunction

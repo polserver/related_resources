@@ -1,0 +1,20 @@
+///////////////////////////////////////////////////////////
+// npcdesc.src
+//
+// Text command to display the npc template browser.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 19-Apr-2000
+// Updated: 19-Apr-2000
+//
+///////////////////////////////////////////////////////////
+
+use os;
+
+program textcmd_npcdesc(who)
+	unload_scripts("npcutil");
+
+	start_script(":npcutil:npcutil", who);
+endprogram

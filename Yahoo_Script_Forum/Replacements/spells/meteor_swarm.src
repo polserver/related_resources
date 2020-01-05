@@ -1,0 +1,58 @@
+use os;
+use uo;
+
+include "include/client";
+include "include/spellattack";
+include "include/spellrestrictions";
+
+program cast_meteor( parms )
+
+	local circle := 7;
+	local caster;
+	local cast_on;
+
+	if (parms[1] = "#MOB")
+		caster := parms[2];
+		cast_on := parms[3];
+	else
+		caster := parms;
+		cast_on := CanTargetArea(caster, circle);
+		if (!cast_on)
+			return;
+		endif
+	endif
+
+	detach();
+
+	local dmg;
+	local victims := ListMobilesNearLocationEx( cast_on.x , cast_on.y , cast_on.z , 3 , 0x03);
+	foreach mobile in victims
+	   SetObjProperty(cast_on, "LastHit", {caster.name, caster.serial, caster });
+
+		PlayMovingEffect( caster, cast_on, FX_FIREBALL, 5, 1 );
+		if( (CheckLosAt( mobile, cast_on.x , cast_on.y , cast_on.z ) ) )
+			dmg := CalcSpellDamage(circle,caster,mobile);
+			send_attack(mobile,caster, 55);
+			PlaySoundEffect( mobile , SFX_SPELL_FIREBALL );
+			PlayMovingEffect( caster, mobile, FX_FIREBALL, 5, 1 );
+		        ApplyRawDamage( cast_on , Resisted(circle,caster,cast_on,dmg) );
+		endif
+
+		PlayMovingEffect( caster, cast_on, FX_FIREBALL, 5, 1 );
+
+		sleep(1);
+
+		PlayMovingEffect( caster, cast_on, FX_FIREBALL, 5, 1 );
+
+		if( (CheckLosAt( mobile, cast_on.x , cast_on.y , cast_on.z ) ) )
+			dmg := CalcSpellDamage(circle,caster,mobile);
+			send_attack(mobile,caster, 55);
+			PlaySoundEffect( mobile , SFX_SPELL_FIREBALL );
+			PlayMovingEffect( caster, mobile, FX_FIREBALL, 5, 1 );
+		        ApplyRawDamage( cast_on , Resisted(circle,caster,cast_on,dmg) );
+		endif
+		PlayMovingEffect( caster, cast_on, FX_FIREBALL, 5, 1 );
+
+    	endforeach
+
+endprogram

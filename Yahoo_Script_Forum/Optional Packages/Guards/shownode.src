@@ -1,0 +1,18 @@
+use uo;
+
+const UOBJ_GUARD_NODE := 0xa340;
+program textcmd_showrunes(who, trange)
+
+local range;
+if (trange)
+	range := cint(trange);
+else
+	sendsysmessage(who, "usage: shownode distance");
+	return;
+endif
+
+foreach item in ListItemsNearLocationOfType( who.x,who.y,who.z, range, UOBJ_GUARD_NODE )
+	item.graphic := 0x151A;
+endforeach
+
+endprogram

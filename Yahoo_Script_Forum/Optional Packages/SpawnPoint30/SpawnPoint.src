@@ -1,0 +1,258 @@
+///////////////////////////////////////////////////////////
+// SpawnPoint.src
+//
+// Main controller script for a spawn point.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+use os;
+use uo;
+
+include "include/eventid";
+include "include/gumps";
+include "include/gumputil";
+include "include/client";
+include "SpawnPoint";
+
+// Point data structure.
+var pt := struct;
+
+program SpawnPoint(who, point)
+	if (who.cmdlevel < 3)
+		return 0;
+	endif
+
+	pt.+disabled := CInt(GetObjProperty(point, "Disabled"));
+	pt.+despawn := CInt(GetObjProperty(point, "Despawn"));
+	pt.+group := CInt(GetObjProperty(point, "Group"));
+	pt.+type := GetObjProperty(point, "Type");
+	pt.+template := GetObjProperty(point, "Template");
+	pt.+max := CInt(GetObjProperty(point, "Max"));
+	pt.+range := CInt(GetObjProperty(point, "Range"));
+	pt.+freq := CInt(GetObjProperty(point, "Frequency"));
+	pt.+expire := CInt(GetObjProperty(point, "Expire"));
+	pt.+expirenum := CInt(GetObjProperty(point, "ExpireNum"));
+	pt.+starthr := CInt(GetObjProperty(point, "HrStart"));
+	pt.+endhr := CInt(GetObjProperty(point, "HrEnd"));
+	pt.+note := GetObjProperty(point, "Note");
+	if (!pt.note)
+		pt.note := "<NONE>";
+	endif
+
+	var cont := 0;
+	while (!cont)
+		cont := ShowPointGump(who, point);
+	endwhile;
+endprogram
+
+///////////////////////////////////////////////////////////
+// Purpose: Displays the gump.
+// Params:  who			Ref to who is displaying it.
+//			point		Ref to point being displayed.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function ShowPointGump(byref who, byref point)
+	GFSetRef(0, 0);
+
+	// Main page.
+	GFPage(0);
+	GFNoDispose();
+	GFResizePic(0, 0, BKGND_STONESLAB, 270, 340);
+	GFTilePic(0, 0, point.graphic);
+	GFTextLine(30, 5, COLOR_YELLOW, "Spawn Point Config");
+
+	var state;
+	GFTextLine(30, 25, COLOR_BLUE_LIGHT, "State:");
+	if (pt.disabled)
+		state := GFCheckBox(80, 25, G_STONE_CHECK_0, G_STONE_X_0, 1);
+		GFTextLine(120, 25, COLOR_RED, "Disabled");
+	else
+		state := GFCheckBox(80, 25, G_STONE_CHECK_0, G_STONE_X_0, 0);
+		GFTextLine(120, 25, COLOR_GREEN, "Enabled");
+	endif
+
+	GFButtonPage(120, 50, G_GRAY_CIRCLE_0, G_GRAY_CIRCLE_1, 2);
+	GFTextLine(20, 50, COLOR_BLUE_LIGHT, "Type:");
+	GFTextLine(140, 50, COLOR_GREEN_LIGHT, pt.type);
+
+	GFTextLine(20, 70, COLOR_BLUE_LIGHT, "Template:");
+	GFGumpPic(120, 70, G_TX_MARBLE_M);
+	var template := GFTextEntry(120, 70, 100, 20, COLOR_GREEN, pt.template);
+
+	GFTextLine(20, 90, COLOR_BLUE_LIGHT, "Max:");
+	GFGumpPic(120, 90, G_TX_MARBLE_S_DK);
+	var max := GFTextEntry(125, 90, 50, 20, COLOR_GREEN, pt.max);
+	GFTextLine(185, 90, COLOR_BLUE_LIGHT, "(#)");
+
+	GFTextLine(20, 110, COLOR_BLUE_LIGHT, "Range:");
+	GFGumpPic(120, 110, G_TX_MARBLE_S_DK);
+	var range := GFTextEntry(125, 110, 50, 20, COLOR_GREEN, pt.range);
+	GFTextLine(185, 110, COLOR_BLUE_LIGHT, "(sqrs)");
+
+	GFTextLine(20, 130, COLOR_BLUE_LIGHT, "Frequency:");
+	GFGumpPic(120, 130, G_TX_MARBLE_S_DK);
+	var freq := GFTextEntry(125, 130, 50, 20, COLOR_GREEN, pt.freq);
+	GFTextLine(185, 130, COLOR_BLUE_LIGHT, "(mins)");
+
+	GFTextLine(20, 150, COLOR_BLUE_LIGHT, "Time Expire:");
+	GFGumpPic(120, 150, G_TX_MARBLE_S_DK);
+	var expire := GFTextEntry(125, 150, 50, 20, COLOR_GREEN, pt.expire);
+	GFTextLine(185, 150, COLOR_BLUE_LIGHT, "(mins left)");
+
+	GFTextLine(20, 170, COLOR_BLUE_LIGHT, "Num Expire:");
+	GFGumpPic(120, 170, G_TX_MARBLE_S_DK);
+	var expirenum := GFTextEntry(125, 170, 50, 20, COLOR_GREEN, pt.expirenum);
+	GFTextLine(185, 170, COLOR_BLUE_LIGHT, "(num left)");
+
+	GFTextLine(20, 190, COLOR_BLUE_LIGHT, "Start HR:");
+	GFGumpPic(120, 190, G_TX_MARBLE_S_DK);
+	var starthr := GFTextEntry(125, 190, 50, 20, COLOR_GREEN, pt.starthr);
+	GFTextLine(185, 190, COLOR_BLUE_LIGHT, "(1-24)");
+
+	GFTextLine(20, 210, COLOR_BLUE_LIGHT, "End HR:");
+	GFGumpPic(120, 210, G_TX_MARBLE_S_DK);
+	var endhr := GFTextEntry(125, 210, 50, 20, COLOR_GREEN, pt.endhr);
+	GFTextLine(185, 210, COLOR_BLUE_LIGHT, "(1-24)");
+
+	GFTextLine(20, 230, COLOR_BLUE_LIGHT, "Note:");
+	GFGumpPic(20, 250, G_TX_MARBLE_SQ_L);
+	var note := GFTextEntry(25, 250, 200, 20, COLOR_GREEN, pt.note);
+
+	// Despawn option.
+	var despawn;
+	if (pt.despawn)
+		despawn := GFCheckBox(5, 280, G_STONE_CHECK_0, G_STONE_X_0, 1);
+		GFTextLine(35, 280, COLOR_RED, "Despawn on Destroy");
+	else
+		despawn := GFCheckBox(5, 280, G_STONE_CHECK_0, G_STONE_X_0, 0);
+		GFTextLine(35, 280, COLOR_BLUE_LIGHT, "Leave on Destroy");
+	endif
+
+	// Stagger option.
+	var group;
+	if (pt.group)
+		group := GFCheckBox(160, 280, G_STONE_X_0, G_STONE_CHECK_0, 1);
+		GFTextLine(190, 280, COLOR_BLUE_LIGHT, "Group");
+	else
+		group := GFCheckBox(160, 280, G_STONE_X_0, G_STONE_CHECK_0, 0);
+		GFTextLine(190, 280, COLOR_RED, "Stagger");
+	endif
+
+	// Reset command.
+	var reset := GFButtonID(160, 310, G_RED_DIAMOND_0, G_RED_DIAMOND_1, 1);
+	GFTextLine(190, 313, COLOR_YELLOW, "Reset");
+
+	GFPage(2);
+	GFResizePic(241, 0, BKGND_STONESLAB, 100, 100);
+
+	var npc := GFButtonID(245, 10, G_GRAY_CIRCLE_0, G_GRAY_CIRCLE_1, 1);
+	GFTextLine(265, 10, COLOR_GREEN, "NPC");
+
+	var container := GFButtonID(245, 30, G_GRAY_CIRCLE_0, G_GRAY_CIRCLE_1, 1);
+	GFTextLine(265, 30, COLOR_GREEN, "Container");
+
+	var item := GFButtonID(245, 50, G_GRAY_CIRCLE_0, G_GRAY_CIRCLE_1, 1);
+	GFTextLine(265, 50, COLOR_GREEN, "Item");
+
+	var keyret := GFSendGump(who);
+
+	// Check for page 2 button presses, redisplay if pressed.
+	if (keyret[npc.keyid])
+		SetObjProperty(point, "Type", "NPC");
+		pt.type := "NPC";
+		return 0;
+	elseif (keyret[container.keyid])
+		SetObjProperty(point, "Type", "Container");
+		pt.type := "Container";
+		return 0;
+	elseif (keyret[item.keyid])
+		SetObjProperty(point, "Type", "Item");
+		pt.type := "Item";
+		return 0;
+	endif
+
+	// Check for state change.
+	var disabledtxt := "";
+	if (keyret[state.keyid])
+		SetObjProperty(point, "Disabled", 1);
+		disabledtxt := "Disabled";
+		pt.disabled := 1;
+	else
+		EraseObjProperty(point, "Disabled");
+		pt.disabled := 0;
+	endif
+
+	// Check for Group option.
+	if (keyret[group.keyid])
+		SetObjProperty(point, "Group", 1);
+		pt.group := 1;
+	else
+		EraseObjProperty(point, "Group");
+		pt.group := 0;
+	endif
+
+	// Check for despawn change.
+	if (keyret[despawn.keyid])
+		SetObjProperty(point, "Despawn", 1);
+		pt.despawn := 1;
+	else
+		pt.despawn := 0;
+		EraseObjProperty(point, "Despawn");
+	endif
+
+	pt.template := GFExtractData(template.keyid, keyret);
+	pt.max := GFExtractData(max.keyid, keyret);
+	pt.range := GFExtractData(range.keyid, keyret);
+	pt.freq := GFExtractData(freq.keyid, keyret);
+	pt.expire := GFExtractData(expire.keyid, keyret);
+	pt.expirenum := GFExtractData(expirenum.keyid, keyret);
+	pt.starthr := GFExtractData(starthr.keyid, keyret);
+	pt.endhr := GFExtractData(endhr.keyid, keyret);
+	pt.note := GFExtractData(note.keyid, keyret);
+
+	// Set the other props.
+	SetObjProperty(point, "Type", pt.type);
+	SetObjProperty(point, "Template", pt.template);
+	SetObjProperty(point, "Max", pt.max);
+	SetObjProperty(point, "Range", pt.range);
+	SetObjProperty(point, "Frequency", pt.freq);
+	SetObjProperty(point, "Expire", pt.expire);
+	SetObjProperty(point, "ExpireNum", pt.expirenum);
+	SetObjProperty(point, "HrStart", pt.starthr);
+	SetObjProperty(point, "HrEnd", pt.endhr);
+	if (!pt.note)
+		pt.note := "<NONE>";
+	endif
+	SetObjProperty(point, "Note", pt.note);
+
+	var hrtxt := "";
+	if (pt.starthr and pt.endhr)
+		hrtxt := "HR: " + pt.starthr + " - " + pt.endhr;
+	endif
+
+	point.name := "SpawnPoint [" + pt.max + " " + pt.template + "] " + disabledtxt + hrtxt;
+
+	// Reset button.
+	if (keyret[reset.keyid])
+		DespawnAll(point);
+		Sleep(2);
+		SetObjProperty(point, "NextSpawn", 0);
+		SetObjProperty(point, "NextValidate", 0);
+	endif
+
+	// Send event to manager that config changed.
+	var ev := struct;
+	ev.+type := EVID_SPAWNPOINT_CHANGED;
+	ev.+source := point;
+	var pid := GetGlobalProperty("#SpawnPointManagerPID");
+	var proc := GetProcess(pid);
+	proc.SendEvent(ev);
+
+	return 1;
+endfunction

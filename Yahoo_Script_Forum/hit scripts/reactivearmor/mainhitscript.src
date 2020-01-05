@@ -1,0 +1,116 @@
+// Main Hitscript
+// This script is fired when all weapons/creatures strike an opponent.
+// It checks the weapon and armor for any effects that need to be 
+// applied, then calls them as scripts.  This means that we will have
+// to store the effects with the same nameas the script.  The program
+// flows like this: if there are no weapon effects, it checksfor armor
+// effects.   If there are no armor effects, it applies damage, makes
+// any notochanges needed as far as criminal flagging [do we need to 
+// add this?   maybe not], thenreturns.   If there IS an armor effect
+// present, we start the armor script and pass all thenecessary info.
+// Now, since there may be multiple effects on a single armor/critter
+// (i.e.,"silveronly", "blunt", etc), we need to keep track of how
+// the rawdamage will be altered.  So theyset a temporary property on
+// the defender, and let the MainHitScript do the actualdamage 
+// dealing.  In other words, the armor and weapon subscripts will only
+// ALTER thedamage, not deal any.  If the effects call for no damage
+// to be dealt, we can just have thescript set the TempDamage to a 
+// value of 0.  Once the armor is done cycling thedamage, we apply
+// (if needed), and return.  Now, if there ARE weapon effects to be
+// processed, we once again cycle through all the effects in order.
+// We check to see if the target is slain after each one (unless we 
+// want to add torture and physical insults to the shard), and apply
+// any damage that we need to.  We also want the weapon scripts not 
+// to deal damage, but to pass the changes to rawdamage.   This is 
+// because each effect may have different results for different armor
+// types.  So basically, once we're done cycling the weapon scripts, 
+// that's when we apply the rest of the damage.  We still want to 
+// check for death though, in case we have any other effects that 
+// would cause it (e.g., lightning damage, fire damage, insta-kill,
+// or whatever.)
+use uo;
+use os;
+
+include "include/hitscriptinc";
+
+program MainHitScript(attacker, defender, weapon, armor, basedamage, rawdamage)
+	local WeaponHit := GetObjProperty(weapon, "OnHit");
+	local ArmorHit := {};
+	if (armor = 0)
+		ArmorHit := GetObjProperty(defender, "OnHit");
+	else
+		if( GetObjProperty( defender, "#reactive" ) )
+			ArmorHit := GetObjProperty( defender, "OnHit" );
+		else
+			ArmorHit := GetObjProperty(armor, "OnHit");
+		endif
+	endif
+	local x;
+	if (!WeaponHit)
+		if (!ArmorHit)
+			DealDamage(defender, attacker, rawdamage);
+			SetObjProperty(defender, "LastHit", {attacker.name, attacker.serial, weapon });
+			AdjustNoto(attacker);
+			return;
+		else
+			ArmorHit := SplitWords(ArmorHit);
+			foreach hitscript in ArmorHit
+				detach();
+				set_critical(1);
+				Start_Script(cstr(hitscript), { attacker, defender, weapon, armor, basedamage, rawdamage } );
+				rawdamage := CInt(GetObjProperty(defender, "TempDamage") );
+			endforeach
+			EraseObjProperty(defender, "TempDamage");
+			if (rawdamage > 0)
+				DealDamage(defender, attacker, rawdamage);
+				SetObjProperty(defender, "LastHit", {attacker.name, attacker.serial, weapon });
+				AdjustNoto(attacker);
+				return;
+			else
+				return;
+			endif
+		endif
+	else
+		WeaponHit := SplitWords(WeaponHit);
+		var weaponhit_length := len(WeaponHit);
+		SetObjProperty(defender, "TempDamage", rawdamage);
+		foreach x in WeaponHit
+			detach();
+			set_critical(0);
+			Start_Script(CStr(x), { attacker, defender, weapon, armor, basedamage, rawdamage } );
+			rawdamage := GetObjProperty(defender, "TempDamage");
+		endforeach
+		EraseObjProperty(defender, "TempDamage");
+		if (rawdamage > 0)
+			if( !ArmorHit )
+				DealDamage(defender, attacker, rawdamage);
+				SetObjProperty(defender, "LastHit", {attacker.name, attacker.serial, weapon });
+				AdjustNoto(attacker);
+				return;
+			else
+				ArmorHit := SplitWords(ArmorHit);
+				foreach x in ArmorHit
+					detach();
+					set_critical(0);
+					Start_Script(Cstr(x), { attacker, defender, weapon, armor, basedamage, rawdamage } );
+					rawdamage := CInt(GetObjProperty(defender, "TempDamage") );
+				endforeach
+				EraseObjProperty(defender, "TempDamage");
+				if (rawdamage > 0)
+					DealDamage(defender, attacker, rawdamage);
+					SetObjProperty(defender, "LastHit", {attacker.name, attacker.serial, weapon });
+					AdjustNoto(attacker);
+					return;
+				else
+					return;
+				endif
+			endif
+		endif
+	endif
+endprogram
+
+function output( who, msg )
+	if( who.cmdlevel )
+		SendSysMessage( who, msg );
+	endif
+endfunction

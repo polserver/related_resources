@@ -1,0 +1,17 @@
+include "include/modules";
+
+var duration;
+
+program rainnow (who, dur)
+	if( dur )
+		duration := CInt( dur );
+	else
+		duration := SendTextEntryGump( who, "How long (in minutes) will it rain?" );
+		duration := CInt( duration );
+	endif
+	var i;
+	for (i := 1; i <= duration; i := i + 1)
+		var res := SetRegionWeatherLevel( "Background", 1, 15);
+		sleep(60);
+	endfor
+endprogram

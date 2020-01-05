@@ -1,0 +1,71 @@
+include "include/modules";
+include "include/gumps";
+include "include/output";
+
+var sets_cfg  := ReadConfigFile("sets");
+var cfg_keys := GetConfigStringKeys( sets_cfg );
+var i, j, k, num_sets;
+
+program makeset( who )
+	for( i := len(cfg_keys); i >= 1; i := i - 1 )
+		if( CInt( cfg_keys[i] ) )
+			cfg_keys.erase(i);
+		endif
+	endfor
+	num_sets := len(cfg_keys);
+	GFSetRef( 20, 20 );
+	GFPage( 0 );
+	GFNoDispose();
+	GFResizePic( 0, 0, BKGND_GOLDTRIM, 450, 385 );
+	GFTextMid( 0, 10, 400, 4, "Choose a set to place" );
+	fill_in_pages();
+	var res := GFSendGump( who );
+	if( !sets_cfg[cfg_keys[res[0]-1024]] )
+		SendSysMessage(who, "Invalid set!");
+		return;
+	endif
+	var where := TargetCoordinates( who );
+	if( !where )
+		return;
+	endif
+	foreach entry in GetConfigStringArray( sets_cfg[cfg_keys[res[0]-1024]], "item" )
+		var it := sets_cfg[entry];
+		var x_loc := where.x + CInt(it.x);
+		var y_loc := where.y + CInt(it.y);
+		var z_loc := where.z + CInt(it.z);
+		var item := CreateItemAtLocation( x_loc, y_loc, z_loc, CInt(it.objtype), 1 );
+		if (it.color)
+			item.color := CInt(it.color);
+		endif
+	endforeach
+endprogram
+
+function fill_in_pages()
+	var x_start := 25, y_start := 10;
+	var num_pages := CInt( CInt(num_sets/60) + 1 );
+	for( i := 1; i <= num_pages; i := i + 1 )
+		GFPage( i );
+		for( j := 1; j <= num_pages; j := j + 1 )
+			GFTextLine( 20 + j * 50, 350, 4, "Page " + j );
+			if( !i == j )
+				GFButtonPage( 15 + j * 50, 350, 0x3, 0x4, j );
+			endif
+		endfor
+		var num_cols := CInt( CInt( (num_sets-(i-1)*60)/20 ) + 1 );
+		if( num_cols > 3 )
+			num_cols := 3;
+		endif
+		for( j := 1; j <= num_cols; j := j + 1 )
+			var last_set := CInt( num_sets - (i-1)*60 - (j-1)*20 );
+			if( last_set > 20 )
+				last_set := 20;
+			endif
+			for( k := 1; k <= last_set; k := k + 1 )
+				var new_x := x_start + (j-1)*165;
+				var new_y := y_start + (k*16);
+				GFTextLine( new_x, new_y, 8, cfg_keys[k+(j-1)*20+(i-1)*60] );
+				GFButtonID( new_x - 16, new_y + 4, 0x4B9, 0x4BA, 1 );
+			endfor
+		endfor
+	endfor
+endfunction

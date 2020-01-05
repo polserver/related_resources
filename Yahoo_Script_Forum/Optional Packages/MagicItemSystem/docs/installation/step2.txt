@@ -1,0 +1,32 @@
+Goto your combat package
+pol\pkg\systems\combat
+
+Now open the file "mainhitscript.src"
+just after the line:
+-------------------------------------------
+
+
+program MainHitScript(attacker, defender, weapon, armor, basedamage, rawdamage)
+
+
+-----------------------
+or something similar... 
+add this chunk of code:
+-----------------------
+
+
+  rawdamage := run_script_to_completion( ":sithmagicitems:senchantedhit", { attacker, defender, weapon, armor, basedamage, rawdamage } );
+	
+	
+------------------------------------------
+So now, it would look something like this:
+------------------------------------------
+
+<SNIP>
+
+program MainHitScript(attacker, defender, weapon, armor, basedamage, rawdamage)
+  rawdamage := run_script_to_completion( ":sithmagicitems:senchantedhit", { attacker, defender, weapon, armor, basedamage, rawdamage } );
+	
+</SNIP>
+
+Now, onto step3.txt

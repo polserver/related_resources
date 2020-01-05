@@ -1,0 +1,68 @@
+/////////////////////////////////////////////////////////////////////////////
+// Designed by:		Cassandra White of Nirvana Shard
+// Last Updated:	Feb, 19, 2000
+// Status:		Fully tested
+/////////////////////////////////////////////////////////////////////////////
+// Notes:
+// Three warnings are given to players. The first is based on basetime in
+// minutes. The second warning is based on basetime - 1/3. The final
+// warning is basetime - 2/3.
+//
+// An easy reminder for times are keypress * 6 minutes.
+//
+// Messages are sent to console display and all online characters.
+//
+// console.cfg will need to concur with 1-0 entries.
+//
+// You are welcome too add/subtract/adjust basetimes as you see fit. If anyone
+// has any suggestions you may email me at bvaters@home.com.
+//
+// I hope it helps - ENJOY!!! :o)
+// *Thanks to Syzygy for help scripting and much needed commands!*
+//////////////////////////////////////////////////////////////////////////////
+
+use uo;
+use os;
+use util;
+
+Include "include/clock";
+
+program cmd_shutdown( cmd )
+	cmd := CInt(cmd);
+
+	Local basetime;
+	Local nexttime;
+	Local i;
+
+	Case (cmd)
+		0:	basetime := 60;
+		1:	basetime := 6;
+		2:	basetime := 12;
+		3:	basetime := 18;
+		4:	basetime := 24;
+		5:	basetime := 30;
+		6:	basetime := 36;
+		7:	basetime := 42;
+		8:	basetime := 48;
+		9:	basetime := 54;
+	Endcase
+
+	for(i := 1; i <= 3; i := i + 1)
+
+		nexttime := basetime - ((basetime/3) * (i-1));
+;
+
+		print ("System Message: " + nexttime +" minutes to shutdown!");
+		
+
+		foreach onlinechr in EnumerateOnlineCharacters()
+			SendSysMessage(onlinechr, "System Message: " + nexttime +" minutes to shutdown!");
+		endforeach
+
+		sleep( 60 * basetime / 3 );
+
+	endfor
+
+	ShutDown();
+
+endprogram

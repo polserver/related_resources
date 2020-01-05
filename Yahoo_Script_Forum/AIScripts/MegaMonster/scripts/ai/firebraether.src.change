@@ -1,0 +1,18 @@
+// [...]
+
+include "include/animal";
+
+// [...]
+
+////////////////////////
+// FireBreather - Init
+////////////////////////
+
+Program FireBreather()
+  // [...]
+
+  Expand_Stats(me);
+
+  SetWarMode(0);
+  
+  // [...]

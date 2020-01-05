@@ -1,0 +1,125 @@
+use uo;
+use cfgfile;
+use util;
+use os;
+
+include "include/starteqp";
+include "include/NPCBackpacks";
+
+program npcdeath(corpse)
+
+	set_critical(0);
+
+	if ( GetObjProperty( corpse, "regspawn" ) )
+		local SpawnName := GetObjProperty( corpse, "regspawn" );
+		if ( GetGlobalProperty(SpawnName) )
+			local numspawns := Cint(GetGlobalProperty(SpawnName))-1;
+			SetGlobalProperty(SpawnName,numspawns);
+		else
+			EraseGlobalProperty(SpawnName);
+		endif
+	endif
+
+	if (getobjproperty(corpse,"color"))
+		corpse.color := getobjproperty(corpse,"color");
+	endif		
+
+	MoveBackpackToCorpse(corpse);
+	zapstorageareas(corpse);
+        
+	if (getobjproperty(corpse, "guardkill"))
+                destroyitem(corpse);
+                return;
+        endif
+
+	dismount(corpse);
+
+    if( GetObjProperty( corpse , "summoned" ) )
+       DestroyItem( corpse );
+    elseif( GetObjproperty( corpse , "nocorpse" ) )
+       MakeLoot (corpse , "");
+       foreach item in EnumerateItemsInContainer( corpse );
+	   if (!getobjproperty(item,"#noloot"))
+           	MoveItemToLocation( item , corpse.x , corpse.y , corpse.z,0 );
+	   endif
+       endforeach
+       DestroyItem( corpse );
+    else
+       MakeLoot (corpse , "");
+	//treasuremaps:
+	local corpseof := getobjproperty(corpse,"npctemplate");
+	foreach item in EnumerateItemsInContainer( corpse );
+		case (item.objtype)
+			0x6001:
+			0x6002:
+			0x6003:
+			0x6004:
+			0x6005:	item.name := item.desc + " from " + corpse.desc +" (" + corpseof + ")";
+				setobjproperty(item,"wherefrom",corpse.desc +" (" + corpseof + ")");
+		endcase
+	endforeach
+    endif
+
+	foreach what in enumerateitemsincontainer(corpse)
+		if ( getobjproperty(what,"#noloot") )
+			destroyitem(what);
+		endif
+	endforeach
+
+endprogram
+
+function dismount(corpse)
+
+	local mount := 0;
+	foreach item in enumerateitemsincontainer(corpse)
+		if (item.objtype = 0xF021)
+			mount := item;
+			break;
+		endif
+	endforeach
+	if (!mount)
+		return;
+	endif
+
+	local critter := "";
+	case (mount.graphic)
+	0x3ea2: critter := "horse";
+	0x3e9f: critter := "horse2";
+	0x3ea0: critter := "horse3";
+	0x3ea1: critter := "horse4";
+	0x3ea6:	critter := "llama";
+	0x3ea3:	critter := "desertostard";
+	0x3ea4:	critter := "frenziedostard";
+	0x3ea5:	critter := "forestostard";
+	endcase
+	if (mount.color = 1109)
+		critter := "nightmare";
+	endif
+
+	local animal := CreateNPCFromTemplate (critter, corpse.x, corpse.y, corpse.z);
+	if (animal)
+		animal.color := mount.color;
+		SetObjProperty(animal,"killme",1);
+	endif
+
+	DestroyItem( mount );
+
+endfunction
+
+function zapstorageareas(me)
+
+	local myserial := getobjproperty(me,"serial");
+	if (!myserial)
+		return;
+	endif
+
+	local storage := FindStorageArea( "Merchant Storage" );
+	if (DestroyRootItemInStorageArea( storage, myserial + " FS"))
+		DestroyRootItemInStorageArea( storage, myserial + " PB");
+		DestroyRootItemInStorageArea( storage, myserial + " 1C");
+	endif
+
+	storage := FindStorageArea( "Tamed Storage" );
+	DestroyRootItemInStorageArea( storage, "Bankbox  " + hex(myserial));
+
+endfunction

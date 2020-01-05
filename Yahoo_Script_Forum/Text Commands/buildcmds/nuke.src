@@ -1,0 +1,34 @@
+//=============================================================================
+//| NUKE command                                                              |
+//|---------------------------------------------------------------------------|
+//| by Z.e.r.o (z.e.r.o@softhome.net)                                         |
+//|---------------------------------------------------------------------------|
+//| Simply nukes all items between the specified radius 8)                    |
+//=============================================================================
+include "include/modules";
+include "include/coreconstants";
+include "include/attributes";
+
+program textcmd_nuke( who )
+	var range := SendTextEntryGump( who, "What radius do you wish to nuke?" );
+	range := Cint( range );
+	var near_items, near_mobs;
+	near_items :=  ListItemsNearLocation( who.x, who.y, who.z, range );
+	foreach item in near_items
+		DestroyItem(item);
+	endforeach
+	near_mobs := ListMobilesNearLocation( who.x, who.y, who.z, range );
+	foreach mob in near_mobs
+		if( mob.cmdlevel )
+			break;
+		endif
+		RevokePrivilege( mob, "invul" );
+		Damage(mob, GetHp(mob)+3);
+	endforeach
+	sleepms(500);
+	//Now removing corpses leaved from the killing of creatures
+	near_items :=  ListItemsNearLocation( who.x, who.y, who.z, range );
+	foreach item in near_items
+		DestroyItem(item);
+	endforeach
+endprogram

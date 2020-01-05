@@ -1,0 +1,30 @@
+// housing
+// updated by zulu December 12, 2000
+
+use uo;
+
+program ownership( who )
+
+Sendsysmessage( who , "Select the house sign." );
+Local sign := Target( who );
+
+
+if(!sign) return; endif
+
+local hserial := GetObjProperty( sign , "house_serial" );
+local house := SystemFindObjectBySerial( hserial );
+local oserial := GetObjProperty( house , "ownerserial" );
+
+if(!house) return; endif
+
+Sendsysmessage( who , "Select the new owner." );
+Local person := Target( who );
+
+
+if (!person) return; endif
+
+SetObjProperty( house , "ownerserial" , person.serial );
+SetObjProperty( house , "owneracct" , person.acctname );
+SendSysmessage( who , "House transfer was successful." );
+
+endprogram

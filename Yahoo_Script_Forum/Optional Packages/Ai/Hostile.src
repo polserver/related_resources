@@ -1,0 +1,29 @@
+///////////////////////////////////////////////////////////
+// Hostile.src
+//
+// Generic Hostile AI.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+include "include/AiMain";	// REQUIRED: Main Prcessing.
+include "speech/DefaultSpeech";	// REQUIRED: Speech.
+include "combat/DefaultCombat";	// REQUIRED: Combat
+include "noncombat/DefaultNonCombat"; // REQUIRED: NonCombat.
+include "consider/DefaultConsider";	// REQUIRED: Consider.
+
+// Customize AI.
+ai.HearDist	 		:= 4;
+ai.ConsiderRange 	:= 8;
+ai.FleePoint		:= 20;
+ai.Run				:= 0;
+ai.MoveDelay 		:= 500;
+
+program Orc()
+	MainAILoop();
+endprogram

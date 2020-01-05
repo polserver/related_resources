@@ -1,0 +1,157 @@
+use uo;
+use basicio;
+
+program txtcmd_addpath ( me, params )
+
+params := SplitWords( params );
+
+
+// Get .addpath [command] [pathname] [1st] [2nd] [3rd]
+//              params[1] params[2]    [3]   [4]   [5]
+
+var addpath := params[1];
+var pathname := params[2];
+// var nfirst := params[3];
+// var nsecond := params[4];
+// var nthird := params[5];
+
+var first;
+var second;
+var third;
+
+var who := me;
+
+// Error checking
+
+if (!params[2])
+
+	if (!params[1])
+		SendSysMessage( who, "No pathname speficied, cancelling addpath!" );
+		return;
+	endif
+
+	pathname := params[1];
+
+	var point := { };
+
+	SetGlobalProperty( pathname, point );
+
+	SendSysMessage( who, "Path: " + pathname + " does not exist - Initiating!" );
+	return;
+
+endif
+
+if (!params[3])
+	local who := TargetCoordinates( me );
+//	local who := Target( me, TGTOPT_NOCHECK_LOS );
+	params[3] := who.x;
+	params[4] := who.y;
+	params[5] := who.z;
+endif
+
+
+// Error check for Path Initiated
+
+var NPCPathList := GetGlobalProperty( pathname );
+
+if ( !NPCPathList )
+	// GPRop does not exist
+	SendSysMessage (who, "Path: " + pathname + " does not exist! ");
+	return;
+endif
+
+// Check for [addpath], if found process. If not return.
+
+var point := { };
+
+Case (addpath)
+	"action":
+		first := "action";
+		second := CInt( params[3] );
+		third := CInt( params[4] );
+
+	"color":
+		first := "color";
+		second := CInt( params[3] );
+		third := "na";
+
+	"facing":
+		first := "facing";
+		second := CInt( params[3] );
+		third := "na";
+
+	"graphic":
+		first := "graphic";
+		second := CInt( params[3] );
+		third := "na";
+
+	"pause":
+		first := "pause";
+		second := CInt( params[3] );
+		third := "na";
+
+	"rename":
+		// Destroy all params but [phrase] params
+		params.erase(1);
+		params.erase(1);
+
+		var rename := "";
+
+		foreach word in params
+			rename := rename + word + " ";
+		endforeach
+
+		first := "rename";
+		second := rename;
+		third := "na";
+
+	"run":
+		first := "run";
+		second := CInt( params[3] );
+		third := CInt( params[4]);
+
+	"say":
+		// Destroy all params but [phrase] params
+		params.erase(1);
+		params.erase(1);
+
+		var phrase := "";
+
+		foreach word in params
+			phrase := phrase + word + " ";
+		endforeach
+
+		first := "say";
+		second := phrase;
+		third := "na";
+
+	"sfx":
+		first := "sfx";
+		second :=  params[3];
+		third := CInt( params[4]);
+
+	"walk":
+		first := "walk";
+		second := CInt( params[3] );
+		third := CInt( params[4] );
+
+	default:
+		SendSysMessage( who, "Not enough Params to location addpath [action]!" );
+		SendSysMessage( who, "addpath action not added!" );
+		Return;
+
+endcase
+
+point.append( first );
+point.append( second );
+point.append( third );
+
+NPCPathList.append( point );
+
+Print ( "First=" + first + " Second=" + Second + " Third=" + Third);
+SendSysMessage ( who, "addpath [" + first + "] added successfuly!" );
+SendSysMessage ( who, "Param[1]:" + first + " Param[2]:" + second + " Param[3]:" + third );
+
+SetGlobalProperty( pathname, NPCPathList );
+
+endprogram

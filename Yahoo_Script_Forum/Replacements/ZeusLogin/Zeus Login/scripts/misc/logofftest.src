@@ -1,0 +1,55 @@
+//
+//  default logofftest: anyone with a cmdlevel can log off immediately.
+//                      those without have to wait 5 minutes.
+//
+
+include "include/inncheck";
+
+program logofftest( character )
+	
+	
+	var ingameadmin:=     GetGlobalProperty( "onlineadmin" );
+	var ingamegm:=        GetGlobalProperty( "onlinegm" );
+	var ingameseer:=      GetGlobalProperty( "onlineseer" );
+	var ingamecouncil:=   GetGlobalProperty( "onlinecouncil" );
+	var ingamedeveloper:= GetGlobalProperty( "onlinedeveloper" );  
+   
+      if (character.cmdlevel=1)
+      SetGlobalProperty( "onlinecouncil", ingamecouncil - 1 );
+      endif
+      if (character.cmdlevel=2)
+      SetGlobalProperty( "onlineseer", ingameseer - 1 );  
+      endif
+      if (character.cmdlevel=3)
+      SetGlobalProperty( "onlinegm", ingamegm - 1 );
+      endif
+      if (character.cmdlevel=4)
+      SetGlobalProperty( "onlineadmin", ingameadmin - 1 );
+      endif
+      if (character.cmdlevel=5)
+      SetGlobalProperty( "onlinedeveloper", ingamedeveloper - 1 );
+      endif
+   
+   
+   
+   
+   
+   
+    // print( "logofftest: " + character.name );
+    if (character.cmdlevel)
+        return 0;
+    elseif (Inncheck(character))
+        return 0;
+    elseif (CInt(GetObjProperty(character, "camped"))= 1)
+        EraseObjProperty(character, "camped");
+		return 0;
+    else        
+        return 60 * 5;
+    endif
+    
+    
+    
+    
+    
+endprogram
+

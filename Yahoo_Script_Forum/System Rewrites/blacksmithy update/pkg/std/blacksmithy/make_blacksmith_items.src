@@ -1,0 +1,284 @@
+/////////////////
+// make_blacksmith_items.src
+//
+// Use a smithy hammer to either repair arms & armor or
+// to work with metal to create new items. You need to be
+// skillful to work with the rarer metals.
+//
+// TODO: remove hardcoding of skill pointvalue
+//
+// Author: DreamWeaver:
+//              original
+//         Racalac:
+//              colored items
+// Updates: Dream Weaver 6/3/99 handled item quality an HP to new specs
+//          Ignatius     99/06/10 added name of maker to exceptional items.	
+//
+//	    Shai`tan, Gabriel   22/09/00 added AR mods for coloured items. Added 
+//	    magical properties for some coloured items. Changed exceptional to 1.4 and now only certain 
+//          colours can be exceptional. Added colour of armor into its name. Made it harder to make exceptional (2% chance only)	
+////////////////
+
+use uo;
+use cfgfile;
+use os;
+use util;
+use basicio;
+
+include "util/repair";
+include "include/client";
+include "include/objtype";
+
+Global itemcfg   := ReadConfigFile(":combat:itemdesc");
+Global smith_cfg := ReadConfigFile( "blacksmithy" );  
+Global itemname;  
+
+// called when a player double-clicks a hammer or other blacksmith tool
+program use_hammer( character, hammer )
+
+    SendSysmessage( character, "What would you like to use that on?" );
+    Local use_on := Target( character );
+    if( !use_on )
+        SendSysmessage( character, "Targetting cancelled" );
+        return;
+    endif
+
+	ReserveItem(use_on);
+    
+    if( is_weapon_armor(use_on.objtype) )
+        repair_item( character, use_on, SKILLID_BLACKSMITHY );
+        return;
+    endif
+    
+    if( (use_on.objtype < UOBJ_INGOTS_START) or  (use_on.objtype > UOBJ_INGOTS_END))
+        SendSysMessage( character, "You can only use that on ingots!" );       
+        return;
+    endif
+
+    if( !checkskillForDifferentMetals( character , use_on ) )
+        SendSysmessage( character, "You have no chance to successfully work with that metal." );
+        return;
+    endif
+
+    Local Near_Items := ListItemsNearLocation(character.x, character.y, character.z,2);
+    foreach item in Near_Items
+         if ((item.objtype = UOBJ_ANVIL1) or (item.objtype = UOBJ_ANVIL2))
+              MakeBlacksmithItems(character, use_on);
+              Return;
+         endif
+    endforeach
+    SendSysmessage( character, "You must be near an anvil to smith items!" );
+       
+endprogram
+function is_weapon_armor(what)
+    local elem := FindConfigElem(itemcfg, what);
+    if (elem)
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+function MakeBlacksmithItems( character, ingots )
+    local skill;          //skill needed to create the item
+    local element;        // entry in smith_config
+    local material;       //amount of material needed to create the item
+    local points;
+    local retval;
+    local maxhp;
+    local quality;
+    
+    
+    
+    if ( !Accessible( character, ingots))
+        SendSysmessage( character, "You don't have any ingots!" );
+        return;
+    endif
+    
+    if (!smith_cfg)
+        SendSysmessage (character, "Could not open blacksmith.cfg");
+        return;
+    endif
+    
+    local what := SelectMenuItem2( character, "blacksmith" );
+    if ( !what )
+          SendSysmessage( character, "Targetting cancelled" );
+          return;
+    endif
+
+    what := what.objtype;
+    maxhp := itemcfg[what].maxhp;
+    element := FindConfigElem( smith_cfg,what ); //need to make sure the key reflects the menu return value
+    
+    if (element)
+        material := GetConfigInt( element, "material" );
+        skill := GetConfigInt( element, "skill" );
+        itemname := GetConfigString( element, "Name") ;
+        points := GetConfigInt( element , "points" );
+    else
+        print("Bad stuff goin on!");
+    endif
+    //first, check to see that they have enough ingots
+ 
+    
+
+    if ( GetAmount(ingots)  > material )
+            retval := PlaySoundEffect(character, SFX_ANVIL);
+            sleep (2);
+            retval := PlaySoundEffect(character, SFX_ANVIL);
+            sleep (2);
+            retval := PlaySoundEffect(character, SFX_ANVIL);
+            sleep (2);
+    
+        if( ingots.color != 0 )
+            points := points * 2;
+        endif
+	
+	points := points * 0.2;
+
+        if ( checkskill( character, SKILLID_BLACKSMITHY, skill, points ) )
+            Local theitem := CreateItemInBackpack( character, what, 1 );
+        
+
+            if (theitem) //they sucessfully create the item
+                theitem.color := ingots.color; //for colored ingots!
+
+                SubtractAmount( ingots, material );
+
+                if ( (checkskill( character, SKILLID_BLACKSMITHY, 90, points ) ) && ( randomint(100) < 3 ) && (CanMakeExcept(ingots)))  //check2
+                    //they make an exceptional item
+                    quality := 1.4;
+                    theitem.quality := quality;
+                    theitem.hp := theitem.maxhp;
+                    SetObjProperty(theitem, "type","b");
+                    SetObjProperty(theitem, "madeby", character.name);
+		    add_special_ingot_bonus( theitem, ingots );	
+		    SendSysmessage (character, "You make an exceptional item and put it in your pack");
+		    local tname := "Exceptional " + itemname + " [Crafted by " + character.name + "]" ;
+		    SetName(theitem, tname);
+		    
+              else  //check2
+                    //regular-quality
+                    theitem.quality := (60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0;
+                    theitem.hp := theitem.maxhp;
+                    SetObjProperty(theitem, "type","b");
+                    SetObjProperty(theitem, "madeby", character.name);
+  		    add_special_ingot_bonus( theitem, ingots );
+		    SendSysmessage( character, "You create the item and place it in your pack." );	
+		    SetName(theitem,  itemname );
+		    
+                    
+                endif //check2
+            endif //theitem
+        else  //checkskill
+            SubtractAmount( ingots, material );
+            SendSysmessage( character, "You destroy some ingots." );
+        endif //checkskill
+    else 
+        SendSysmessage (character, "You don't have enough ingots!");
+        return;
+    endif  //getamount
+  
+endfunction
+
+
+function checkskillForDifferentMetals( character , ingots )
+
+    case( ingots.objtype )
+        UOBJ_IRON_INGOT: return 1;   //anyone can work with iron
+        UOBJ_BRONZE_INGOT: return (CheckHisSkill( character , 60 ));
+        UOBJ_DULLCOPPER_INGOT: return (CheckHisSkill( character , 70 ));
+        UOBJ_COPPER_INGOT: return (CheckHisSkill( character , 80 ));
+        UOBJ_ONYX_INGOT: return (CheckHisSkill( character , 85 ));
+        UOBJ_PYRITE_INGOT: return (CheckHisSkill( character , 90 ));
+        UOBJ_MALACHITE_INGOT: return (CheckHisSkill( character , 95 ));
+        UOBJ_AZURITE_INGOT: return (CheckHisSkill( character , 100 ));
+        default: SendSysmessage( character , "You can't smelt that." );
+    endcase
+endfunction
+
+function CheckHisSkill( character , skill )
+
+    local his_skill := GetSkill( character , SKILLID_BLACKSMITHY );
+
+    if( his_skill >= skill )
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+function add_special_ingot_bonus( theitem, ingots )
+	
+	case( ingots.objtype )
+        	UOBJ_IRON_INGOT: return( theitem );   
+        	UOBJ_BRONZE_INGOT: b_Bronze( theitem );
+        	UOBJ_DULLCOPPER_INGOT: b_DullCopper( theitem ) ;
+        	UOBJ_COPPER_INGOT:  b_Copper( theitem ) ;
+        	UOBJ_ONYX_INGOT: b_Onyx( theitem ) ;
+        	UOBJ_PYRITE_INGOT: b_pyrite( theitem ) ;
+        	UOBJ_MALACHITE_INGOT: b_Malachite( theitem );
+        	UOBJ_AZURITE_INGOT: b_Azurite( theitem ) ;
+        	default: return( theitem ); //something funky has happened - return item unchanged
+	endcase
+
+endfunction
+
+function b_Bronze( theitem)  
+theitem.ar_mod := 1;
+itemname:= "Bronze " + itemname;
+SetObjProperty(theitem, "br",1); //for later when I think of something
+endfunction
+
+function b_DullCopper( theitem )
+theitem.ar_mod := 2;
+itemname:= "Dull Copper " + itemname;
+SetObjProperty(theitem, "dc",1); //for later when I think of something
+endfunction
+
+function b_Copper( theitem )
+theitem.ar_mod := 3;
+itemname:= "Copper " + itemname;
+SetObjProperty(theitem, "cr",1); //for later when I think of something
+endfunction
+
+function b_Onyx( theitem )
+theitem.ar_mod := 3;
+itemname:= "Onyx " + itemname;
+SetObjProperty(theitem, "ox",1); //for later when I think of something
+endfunction
+
+function b_pyrite( theitem )
+theitem.ar_mod := 3;
+itemname:= "Pyrite " + itemname;
+SetObjProperty(theitem, "py",1); //for later when I think of something
+endfunction
+
+
+// for this to work you need my update to spellrestriction.inc and the new include shaitan.inc
+function b_Malachite( theitem )
+theitem.ar_mod := 3;
+itemname:= "Malachite " + itemname;
+SetObjProperty(theitem, "ma",1); //adds magic armor property to the armor piece
+endfunction
+
+// for this to work you need my update to spellrestriction.inc and the new include shaitan.inc
+function b_Azurite( theitem )
+theitem.ar_mod := 3;
+itemname:= "Azurite " + itemname;
+SetObjProperty(theitem, "mr",1); //adds magic reflect property to the armor piece
+endfunction
+
+function CanMakeExcept( ingots ) // Allow only certain ingot type to be exceptional
+case( ingots.objtype )
+        	UOBJ_IRON_INGOT: return 0;   
+        	UOBJ_BRONZE_INGOT: return 0 ;
+        	UOBJ_DULLCOPPER_INGOT: return 0 ;
+        	UOBJ_COPPER_INGOT: return 0  ;
+        	UOBJ_ONYX_INGOT: return 1 ;
+        	UOBJ_PYRITE_INGOT: return 1 ;
+        	UOBJ_MALACHITE_INGOT: return 1;
+        	UOBJ_AZURITE_INGOT: return 1 ;
+        	default: return 0; //something funky again, disallow exceptional
+	endcase
+endfunction

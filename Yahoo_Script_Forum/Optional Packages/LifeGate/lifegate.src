@@ -1,0 +1,9 @@
+use uo;
+program gate_resme(who)
+
+if (who.dead)
+      Resurrect( who );
+else
+     SendSysMessage( who, "You are not dead yet!" );
+endif
+endprogram

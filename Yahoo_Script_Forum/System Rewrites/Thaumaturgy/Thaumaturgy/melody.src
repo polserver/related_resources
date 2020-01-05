@@ -1,0 +1,45 @@
+// Melody Cantrip
+// Creates a random musical instrument sound
+
+use uo;
+use os;
+use util;
+include "spellinc";
+include "include/client";
+
+program melody(caster)
+
+	const THISSPELL := 105;
+	
+	local x := caster.x;
+	local y := caster.y;
+
+	local cast_on :=  Target(caster, TGTOPT_CHECK_LOS );
+	if (!cast_on)
+		CleanUp(caster);
+		return;
+	endif
+
+	if ((caster.x != x) or (caster.y != y) or (BrokeCon(caster)))
+		SendSysMessage(caster, "You have lost your concentration.");
+		CleanUp(caster);
+		return;
+	endif
+	
+	if (DoCast(caster, THISSPELL))
+		CleanUp(caster);
+		return;
+	endif
+
+	local tune;
+	case (RandomInt(5))
+	0:	tune := 0x0039; //drum
+	1:	tune := 0x0044; //harp1
+	2:	tune := 0x0046; //harp2
+	3:	tune := 0x004d; //lute
+	4: 	tune := 0x0053; //tamborine
+	endcase
+	PlaySoundEffect(cast_on, tune);
+
+	CleanUp(caster);
+endprogram

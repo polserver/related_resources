@@ -1,0 +1,9 @@
+Use uo;
+
+Include "../../spellbook";
+
+Program TextCMD_EmptySpellBook2(who)
+  CreateSpellBookInBackpack(who, UOBJ_SPELLBOOK_MAGE);
+  CreateSpellBookInBackpack(who, UOBJ_SPELLBOOK_CLERIC);
+  CreateSpellBookInBackpack(who, UOBJ_SPELLBOOK_NECRO);
+EndProgram

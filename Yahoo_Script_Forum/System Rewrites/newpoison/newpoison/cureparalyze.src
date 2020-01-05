@@ -1,0 +1,10 @@
+use uo;
+use os;
+
+program cureparalyze(parms)
+
+local who := parms[1];
+who.paralyzed := 0;
+syslog(who.name + " Was just released from paralysis");
+
+endprogram

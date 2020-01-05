@@ -1,0 +1,132 @@
+/////////////////////////////////////////////////////////////////////////////
+//
+// Simple Minstrel AI. responds to a few keywords and barks out
+// some tunes while playing a harp, lute, drum or tambourine :)
+//
+// He also runs like heck if you try to attack him :)
+//
+//	NOTE: Be careful about adding new midi files to the list in PlayMidi(). 
+//	      When you use the death.mid it runs through the death cycle.......
+//
+// TODO: put all keyword / response text in a cfg file.
+//	 check on the rest of the midis
+//	 write more 'songs' - prolly leave this on an individual shard basis
+//
+//	Angreal
+//	  created on: 03/20/00
+/////////////////////////////////////////////////////////////////////////////
+
+use basic;
+use npc;
+use os;
+use uo;
+
+include "include/eventid";
+include "include/randname";
+include "include/client";
+include "include/math";
+
+const HALT_THRESHOLD := 10; // how close before he barks?
+
+global me := Self();
+if( me.name["<random>"] )
+   SetName ( me , RandomName( me ) );
+   case( randomint(2) )
+      0: me.graphic := 400;
+      1: me.graphic := 401;
+   endcase
+endif
+
+global isnew := GetObjProperty( Self(), "#new");
+if (isnew)
+   EquipFromTemplate( me , "Crier" );
+endif
+
+program Performer()
+    EnableEvents( EVID_SPEECH, HALT_THRESHOLD);
+    EnableEvents( EVID_ENTEREDAREA + EVID_LEFTAREA, HALT_THRESHOLD );
+//	local next_wander := readgameclock() + 1;
+
+	if (getobjproperty(me, "frozen"))
+		me.frozen := 1;
+	endif
+
+    SetWarMode( 0 );
+    set_priority(10);
+
+    local ev;
+    while (1)
+        ev := os::wait_for_event( 120 );
+        // print( "event type: " + ev.type );
+        case (ev.type)
+            EVID_SPEECH:
+                if (ev.text["hi"] or ev.text["hail"])
+                    say("Hail traveler! Wouldst thou like to hear a new song?");
+                elseif (ev.text["song"] or ev.text["sing"])
+                    singsongs( me, ev.source );
+		endif
+            EVID_ENTEREDAREA:
+                singsongs(me, ev.source);
+	    EVID_LEFTAREA:
+		say("Fare thee well!");
+        endcase
+	//if (readgameclock() >= next_wander)
+	//	wander();
+	//	next_wander := readgameclock() + 1;
+	//endif  
+        // TODO: ReturnToPost();
+    endwhile
+endprogram
+
+
+function singsongs(character, tonedeaf)
+	local counting := 1;
+	// local numsongs := 4;
+	local songcfg  := ReadConfigFile("songs");
+	local maxsongs := FindConfigElem( songcfg, "songs");
+	local numsongs := GetConfigInt( maxsongs, "number");
+	//local numsongs := cint(GetConfigMaxIntKey("songs"));
+	local songnumb := RandomInt(numsongs) + 1;
+	local songelem := FindConfigElem( songcfg, songnumb);
+	local midinum  := GetConfigString ( songelem, "midi");
+  	local number   := GetConfigInt( songelem, "count");
+
+	if ( midinum )
+		PlayMidi( character, midinum);
+	else
+		PlaySFX( character );
+	endif
+	
+	while ( counting <= number )
+		local linename := "line" + cint( counting );
+		print( "linename is: " + linename );
+		local song := GetConfigString( songelem, linename );
+		say(song);
+		sleep(4);
+		counting := counting + 1;
+	endwhile
+endfunction
+
+function PlayMidi(character, song_id)
+	local packet_id;
+	local xdist    := Abs(me.x - character.x);
+	local ydist    := Abs(me.y - character.y);
+
+	foreach character in EnumerateOnlineCharacters()
+		if ( xdist <= 15 and ydist <= 15 )  // character is within a given radius
+			packet_id := "6D00" + song_id;
+			SendPacket (character, packet_id);
+		endif
+	endforeach
+endfunction
+
+function PlaySFX( character )
+	local randy    := RandomInt(4);
+
+	case( randy )
+		0: playsoundeffect( character, SFX_MUSIC_LUTE_GOOD );
+		1: playsoundeffect( character, SFX_MUSIC_HARP_LAP_GOOD );
+		2: playsoundeffect( character, SFX_MUSIC_DRUM_GOOD );
+		3: playsoundeffect( character, SFX_MUSIC_TAMBORINE_GOOD );
+   	endcase
+endfunction

@@ -1,0 +1,24 @@
+use uo;
+use os;
+use cfgfile;
+
+var itemdesc := ReadConfigFile("itemdesc");
+
+program unequiparmor(who,item)
+        if (!who.npctemplate)
+                set_critical(1);
+                if (!GetObjProperty( item, "a_equipped"))
+                        //the item has already been unequipped so we
+                        //don't want to boost their dex again
+                        return 1;
+                endif
+                EraseObjProperty(item,"a_equipped");
+                var dex := who.dexterity;
+                var penalty := cint(itemdesc[item.objtype].DexPenalty);
+                if (penalty)
+                        who.dexterity_mod := who.dexterity_mod + penalty;
+                endif
+        endif
+        return 1;
+endprogram
+

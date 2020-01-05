@@ -1,0 +1,15 @@
+//
+// LOGON.SRC
+//
+// Called when a player initially connects...
+// Shows a random tip
+
+use uo;
+use os;
+
+program logon( who )
+
+	print( "[LOGON] TIP Tip-window Shown" );
+	run_script_to_completion( ":randomtips:textcmd/player/tip", who );
+
+endprogram

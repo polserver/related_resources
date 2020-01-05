@@ -1,0 +1,22 @@
+Copy the folder "sithmagicitems" from the zip, to your 'systems' directory (based on 94 distro).
+  pol\pkg\systems\
+
+So you now have...
+  pol\pkg\systems\sithmagicitems\
+
+Now you have to enable the package. Open the "pkg.cfg" in the "sithmagicitems" directory. 
+It should look like this:
+
+Enabled 0
+Name sithmagicitems
+Author S!tH
+Version 1.14
+
+Change the line "Enabled" to 1, so it looks like:
+
+Enabled 1
+Name sithmagicitems
+Author S!tH
+Version 1.14
+
+Now youve finished step1! Onto step2.txt :)

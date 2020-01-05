@@ -1,0 +1,153 @@
+////////////////////////////////////////////////////////////////
+//
+//      Race-Gate ReWrite by SoM-Scripting-Team o|0|o
+//
+//      Features:
+//
+//        -Stat-Mod
+//           -Str
+//           -Int
+//           -Dex
+//        -Visual-Mods
+//           -Graphic change
+//           -Skin-Color change
+//           -Gender-Supporting Race-Hairstyle
+//        -Racename          
+//           -Independent Race/Title-Setting
+//           -Gender-Support
+//
+////////////////////////////////////////////////////////////////
+
+use uo;
+use util;
+use basic;
+
+include "include/client";
+
+program walkon_racegate(who, me)
+
+if (getobjproperty(who, "race"))
+	sendsysmessage(who, "You are already a " + getobjproperty(who, "race"));
+	return;
+endif
+
+local strmod   := getobjproperty(me, "strmod");
+local intmod   := getobjproperty(me, "intmod");
+local dexmod   := getobjproperty(me, "dexmod");
+local graphic  := getobjproperty(me, "skin");
+local color    := getobjproperty(me, "skincolor");
+local race     := getobjproperty(me, "race");
+local item;
+
+if (strmod)
+	who.setstr(who.strength + strmod);
+endif
+if (dexmod)
+	who.setdex(who.dexterity + dexmod);
+endif
+if (intmod)
+	who.setint(who.intelligence + intmod);
+endif
+
+if (graphic)
+        who.graphic := graphic;
+endif
+
+if (color)
+        who.color := color;
+        who.truecolor := color;
+endif
+
+
+setobjproperty(who, "race", race);
+
+
+if (race["Human"])
+
+else
+
+      cut(who);
+      shave(who);
+
+endif
+
+if (who.gender = 0)
+
+      Male(who, race);
+
+else 
+
+      Female(who, race);
+
+endif
+
+//Takes the Player to the next Step of Character-Creation - !Coords may be different on your Shard!
+
+MoveCharacterToLocation(who, 5146, 1759, 1, MOVECHAR_FORCELOCATION);
+
+endprogram
+
+
+//Local-Functions
+
+
+function Male(who,race)
+
+        who.title_race := race;
+
+        if     (race["Elf"])
+                  CreateAndEquip(who, 0x203C, 0);
+
+        elseif (race["Dwarf"])
+                  CreateAndEquip(who, 0x203C, 542);
+                  CreateAndEquip(who, 0x204C, 542);
+
+        endif
+
+endfunction
+
+function Female(who,race)
+
+        if     (race["Elf"])
+        	  CreateAndEquip(who, 0x203C, 0);
+                  who.title_race := "Elven Maid";
+      
+        elseif (race["Dwarf"])
+	  	  CreateAndEquip(who, 0x203C, 542);
+                  who.title_race := "Dwarfish Maid";
+
+        endif
+
+endfunction
+
+function CreateAndEquip(who,item,color)
+
+	if (item)
+		local theitem := CreateItemAtLocation
+                  (who.x,who.y,who.z,item,1);
+		if (theitem)
+			if (EquipItem(who,theitem))
+				theitem.color := color;
+			else
+				DestroyItem(theitem);
+			endif
+		endif
+	endif
+
+endfunction
+
+function shave(who)
+        
+        local beard := GetEquipmentByLayer(who, LAYER_BEARD);
+        
+        DestroyItem(beard);
+
+endfunction
+
+function cut(who)
+
+        local hair := GetEquipmentByLayer(who, LAYER_HAIR);
+
+        DestroyItem(hair);
+
+endfunction

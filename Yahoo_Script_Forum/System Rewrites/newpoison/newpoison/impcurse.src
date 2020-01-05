@@ -1,0 +1,30 @@
+use uo;
+use os;
+use util;
+const EVID_TAUNT := 901;
+program  impcurse(parms)
+local who := parms[1];
+syslog("I have to taunt " + who.name);
+while(1)
+
+local imp := createnpcfromtemplate("tormenter", 1,1,1);
+if (!imp)
+	syslog("Coulnd't create imp: " + imp.errortext);
+else
+	syslog("Created " + who.name + "'s imp!");
+endif
+
+local ev := struct;
+ev.+type;
+ev.+targ;
+ev.type := EVID_TAUNT;
+ev.targ := who;
+syslog("Sent " + ev + " to imp!");
+sendevent(imp, ev);
+sleep(10);
+movecharactertolocation(imp, 0,0,-5, MOVECHAR_FORCELOCATION);
+applydamage(imp, 100000);
+sleep((randomint(60) * 10) + 30);
+endwhile
+
+endprogram

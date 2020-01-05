@@ -1,0 +1,46 @@
+use uo;
+use os;
+use cfgfile;
+
+program startpoison(parms)
+local who := parms[1];
+local lvl := parms[2];
+local str := parms[3];
+
+//local pn := "p" + lvl;
+local pn := "poison_level";
+
+if(!getglobalproperty("poisoninterval"))
+   SetGlobalProperty("poisoninterval", 10);
+endif
+
+//print("Poisoning " + who.name + " with " + str + " level " + lvl + " poison");
+
+if (getobjproperty(who, pn))
+	set_critical(1);
+	local pl := cint(getobjproperty(who, pn));
+	pl := pl + cint(str/2); // trying out this formula... other one did too much dmg i think
+	//pl := pl + cint(str); // orig formula - kicks ass...
+	setobjproperty(who, pn, pl);
+	sendsysmessage(who, "You have been further poisoned!");
+	set_critical(0);
+	return;
+else
+	local pcfg := readconfigfile("poison");
+	if (!pcfg)
+		print("Couldn't open file");
+	endif
+	local msg := pcfg[lvl].msg;
+//	print ("Message is " + msg);
+	if (msg)
+		sendsysmessage(who, msg);
+	endif
+	local script := pcfg[lvl].script;
+//	print(" script is " + script);
+setobjproperty(who, pn, str);
+	local parm := array;
+	parm[1] := who;
+	parm[2] := cint(lvl);
+	start_script(script, parm);
+endif
+endprogram	

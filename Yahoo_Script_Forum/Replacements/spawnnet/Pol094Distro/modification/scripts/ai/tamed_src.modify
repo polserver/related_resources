@@ -1,0 +1,11 @@
+// [...]
+
+Include "../../pkg/systems/spawnnet/spawnnet";
+
+// [...]
+
+program TamedAI()
+  // Initialisierung
+  SpawnNet_Clear(me);
+
+// [...]

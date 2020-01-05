@@ -1,0 +1,20 @@
+use uo;
+use os;
+use basic;
+
+include "include/client";
+include "../../sench";
+
+program addsench( who, input )
+
+	SendSysMessage( who, "Select a weapon to remove all enchantments from." );
+	var item := target(who);
+	if (!item)
+	        SendSysmessage(who, "Targetting cancelled.");
+        	return;
+	endif
+
+	EraseObjProperty (item, "Enchantments");
+	refreshEnchNames( item );
+
+endprogram

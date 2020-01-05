@@ -1,0 +1,27 @@
+Use uo;
+
+include "include/spawnnet";
+
+
+
+program show_rune(who,params)
+
+if(!params)
+	params := 5;
+endif
+
+params:= cint(params);
+if(!params)
+	SendSysMessage(who,"Parameter muss eine Nummer sein");
+	return;
+endif
+local counter :=0;
+
+foreach rune in ListItemsNearLocationOfType( who.x,who.y,who.z, params, 0xa300 )
+	rune.graphic := 0x20f8;
+	counter:=counter+1;
+	PrintTextAbovePrivate(rune, "Huhu, Ich bin eine Spawnrune!",who);
+endforeach
+
+SendSysMessage(who,"Insg. "+counter+" Runen aufgedeckt.");
+endprogram

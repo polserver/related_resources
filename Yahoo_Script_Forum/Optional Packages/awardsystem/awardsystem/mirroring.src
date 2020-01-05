@@ -1,0 +1,39 @@
+use uo;
+use os;
+
+include "/include/client";
+include "include/advcheckskill";
+
+program mirroring( param)
+  var who;
+  var clean := 0;
+  if( len( param))
+    who := param[1];
+    clean := param[2];
+  else
+    who := param;
+  endif
+  
+  if( clean)
+    return 1;
+  endif
+  
+  if( who.dead)
+    return 0;
+  endif
+
+  if( who.mana < 80)
+    SendSysmessage( who, "You havent enough mana to create a mirror of yourself");
+    return;
+  endif
+  who.mana := who.mana - 80;
+  
+  if( AdvCheckSkill(who, SKILLID_MAGERY, 80, 100))
+    var targ := CreateNPCfromTemplate( "pcmirror", who.x, who.y, who.z);
+    SendSysmessage( who, "You successfully mirrored yourself");
+    SetObjProperty(targ, "master", who.serial);
+    SetObjProperty(targ, "script", targ.script);
+    SetObjProperty(targ, "conjurescript", "pcmirror");
+    RestartScript(targ);
+  endif
+endprogram

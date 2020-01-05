@@ -1,0 +1,25 @@
+use uo;
+
+
+program textcmd_gospawn(who)
+
+local targ := target(who, TGTOPT_NOCHECK_LOS + TGTOPT_NEUTRAL);
+
+if(!targ)
+	SendSysMessage(who, "Abbruch");
+endif
+
+local spawnnet := cint(GetObjProperty(targ,"spawnnet"));
+if(!spawnnet)
+	SendSysMessage(who,"Ungueltiges Ziel");
+	return;
+endif
+
+local list := GetGlobalProperty("runeserial");
+local rune := SystemFindObjectBySerial(list[spawnnet]);
+if(!rune)
+	SendSysMessage(who,"Rune nicht gefunden");
+	return;
+endif
+
+endprogram

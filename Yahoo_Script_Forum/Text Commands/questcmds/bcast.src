@@ -1,0 +1,12 @@
+use uo;
+
+program textcmd_bcast( who, text )
+	if( text )
+		Broadcast( who.name + ": " + text );
+	else
+		text := SendTextEntryGump( who, "What would you like to broadcast?" );
+		if( text )
+			Broadcast( who.name + ": " + text );
+		endif
+	endif
+endprogram

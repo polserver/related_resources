@@ -1,0 +1,231 @@
+// Merchant bug test script
+
+use uo;
+use os;
+use cfgfile;
+use npc;
+
+include "include/eventid";
+include "include/container";
+
+///////////////////////////////////////////////////////////
+// CONSTS
+///////////////////////////////////////////////////////////
+const CITYPRICESCFG		:= "::cityprices";
+const MERCHANTSTOCKCFG 	:= "::merchantstock";
+const MYINV				:= "inventory box";
+const UOBJ_GOLDCOIN   	:= 0x0EED; // A gold coin
+const UOBJ_METALCHEST 	:= 0x0E7C; // A Metal Chest
+
+// How often do I restock my inventory?
+const RESTOCK_INTERVAL := 60*2;
+
+///////////////////////////////////////////////////////////
+// GLOBAL VARIABLES
+///////////////////////////////////////////////////////////
+var NextRestock 	:= 0;
+var stockcfg;		// Stock config.
+var pricescfg;		// City Price mods config.
+var myinv;			// My inventory box.
+var me := self();
+
+///////////////////////////////////////////////////////////
+// GLOBAL CODE
+///////////////////////////////////////////////////////////
+stockcfg := ReadConfigFile(MERCHANTSTOCKCFG);
+if (!stockcfg)
+	syslog("Unable to read: " + MERCHANTSTOCKCFG + ".cfg");
+endif
+
+pricescfg := ReadConfigFile(CITYPRICESCFG);
+if (!pricescfg)
+	syslog("Unable to read: " + CITYPRICESCFG + ".cfg");
+endif
+
+var bp := CreateItemAtLocation(me.x, me.y, me.z, "BackPack", 1);
+EquipItem(me, bp);
+
+myinv := GetMerchantContainer(MYINV);
+var myinv2 := GetMerchantContainer("Buy");
+var myinv3 := GetMerchantContainer("Spare");
+
+RestockInventory();
+
+///////////////////////////////////////////////////////////
+// MAIN PROGRAM
+///////////////////////////////////////////////////////////
+program Merchant()
+	EnableEvents(EVID_SPEECH, 4);
+	EnableEvents(EVID_MERCHANT_BOUGHT + EVID_MERCHANT_SOLD);
+
+	while (1)
+		var ev := wait_for_event(5);
+		print("ev = " + ev.type);
+
+		case (ev.type)
+			EVID_SPEECH:
+				var text := lower(ev.text);
+				if (text["buy"])
+					SendBuyWindow(ev.source, myinv, me, myinv2);
+				elseif (text["sell"])
+					SendSellWindow(ev.source, me, myinv, myinv2, myinv3);
+				elseif (text["open1"])
+					SendOpenSpecialContainer(ev.source, myinv);
+				elseif (text["open2"])
+					SendOpenSpecialContainer(ev.source, myinv2);
+				elseif (text["open3"])
+					SendOpenSpecialContainer(ev.source, myinv3);
+				endif
+
+			EVID_MERCHANT_BOUGHT:
+
+			EVID_MERCHANT_SOLD:
+
+		endcase
+
+	foreach itm in EnumerateItemsInContainer(me.backpack)
+		print("I have: " + itm.desc);
+	endforeach
+
+	endwhile
+endprogram
+
+function Speech(byref ev)
+	case (ev.type)
+		EVID_SPEECH:
+			ProcessMerchantSpeech(ev);
+
+		EVID_MERCHANT_BOUGHT:
+
+		EVID_MERCHANT_SOLD:
+
+	endcase
+
+	return 1;
+endfunction
+
+
+function ProcessMerchantSpeech(byref ev)
+	var text := lower(ev.text);
+
+	if (text["buy"])
+		SendBuyWindow(ev.source, myinv, me, myinv2);
+	elseif (text["sell"])
+		SendSellWindow(ev.source, me, myinv, myinv2, myinv3);
+	elseif (text["opensell"])
+		SendOpenSpecialContainer(ev.source, myinv);
+	elseif (text["openbuy"])
+		SendOpenSpecialContainer(ev.source, myinv2);
+	elseif (text["opentemp"])
+		SendOpenSpecialContainer(ev.source, myinv3);
+	endif
+endfunction
+
+
+///////////////////////////////////////////////////////////
+// Purpose: Restocks the merchant's inventory.
+// 			**NOTE: Called from NonCombat module.
+// Params:  none
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function RestockInventory()
+	var nowtime := ReadGameClock();
+
+	// Is it time to restock?
+	if (NextRestock > nowtime)
+		return 0;
+	endif
+
+	foreach group in SellGroups()
+		RestockGroup(group);
+	endforeach
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Restocks a group of items I sell.
+// Params:  group		Name of the group.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function RestockGroup(group)
+	var groupelem := FindConfigElem(stockcfg, group);
+
+	foreach itm in GetConfigStringArray(groupelem, "Item")
+		RestockItem(itm);
+	endforeach
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Restocks an item.
+// Params:  item		Objtype of item.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function RestockItem(item)
+	item := SplitWords(item);
+	var itm := CInt(item[1]);
+	var tostock := CInt(item[2]);
+
+	// How many to create?
+	var tocreate := tostock - CountExisting(myinv, itm);
+	if (tocreate < 1)
+		return 0;
+	endif
+
+	CreateItemInInventory(myinv, itm, tocreate);
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Counts how many items are in a container.
+// Params:  container		Container ref.
+//			objtype			Object type.
+// Returns: <return>
+///////////////////////////////////////////////////////////
+function CountExisting(byref container, objtype)
+    var count := 0;
+    foreach item in EnumerateItemsInContainer(container)
+        if (item.objtype = objtype)
+            count := count + item.amount;
+        endif
+    endforeach
+    return count;
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Returns a list of Sell groups.
+// Params:  none
+// Returns: selllist	Array of groups I sell.
+///////////////////////////////////////////////////////////
+function SellGroups()
+	var mymrelem := FindConfigElem(stockcfg, GetObjProperty(me, "Merchant"));
+	return GetConfigStringArray(mymrelem, "Sells");
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Returns a list of Buy groups.
+// Params:  none
+// Returns: buylist		Array of groups I buy.
+///////////////////////////////////////////////////////////
+function BuyGroups()
+	var mymrelem := FindConfigElem(stockcfg, GetObjProperty(me, "Merchant"));
+	return GetConfigStringArray(mymrelem, "Buys");
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Finds or creates a container for the merchant's
+//			inventory.
+// Params:  name		Name of inventory.
+// Returns: inv			Item container for the inventory.
+///////////////////////////////////////////////////////////
+function GetMerchantContainer(name)
+	// Try to find the container.
+	foreach box in EnumerateItemsInContainerOfObjtype(me.backpack, UOBJ_METALCHEST)
+		if (box.name = name)
+			return box;
+		endif
+	endforeach
+
+	// Not found, so create.
+	var mrbox := CreateItemInBackpack(me, UOBJ_METALCHEST, 1);
+	mrbox.name := name;
+
+	return mrbox;
+endfunction

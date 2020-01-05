@@ -1,0 +1,27 @@
+/////////////////////////////////////////////////////////////
+//
+//	Author: Caine
+//
+// 	Description:	Normal Destroy an item
+// 			but loops till cancelled
+//
+/////////////////////////////////////////////////////////////
+
+use uo;
+
+program textcmd_destroy( who )
+    SendSysMessage( who, "Please target something to destroy" );
+while(1)
+    local tgt := TargetCoordinates( who );
+    if (tgt)
+	if (tgt.item)
+        	DestroyItem( tgt.item );
+        else
+            	SendSysMessage( who, "You can only destroy items" );
+    	endif    
+    else
+    	break;
+    endif
+
+endwhile;
+endprogram

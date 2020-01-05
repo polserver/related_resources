@@ -1,0 +1,72 @@
+/* webview.src
+ * Last Modified: 06/18/04
+ *
+ * This command makes it easier to do dev functions while in game.
+ * The only useful one is resetwebprop. The rest are kind of dangerous.
+ * By dangerous, of course, I mean it would only mess up the webprofile
+ * stuff and not anything else. These have not been heavily tested.
+ *
+*/
+
+use uo;
+use os;
+
+include ":webview:webProfile";
+
+program webview(who, text) 
+
+  var props := SplitWords(text); 
+
+  if (props[1] == "resetwebpropval")
+    if (!props[2])
+      usage(who, "resetwebpropval");
+      return 0;
+    endif
+
+    if (!props[3])
+      SendSysMessage(who, "Resetting WebProp at index " + CInt(props[2]) + " to \"\".");
+      ResetWebPropVal(CInt(props[2]));
+    else
+      SendSysMessage(who, "Resetting WebProp at index " + CInt(props[2]) + " to " + props[3] + ".");
+      ResetWebPropVal(CInt(props[2]), props[3]);
+    endif
+
+  elseif (props[1] == "resetwebprop")
+    SendSysMessage(who, "Resetting WebProp to default.");
+    ResetWebProp();
+
+  elseif (props[1] == "renamewebprop")
+    if (!props[2])
+      usage(who, "renamewebprop");
+      return 0;
+    else
+      SendSysMessage(who, "Renaming WebProp to " + CStr(props[2]) + ".");
+      RenameWebProp(CStr(props[2]));
+    endif
+
+  elseif (props[1] == "help" || props[1] == "usage" || !props[1])
+    usage(who);
+    return 0;
+  endif
+
+endprogram
+
+
+function usage(who, text := "")
+
+  if (text == "resetwebpropval")
+    SendSysMessage(who, "Syntax incorrect. Usage for resetwebpropval:");
+    SendSysMessage(who, ".webview resetwebpropval [index] [value]");
+
+  elseif (text == "renamewebprop")
+    SendSysMessage(who, "Syntax incorrect. Usage for renamewebprop:");
+    SendSysMessage(who, ".webview renamewebprop [new name]");
+
+  else
+    SendSysMessage(who, "Possible usages:");
+    SendSysMessage(who, ".webview resetwebpropval [index] [value]");
+    SendSysMessage(who, ".webview renamewebprop [new name]");
+    SendSysMessage(who, ".webview resetwebprop");
+  endif
+
+endfunction

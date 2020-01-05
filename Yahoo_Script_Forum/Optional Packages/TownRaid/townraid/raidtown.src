@@ -1,0 +1,638 @@
+//townraid v0.7c
+//made by GM Scull
+use uo;
+use cfgfile;
+use util;
+use os;
+
+include "include/raidconsts";
+include "include/stringarrays";
+
+var codename;
+var coords := {};
+var totalnpcsspawned := 0;
+var goldpile := 0;
+
+var raidsettings := { };
+var raidupdateinfo := { };
+
+
+var settings;
+var difficulty;
+var raiders;
+var config;
+
+
+var Raidid:=1;
+var errorcount:=0;
+
+
+program RaidTown(prefs)
+
+	UnloadConfigFile( "groups" );
+	UnloadConfigFile( "locations" );
+	UnloadConfigFile( "difficulty" );
+	UnloadConfigFile( "config" );
+
+
+	var locationcfg := ReadConfigFile( "locations" );
+	var groupcfg := ReadConfigFile( "groups" );
+	var difficultycfg := ReadConfigFile( "difficulty" );
+	var configcfg := ReadConfigFile( "config" );
+
+
+	// - Error Checking -
+
+	settings := locationcfg[prefs[PA_LOCATION]];
+   	raiders := groupcfg[prefs[PA_GROUP]];
+	difficulty := difficultycfg[ prefs[PA_DIFFICULTY] ];
+	config := configcfg["Config"];
+
+	/* dont like this
+	if(CHECK_FOR_ERRORS) //intergrate into gump?
+		if (Start_script(":townraid:checkcfg", prefs))
+			local waitforit := GetGlobalProperty("RaidcfgOK");
+			var timeout;
+			repeat
+				sleep(5);
+				waitforit := GetGlobalProperty("RaidcfgOK");
+				timeout := timeout + 1;
+			until (waitforit or (timeout>10));
+
+			EraseGlobalProperty("RaidcfgOK");
+			if (!waitforit=2)
+				CleanUpRaid("Cfg Error");
+				return;
+			endif
+		endif
+	endif
+	*/
+
+	if (!settings)
+		print("Could not find location: "+settings);
+		CleanUpRaid("missing " +settings +" entry in location.cfg");
+		return;	
+	elseif (!raiders)
+		print("Could not find group: "+raiders);
+		CleanUpRaid("missing " +raiders +" entry in group.cfg");
+		return;
+	elseif (!difficulty)
+		print("Could not find difficuly: "+difficulty);
+		CleanUpRaid("missing " + difficulty + " entry in difficuly.cfg");
+		return;	
+	endif
+
+	codename := settings.name;
+	if (!codename)
+		print("ERROR: No raidname in "+settings);
+		CleanUpRaid("No raidname");
+		return;
+	endif
+
+	
+	var newraidsonnow:={};
+	var raidsonnow := {};
+
+	set_critical(1);
+		raidsonnow := GetGlobalProperty("raidsonnow");
+
+		if (!raidsonnow)
+			newraidsonnow := {};
+			print ("No other raids in progress");
+		else
+			foreach raid in raidsonnow //rebuild
+				if (GetGlobalProperty("raidsettings"+raid))
+					newraidsonnow.append(raid);
+					if (raid >= Raidid)
+						Raidid := raid+1;
+					endif
+				endif
+			endforeach
+		endif
+
+		newraidsonnow.append(Raidid);
+		setglobalproperty("raidsonnow",newraidsonnow);
+	set_critical(0);
+
+
+	EraseGlobalProperty("raidname"+Raidid);
+	EraseGlobalProperty("raidsettings"+Raidid);
+	EraseGlobalProperty("raidupdateinfo"+Raidid);
+	EraseGlobalProperty("raiddead"+Raidid);
+	EraseGlobalProperty("raidwaypoints"+Raidid);
+
+	// - Settings Code -
+
+	var i:=0, j:=0;
+	var waves := cint(difficulty.cycles);
+	var goldamount := cint(difficulty.goldpile);
+	var maxnpcalive := cint(difficulty.maxnpcs);
+	var sleepbetweenwaves := cint(difficulty.sleeptime);
+
+	print(cstr(prefs[PA_STARTERNAME]) + " just started townraid ID:" + Raidid);
+	staffreport("" + cstr(prefs[PA_STARTERNAME]) + " has initiated Townraid ID:" + Raidid);
+
+	var splitter := splitwords(settings.rect); //Get the raiders spawn area
+	coords[1] := cint(splitter[1]);
+	coords[2] := cint(splitter[2]);
+	coords[3] := cint(splitter[3]);
+	coords[4] := cint(splitter[4]);
+
+	splitter := splitwords(settings.goal);
+	raidsettings[SET_XGOAL] := cint(splitter[1]);
+	raidsettings[SET_YGOAL] := cint(splitter[2]);
+
+	if ((goldamount) and (settings.goldgfx) and (prefs[PA_RAIDTYPE]=RAID_RAIDWITHGOLD))
+		goldpile := createitematlocation(raidsettings[SET_XGOAL], raidsettings[SET_YGOAL], GetWorldHeight( raidsettings[SET_XGOAL], raidsettings[SET_YGOAL] ), settings.goldgfx, 1);
+		goldpile.name := codename + " goldpile - " + goldamount + "gp remaining";
+		goldpile.moveable := 0;
+		if (!goldpile)
+			staffreport ("Goldpile could not be created, continuing without.");
+			raidupdateinfo[UPD_GOLDLEFT] := 0;
+		else
+			raidupdateinfo[UPD_GOLDLEFT] := goldamount;
+			raidsettings[SET_STOPNOGOLD] := prefs[PA_STOPNOGOLD]; //Stop the raid if theres no gold left
+		endif
+		raidsettings[SET_YOINKAMOUNT] := cint(difficulty.yoinkamount);
+	else
+		raidsettings[SET_YOINKAMOUNT] := 0;
+	endif
+
+	var raiderarray := GetConfigStringArray( raiders, "npc" );
+	var raidertype := { };   //Template
+	var raideramount := { }; //How many to spawn
+	var raiderchance := { }; //Random Chance of spawning
+
+	var totalbadiesperwave := FillInRaiderArrays(raiderarray, raidertype, raideramount, raiderchance, 1);
+
+
+	raidsettings[SET_TOTALRAIDERS] := (totalbadiesperwave*waves);
+	raidsettings[SET_RAIDERTYPE] := cstr(prefs[PA_GROUP]);
+	raidsettings[SET_PROVOKE] := prefs[PA_PROVOKE];//Not workin yet
+
+	SetGlobalProperty("raidname"+Raidid, codename);
+	SetGlobalProperty("raidsettings"+Raidid,raidsettings);
+	SetGlobalProperty("raidupdateinfo"+Raidid,raidupdateinfo);
+
+	SetGlobalProperty("raiddead"+Raidid, 0);
+	CreateWayponts(settings);
+
+	// - Spawning Code -
+
+	if ((prefs[PA_RAIDGUARDS]) and (settings.raidguards))
+		var guardtemplate := "raiddefender"; 
+		if (settings.raidguardtemplate)
+			guardtemplate := settings.raidguardtemplate;
+		endif
+		for (i := 1; i <= cint(settings.raidguards); i:=i+1)
+			SpawnNPC(guardtemplate, 1, 0);
+		endfor
+	endif
+	
+
+	if (settings.playermessage)
+		Playermessage(settings.playermessage);
+	endif
+
+	if ((goldamount) and (prefs[PA_REWARDPLAYERS]) and (prefs[PA_RAIDTYPE]=RAID_RAIDWITHGOLD))
+		sleep(4);
+		Playermessage("There shall be a " + goldamount + "gp split reward for the defenders if the monsters dont get to it first!");
+	endif
+
+
+	var numnpcs := 0;
+	var critnum;
+
+	//randomspawn stuff
+	var tospawn:=0;
+	var totalrandomlyspawned := 0;
+
+	i:=0; j:=0;
+
+	EndLoop:
+
+	while((i < waves) and RaidinProgress());
+		sleepms(500);
+
+		numnpcs := totalnpcsspawned - GetGlobalProperty("raiddead"+Raidid);
+
+		UpdateGoldInfo();
+
+		if ((numnpcs < maxnpcalive) or (maxnpcalive=0))
+
+			if (RANDOM_SPAWNS)
+			//** Random Spawning
+				while((totalrandomlyspawned < totalbadiesperwave) and RaidinProgress()); //change to mod
+					tospawn := randomInt(len(raiderarray))+1;
+					if (cint(raideramount[tospawn]) >= 1)
+						if (SpawnNPC(raidertype[tospawn],0,raiderchance[tospawn]) )
+							totalrandomlyspawned := totalrandomlyspawned + 1;
+							raideramount[tospawn] := raideramount[tospawn] - 1;
+							sleep(cint(difficulty.spawndelay));
+						endif
+					endif
+					sleepms(50); //stopspamming
+				endwhile
+
+				totalrandomlyspawned := 0;
+				tospawn := 0;
+				FillInRaiderArraysEx(raiderarray, raideramount);//rebuild
+			else
+				//** No Random Spawning
+				for (j := 1; j <= len(raiderarray); j:=j+1)
+					for (critnum:=0; critnum <= raideramount[j]; critnum:=critnum+1)
+						if (SpawnNPC(raidertype[j],0,raiderchance[j]))
+							sleep(cint(difficulty.spawndelay));
+						endif
+
+					endfor
+				endfor
+			endif
+
+			//staffreport ("Wave Spawned. " + (totalnpcsspawned - GetGlobalProperty("raiddead"+Raidid) ) + " raiders now in exisitance.");
+			if (RaidinProgress())
+				sleep(sleepbetweenwaves);
+			endif
+			i:=i+1;
+		else
+			//staffreport("Waiting for " + (numnpcs - maxnpcalive + 1) + " to die till next wave."); //mabey tell this to players?
+			sleep(15);
+		endif
+
+	endwhile
+
+	
+	if (RaidinProgress()) //check for raid stop
+
+		if (config.FinishedSpawning) Playermessage(config.FinishedSpawning); endif
+
+		//staffreport("Waiting on Raiders to Die...");
+		sleep(5);
+		WaitForEnemyDeaths();
+
+	endif
+
+
+	// - EndGuy Spawning Code -
+
+	raiderarray := { };
+	raiderarray := GetConfigStringArray( raiders, "endnpc" );
+
+	if ((len(raiderarray)>=1) and (RaidinProgress()))
+		if (config.EndGuyString) Playermessage(config.EndGuyString); endif
+
+		for (i := 1; i <= len(raiderarray); i:=i+1)
+			SpawnNPC(raiderarray[i]);
+		endfor
+
+		sleep(12);
+		WaitForEnemyDeaths();
+	endif
+
+	sleep(2);
+
+
+
+	var isthereareward := 0;
+	raidupdateinfo := getglobalproperty("raidupdateinfo"+Raidid);
+
+
+	if ((goldpile) and (goldamount) and (prefs[PA_REWARDPLAYERS]) and (prefs[PA_RAIDTYPE]=RAID_RAIDWITHGOLD)) //if the goldpile still exists, reward the players
+		raidsettings := getglobalproperty("raidsettings"+Raidid);
+
+		if (cint(raidupdateinfo[UPD_GOLDLEFT]) <= cint(difficulty.yoinkamount)+1)
+			if (settings.playerfailmessage)
+				Playermessage(settings.playerfailmessage);
+			endif
+		else
+			if (settings.playerendmessage)
+				Playermessage(settings.playerendmessage);
+			endif
+			isthereareward := 1;
+		endif
+
+	else
+		if (settings.playerendmessage)
+			Playermessage(settings.playerendmessage);
+		endif
+	endif
+
+
+	AutoRewardSystem(goldamount,isthereareward);
+
+	Destroyitem(goldpile);
+
+	sleep(5);
+
+	if (!RaidinProgress()) //check for raid stop (Fix this to give a more accurate message)
+		staffreport("Townraid complete on account of GM intervention or theres no gold left.");
+	else
+		staffreport("Townraid complete.");
+	endif
+
+	CleanUpRaid();
+	
+endprogram
+
+
+function SpawnNPC(type, spawnaguard := 0, spawnchance := 0)
+
+	var x,y,z;
+	var thecritter;
+	var sh;
+	var info;
+	var try;
+
+	if (spawnchance)
+		if (RandomInt(spawnchance)!=1)
+			return 1;
+		endif
+	endif
+
+
+	for (try := 0; try <= MAX_TRIES; try:=try+1)
+
+		if (!spawnaguard)
+			x := RandomInt (coords[3]-coords[1])+coords[1];
+			y := RandomInt (coords[4]-coords[2])+coords[2];
+		else
+			x := RandomInt ((raidsettings[1]+3)-raidsettings[1])+raidsettings[1];
+			y := RandomInt ((raidsettings[2]+3)-raidsettings[2])+raidsettings[2];
+		endif
+		z := GetMapInfo(x,y).z;
+
+		sh := GetStandingHeight( x, y, z );
+		if ((!sh.multi) and (!sh.multi.serial))
+			info := hex(GetMapInfo( x , y ).landtile);
+			if ((info < 0x406) or (info > 0x455))
+				thecritter := createnpcfromtemplate(type,x,y,z);
+				if (thecritter)
+					if (!spawnaguard)
+						SetupRaider(thecritter);
+						totalnpcsspawned := totalnpcsspawned + 1;
+					else
+						SetupGuard(thecritter);
+					endif
+					return 1;
+				endif
+			endif
+		endif
+
+	endfor
+
+	staffreport ("Error - could not spawn "+ type);
+	sleep(2); //stop the spam
+	errorcount:=errorcount+1;
+
+	if (errorcount>30)
+		staffreport("fix the damn errors and u wont get spamed!");
+	endif
+
+endfunction
+
+
+function WaitForEnemyDeaths()
+
+	while ((GetGlobalProperty("raiddead"+Raidid) < totalnpcsspawned) and RaidinProgress())
+		//staffreport("Remaining Enemys: "+ (totalnpcsspawned - GetGlobalProperty("raiddead"+Raidid)));
+		UpdateGoldInfo();
+		sleep(10);
+	endwhile
+
+endfunction
+
+
+function CleanUpRaid(msg:="")
+
+	if (Raidid)
+		var newraidarr := {};
+		set_critical(1);
+			foreach raid in GetGlobalProperty("raidsonnow")
+				if (raid!=Raidid)
+					newraidarr.append(raid);
+				endif
+			endforeach
+			setglobalproperty("raidsonnow",newraidarr);
+		set_critical(0);
+	endif
+
+	EraseGlobalProperty("raiddead"+Raidid);
+	EraseGlobalProperty("raidsettings"+Raidid);
+	EraseGlobalProperty("raidupdateinfo"+Raidid);
+	EraseGlobalProperty("raidname"+Raidid);
+	EraseGlobalProperty("raidwaypoints"+Raidid);
+	EraseGlobalProperty("RaidcfgOK");
+	print("townraid #" + Raidid + " complete. " + msg);
+	if (msg)
+		staffreport("Error in Townraid " + Raidid +" , see console for details: " + msg);
+	endif
+	sleep(5); //so we can see the staffmsg`s incase of error
+endfunction
+
+
+function SetupGuard(thecritter)
+	SetObjProperty(thecritter,"#towndefender",Raidid);
+endfunction
+
+function SetupRaider(thecritter)
+	SetObjProperty(thecritter,"#townraider",Raidid);
+
+	case(thecritter.script)
+		"spellkillpcs": thecritter.script := "raidspellkillpcs";
+		"archerkillpcs": thecritter.script := "raidarcherkillpcs";
+		"critterhealer": thecritter.script := "raidcritterhealer";
+		"hireling": thecritter.script := "raidkillpcs"; sleep(5); //let them equip
+		default: thecritter.script := "raidkillpcs";
+	endcase
+
+	RestartScript(thecritter);
+
+endfunction
+
+
+function KillIt(me)
+	MoveCharacterToLocation(me,5288 , 1176 , 0,MOVECHAR_FORCELOCATION);
+	SetObjProperty(me,"guardkill",1);
+	damage( me, me.maxhp + 3 );
+endfunction
+
+function staffreport(text)
+	foreach guy in EnumerateOnlineCharacters()
+        if  (guy.cmdlevel)
+       		SendSysMessage(guy, "Raid#" + cstr(Raidid) + " [" + codename + "]: " + text);
+		endif
+	endforeach
+endfunction
+
+function playermessage(text)
+	if (config.TalkToPlayers)
+		foreach guy in EnumerateOnlineCharacters()
+			SendSysMessage(guy, text);
+		endforeach
+	endif
+endfunction
+
+
+function CreateWayponts(settings)
+
+	var cfgwaypoints := GetConfigStringArray(settings , "waypoint" );
+	if (cfgwaypoints[1])
+
+		var raidwaypoints := { };
+		var splitter := { };
+		var i:=1;
+
+		while (i <= cint(len(cfgwaypoints)));
+			splitter := { };
+			splitter := splitwords(cfgwaypoints[i]);
+
+			if (i=1)
+				raidwaypoints[1] := cint(splitter[1]);
+				raidwaypoints[2] := cint(splitter[2]);
+			else
+				raidwaypoints[(i*2)-1] := cint(splitter[1]);
+				raidwaypoints[i*2] := cint(splitter[2]);
+			endif
+			i:=i+1;
+		endwhile
+
+		SetGlobalProperty("raidwaypoints"+Raidid,raidwaypoints);
+	endif
+
+endfunction
+
+
+function FillInRaiderArrays(raiderarray, byref raidertype, byref raideramount, byref raiderchance, totalrebuild := 0)
+
+	var splitter := { };
+	var totaldudes := 0, i;
+
+	for (i := 1; i <= len(raiderarray); i:=i+1)
+		splitter := splitwords(raiderarray[i]);
+		raidertype[i] := splitter[1];
+		raideramount[i] := cint(splitter[2]);
+		if (!raideramount[i]) //keep compatibility with older cfgs
+			raideramount[i] := 1;
+		endif
+		if (cint(splitter[3]))
+			raiderchance[i] := cint(splitter[3]);
+		else
+			raiderchance[i] := 0;
+		endif
+		totaldudes := totaldudes + raideramount[i];
+	endfor
+	
+	return totaldudes;
+
+endfunction
+
+//quick ver of above func
+function FillInRaiderArraysEx(raiderarray, byref raideramount)
+
+	var splitter := { };
+	var i;
+
+	for (i := 1; i <= len(raiderarray); i:=i+1)
+		splitter := splitwords(raiderarray[i]);
+		raideramount[i] := cint(splitter[2]);
+		if (!raideramount[i]) //keep compatibility with older cfgs
+			raideramount[i] := 1;
+		endif
+	endfor
+	
+endfunction
+
+
+function RaidinProgress()
+	if (GetGlobalProperty("raidname"+Raidid))
+		return 1;
+	endif
+endfunction
+
+
+
+function AutoRewardSystem(initialgold, isthereareward)
+
+	raidupdateinfo := getglobalproperty("raidupdateinfo"+Raidid);
+	var endgold := raidupdateinfo[UPD_GOLDLEFT];
+	var howgoodami := 0;
+	var participants:= {};
+	var i;
+	//var AverageScores := { }; //this really should determine how much a player recives...but thats to much fuckin math for me...
+
+	
+	var effortmessurement := GetConfigStringArray(config , "Effort" );
+	var effortmessurementval := GetConfigStringArray(config , "Kills" );
+
+	foreach guy in EnumerateOnlineCharacters()
+
+		if (!guy.cmdlevel)
+
+			howgoodami := GetobjProperty(guy, "#imadefender");
+			//mabey some sorta 'average howgoodami' system from all the participants
+
+			if (howgoodami)
+				if (isthereareward and config.EffortReport)
+					for (i := len(effortmessurement); i>0 ; i:=i-1)
+	
+						if (howgoodami > effortmessurementval[i])
+							SendSysMessage(guy, effortmessurement[i]);
+							break;
+						endif
+					endfor
+				endif
+				participants.append(guy);
+			endif
+
+			howgoodami:=0;
+
+		endif
+	endforeach
+
+	sleep(1);
+
+	var ppl := cint(len(participants));
+	var gp:=0;
+	//optimise
+
+	if (ppl>1)
+		gp := cint(endgold/ppl);
+	elseif (ppl<=0)
+		staffreport("No players participated in the raid");
+		return;
+	else	
+		gp := cint(endgold);
+	endif
+
+	staffreport(ppl + " players in raid, " + gp + " for each player");
+
+	foreach dude in participants
+		if (!isthereareward)
+			if (config.NoGoldLeft and goldpile) SendSysMessage(dude, config.NoGoldLeft); endif
+		else
+			SendSysMessage(dude, "You recive " + gp + "gp for your efforts in the raid.");	
+			sleep(1);
+			//SendSysMessage(dude, "There were " + ppl-1 + " other defenders in the raid.");	
+			//sleep(1);
+			//SendSysMessage(dude, (initialgold-endgold) + "gp was looted by the monsters.");	
+			CreateItemInBackpack( dude, 0xeed, gp );
+		endif
+
+		EraseobjProperty(dude, "#imadefender");
+	endforeach
+
+
+endfunction
+
+
+function UpdateGoldInfo()
+	if (goldpile)
+		raidupdateinfo := getglobalproperty("raidupdateinfo"+Raidid);
+		goldpile.name := codename + " goldpile - " + cint(raidupdateinfo[UPD_GOLDLEFT]) + "gp remaining";
+	endif
+endfunction
+
+
+
+
+

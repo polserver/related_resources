@@ -1,0 +1,23 @@
+///////////////////////////////////////////////////////////
+// SpawnRegion.src
+//
+// Spawns a specified region.
+//
+// Creator: Oroborous
+// Contact: mkow@sympatico.ca
+//
+// Created: Dec-2000
+///////////////////////////////////////////////////////////
+
+include "SpawnRegion";
+
+program SpawnSpecificRegion(region)
+	if (GetGlobalProperty("#" + region))
+		return 0;
+	endif
+
+	LogMsg("[SPAWNREGION]: Spawning Region: " + region);
+	SetGlobalProperty("#" + region, 1);
+	SpawnRegion(region);
+	EraseGlobalProperty("#" + region);
+endprogram

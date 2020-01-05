@@ -1,0 +1,100 @@
+///////////////////////////////////////////////////
+// mapGo.src 
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+///////////////////////////////////////////////////
+//
+// - travel on a world map to golocs.cfg locations
+//   (not dungeons or T2A tho)
+//
+// - fixed not travelling to some golocs sucessfully
+//
+///////////////////////////////////////////////////
+use uo;
+use os;
+use cfgfile;
+
+program map_travel(who)
+  var goloccfg:=ReadConfigFile("::golocs");
+  
+  var map_layout:={
+   "page 0",
+   "nodispose",
+   "resizepic 0 0 3600 430 480",
+   "gumppic 20 40 5528",
+   "text 180 20 33 0",
+   "text 183 22 63 1",
+   "resizepic 15 40 3600 65 50",
+   "text 20 47 98 2",
+   "text 20 62 98 3" };
+  var map_data:={
+   "Travel Map",
+   "Travel Map",
+   "x",
+   "y" };
+   
+  var lockeys:=GetConfigIntKeys(goloccfg);  
+  var bx,by;
+  var lockey,locelem;
+  var i:=0;
+  for (i:=1;i<=len(lockeys);i:=i+1)
+    lockey:=lockeys[i];
+    locelem:=FindConfigElem(goloccfg,lockey);
+    bx:=GetGumpX(GetConfigInt(locelem,"x"));
+    by:=GetGumpY(GetConfigInt(locelem,"y"));
+    if (bx)
+       map_layout.append("button "+bx+" "+by+" 2361 2360 1 0 "+(100+i));
+    endif
+  endfor
+  if (who.x<5100)
+    map_layout.append("text "+(GetGumpX(who.x)-3)+" "+(GetGumpY(who.y)-3)+" 33 "+len(map_data));
+    map_data.append("X");
+    map_layout.append("text 60 420 33 "+len(map_data));
+    map_data.append("X");
+    map_layout.append("text 80 420 63 "+len(map_data));
+    map_data.append("marks where you are");
+  else
+    map_layout.append("text 80 420 63 "+len(map_data));
+    map_data.append("you are not currently on this map");
+  endif
+  map_layout.append("text 35 47 63 "+len(map_data));
+  map_data.append(who.x);
+  map_layout.append("text 35 62 63 "+len(map_data));
+  map_data.append(who.y);
+  map_layout.append("gumppic 60 443 2361");
+  map_layout.append("text 75 440 63 "+len(map_data));
+  map_data.append("press the green buttons on the map to travel....");
+  var retval:=SendDialogGump(who,map_layout,map_data);
+  for (i:=1;i<=len(lockeys);i:=i+1)
+    if (retval[i+100])
+      locelem:=FindConfigElem(goloccfg,lockeys[i]);
+      var loc:=array;
+      loc.+x:=GetConfigInt(locelem,"x");
+      loc.+y:=GetConfigInt(locelem,"y");
+      loc.+z:=GetMapInfo(loc.x,loc.y).z;
+      if (MoveCharacterToLocation(who,loc.x,loc.y,loc.z))
+        sendsysmessage(who,"You have travelled to "+GetConfigString(locelem,"name"));
+      endif
+    endif
+  endfor
+endprogram
+
+///////////////////////////////////////////////////////////
+
+function GetGumpX(x)
+  if ((x) and (x<5100))
+     return (Cint(380*x/5100)+20);
+  else
+     return 0;
+  endif
+endfunction
+
+///////////////////////////////////////////////////////////
+
+function GetGumpY(y)
+  return (Cint(370*y/4000)+42);
+endfunction
+
+///////////////////////////////////////////////////////////

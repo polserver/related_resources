@@ -1,0 +1,170 @@
+// Armslore script by Shai`tan and Rincewind.
+// well this is according to stratics, I added new props to std\combat\itemdesc.cfg
+// MinDam and Maxdam so you too can use them when reading the cfg. It just 4d3+4 converted
+// to a normal integer :)
+
+
+Use cfgfile;
+Use uo;
+use basic;
+use basic;
+
+
+include "include/client";
+include "include/skillpoints";
+
+program do_armslore( character )
+    local configfile;
+    local the_item;
+    local itemtype;
+    local element;
+    local configfilename;
+    local madeby;
+    var Condition;
+    var Desc := "";
+     
+    local thepoints := get_default_points(SKILLID_ARMSLORE);
+    SendSysMessage( character, "Select an object to evaluate." );
+    the_item := target(character, TGTOPT_CHECK_LOS);
+    if (!the_item)
+        SendSysmessage(character, "Targetting cancelled.");
+        return;
+    endif 
+    
+    local cfg := readconfigfile(":combat:itemdesc");
+    local weapfile := ReadConfigFile( ":combat:itemdesc" );
+    local entry := cfg[the_item.objtype];
+    
+    if (!entry)
+        sendsysmessage(character, "You can only use this skill on weapons or armor!");
+        return;
+    endif
+   
+       madeby:= GetObjProperty(the_item, "madeby");
+	if (madeby = error)
+	madeby:= "unknown";
+       endif
+
+       if (the_item.ar)
+        desc := Get_Armor(the_item);          
+       endif    
+        if (the_item.hitscript)
+         desc := Get_Weapon(the_item);          
+       endif    
+ 
+Condition := Get_Condition(the_item);
+
+if (checkskill( character, SKILLID_ARMSLORE, 90, thepoints ))
+SendSysmessage(character,"This item is "+ condition + " and " + desc + ", it was made by "+ madeby +".");
+ elseif (checkskill( character, SKILLID_ARMSLORE, 60, thepoints ))
+SendSysmessage(character,"This item is "+ condition + " and " + desc + ".");
+ elseif  (checkskill( character, SKILLID_ARMSLORE, 10, thepoints ))
+SendSysmessage(character,"This item is "+ condition + ".");
+ else
+SendSysmessage (character, "I cant quite tell . . .");
+endif
+
+endprogram
+
+
+Function Get_Condition(item);
+
+ local max_hp;
+ local item_max_hp;
+ local hp;
+ local damage_descr;
+ local damage_nbr;
+ local damage_real;
+   
+ item_max_hp := item.maxhp;
+ max_hp := item_max_hp;
+ hp := item.hp;
+ 
+ if (hp = 0)
+    hp := 1;
+   endif
+ if (max_hp = 0)
+    max_hp := 1;
+   endif
+ if (item_max_hp = 0)
+  item_max_hp := 1;
+   endif        
+   
+ damage_real := (hp  * 100) / max_hp;
+ damage_nbr := Cint(damage_real);
+
+if (damage_nbr >= 100);
+return "brand new";
+ elseif (damage_nbr >= 80 and damage_nbr <= 100)
+return "almost new";
+elseif (damage_nbr >= 70 and damage_nbr <= 80)
+return "barely used, with a few nicks and scrapes";
+ elseif (damage_nbr >= 60 and damage_nbr <= 70)
+return "fairly good condition";
+ elseif (damage_nbr >= 50 and damage_nbr <= 60)
+return "suffered some wear and tear";
+ elseif (damage_nbr >= 40 and damage_nbr <= 50)
+return "well used";
+ elseif (damage_nbr >= 30 and damage_nbr <= 40)
+return "rather battered";
+ elseif (damage_nbr >= 20 and damage_nbr <= 30)
+return "somewhat badly damaged";
+ elseif (damage_nbr >= 10 and damage_nbr <= 20)
+return "flimsy and not trustworthy";
+ elseif (damage_nbr <= 10)
+return "falling apart";
+endif
+
+endfunction
+
+Function Get_Weapon(Item);
+
+local weapfile := ReadConfigFile( ":combat:itemdesc" );
+
+ local max_dam := weapfile[item.objtype].MinDam;
+ local min_dam := weapfile[item.objtype].MaxDam;
+
+ local average := Cint(Max_Dam) + Cint(Min_Dam)  / 2;
+
+If (average > 0 and average <= 2)
+ return "might scratch your opponent slightly"; 
+elseif (average >= 3 and average <= 5)
+ return "would do minimal damage";
+elseif (average >= 6 and average <= 10)
+ return "would do some damage";
+elseif (average >= 11 and average <= 15)
+ return "would probably hurt your opponent a fair amount";
+elseif (average >= 16 and average <= 20)
+ return "would inflict quite a lot of damage and pain";
+elseif (average >= 21 and average <= 25)
+ return "would be a superior weapon";
+elseif (average >= 26)
+ return "would be extraordinarily deadly";
+endif
+
+endfunction
+
+function Get_armor(item);
+
+local ar := item.ar;
+
+If (ar = 0)
+ return "offers no defense against attackers";
+elseif (ar >= 1 and ar <= 5)
+ return "provides almost no protection";
+elseif (ar >= 6 and ar <= 10)
+ return "provides very little protection";
+elseif (ar >= 11 and ar <= 15)
+ return "pffers some protection against blows";
+elseif (ar >= 16 and ar <= 20)
+ return "serves as a sturdy protection";
+elseif (ar >= 21 and ar <= 25)
+ return "is a superior defense against attack";
+elseif (ar >= 26 and ar <= 30)
+ return "offers excellent protection";
+elseif (ar >= 30)
+ return "is superbly crafted to provide maximum protection";
+endif
+
+endfunction
+

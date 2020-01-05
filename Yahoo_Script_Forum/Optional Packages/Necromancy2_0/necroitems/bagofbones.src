@@ -1,0 +1,40 @@
+use uo;
+use util;
+
+include "include/client";
+
+var NEW_BONE := 0xA153;
+
+program use_bagofbones(who, bone)
+
+	SendSysMessage(who, "Where do you wish to drop the bag?");
+	local casttarg := targetcoordinates (who);
+
+	if (!casttarg)
+		SendSysMessage(who, "Cancelled.");
+		return;
+	endif
+
+	local parms := {};
+	parms .+ script := "tamed";
+	
+	local i := RandomInt(6) + 1;
+	While (i > 0)
+		local thecritter := CreateNPCfromTemplate("skeleton", casttarg.x, casttarg.y, casttarg.z, parms);
+		SetObjProperty(thecritter,"master", who.serial);
+		PlaySoundEffect(thecritter, 0x022b);
+	
+		if (!thecritter.backpack)
+			local hispack := createitematlocation(thecritter.x, thecritter.y, thecritter.z - 25, 0xe75, 1);
+			equipitem(thecritter, hispack);
+		endif
+
+		if ( RandomInt(5) > 0 )
+			CreateItemInBackpack(thecritter, NEW_BONE);
+		endif
+		i := i - 1;
+	endwhile
+	
+	destroyitem(bone);
+
+endprogram

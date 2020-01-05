@@ -1,0 +1,23 @@
+use uo;
+use os;
+use util;
+
+program blizzard( who , params )    
+
+    var rand := RandomInt( 26 );
+    var res := 
+      SetRegionWeatherLevel( params,       // region name
+                                2,   // weather type = snow
+                               50,   // severity
+                                0,   // aux
+                             rand ); // lightoverride
+
+    broadcast( "A blizzard overtakes " + params );
+    
+    if (!res)
+        SendSysMessage( who, "Error: " + res.errortext );
+    endif
+
+start_script(":daynight:daynight");
+
+endprogram

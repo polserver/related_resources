@@ -1,0 +1,79 @@
+////////////////////////////////////////////////////////////////////////////////////////
+//  RAISERECT.SRC - ingame command
+//  This is a "fastbuild" command you supply Z height as
+//  argument. If Z is left out it uses a default value of 1
+//  This command is great for putting down floors
+//  Todo:   Clean up the code when abs() is avail. and C-style for loops
+//   don't require initialization.
+//  Author: ens 1999/01/02
+//  Recent Modifications:]
+//      1999/01/25 Ignatius Created the command TILE.
+//      2000/02/15 Angreal modified into raiserect.
+/////////////////////////////////////////////////////////////////////////////////////////
+use uo;
+use util;
+use os;
+
+program textcmd_raiserect( who, deltaz )    
+    
+    local zdist;
+
+    if ( deltaz = "" )        
+	zdist := 1;
+    else
+        zdist := cint(deltaz);       
+    endif
+    
+    SendSysmessage( who, "Select coordinate #1" );
+    local coordStructOne := TargetCoordinates( who );
+    sleep(1);
+        SendSysmessage( who, "Select coordinate #2" );
+    local coordStructTwo := TargetCoordinates( who );
+    sleep(1);
+    if ( ( ! coordStructOne ) OR ( ! coordStructTwo ) ) // check that we got two valid coordstructs.
+        SendSysmessage( who, "Missing coordinate. Aborting." );
+        return;
+    endif
+    
+    local startX;
+    local startY;
+    local endX;
+    local endY;
+    if ( coordStructOne.x <= coordStructTwo.x )
+        startX  := coordStructOne.x;
+        endX    := coordStructTwo.x;
+    else
+        startX  := coordStructTwo.x;
+        endX    := coordStructOne.x;
+    endif
+    if ( coordStructOne.y <= coordStructTwo.y )
+        startY  := coordStructOne.y;
+        endY    := coordStructTwo.y;
+    else
+        startY  := coordStructTwo.y;
+        endY    := coordStructOne.y;
+    endif
+    
+    local rangex := cint(endX - startX);
+    local rangey := cint(endY - StartY);
+    local midx   := cint((endX + startX)/2);
+    local midy   := cint((endY + startY)/2);
+    local zspot  := coordStructOne.z;
+    local rad;
+
+    if (rangex >= rangey)
+         rad := rangex;
+    else
+         rad := rangey;
+    endif
+
+    local things := ListItemsNearLocation(midx, midy, zspot, rad);
+    local item; 
+ 
+    foreach item in things
+           MoveItemToLocation( item, item.x , item.y , item.z + zdist, MOVEITEM_FORCELOCATION );
+           sleepms(2);
+    endforeach
+    SendSysmessage( who, "Command completed." );
+    sleep(1);
+endprogram

@@ -1,0 +1,13 @@
+This is my TODO list. If you think it's too short let me know at tekproxy@yahoo.com.
+
+
+Idea (priority) 1 = important, 10 = just an idea
+
+Add option to view the region of players, possibly in the profile. (3)
+
+Have my own native profile array instead of using newclientsupport.
+Should be easy, just steal... erm script a few things. (3)
+
+An in-game gump for viewing profiles like the webprofile. (8)
+
+Make it so that the letter selection is intelligent and doesn't let you pick B if nothing starts with B. (5)

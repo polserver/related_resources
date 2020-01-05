@@ -1,0 +1,70 @@
+use uo;
+include "sench";
+
+//geminsert script
+//run from ItemID.
+
+program geminsert( parms )
+
+	var who := parms[1];
+	var gem := parms[2];
+	var tgtitem := parms[3];
+
+	if( !ReserveItem(gem) )
+	  return;
+	endif
+
+	var enchs;
+	case(gem.objtype)
+		0x7ffd: enchs := { "fstrike_def" }; //a sparklind red ruby
+		default: return 0;
+	endcase
+	
+	if( !enchs || !len(enchs) )
+	    return;
+	endif
+
+        //Make sure its an item, shouldnt have to as its run from item id
+        /////////////////////////////////////////////////////////////////
+	if( tgtitem.intelligence )
+	    SendSysMessage( who, "Thats not an item!" );
+	    return;
+	endif
+
+        //Check for free sockets/slots
+        //////////////////////////////	
+	if( !getFreeEnchSlots( tgtitem ) )
+	    SendSysMessage( who, "That item has no free sockets." );
+	    return;
+	endif
+
+        //Check for enchantment conflicts
+        /////////////////////////////////
+	foreach enchantment in enchs
+		if( hasConflicts( enchantment, tgtitem ) )
+		  SendSysMessage( who, "This enchantment conflicts one already existing on the item." );
+		  return;
+		endif
+	endforeach
+
+	//Skill Checks Here
+
+	var theReturn;
+	foreach e in enchs
+	    if( getFreeEnchSlots( tgtitem ) )        //Check for free slots/sockets
+		theReturn := addEnch( tgtitem, e );  //Add the enchantment
+	        if( theReturn != 420 )
+		  SendSysMessage( who, theReturn );
+		  return;
+		endif 
+		fillEnchSlots( tgtitem, e, getEnchConfigProp(e,"level","integer"), gem );   //Fill the enchantment slots/sockets
+	    endif
+	endforeach
+	refreshEnchNames( tgtitem );  //Refreshes names
+
+	//Error-checking for this?
+	DestroyItem(gem);
+
+	SendSysMessage( who, "The runestone was succesfully inserted" );
+
+endprogram

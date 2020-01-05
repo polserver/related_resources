@@ -1,0 +1,72 @@
+use uo;
+
+include "sench";
+include "include/client";
+
+program stools( who, tools )
+
+	SendSysMessage( who, "Select an item to socket." );
+	var tgt := Target( who );
+
+	if( !tgt )
+	  SendSysMessage( who, "Cancelled." );
+	  return;
+	endif
+
+	if( !canSocket(tgt) )
+	  SendSysMessage( who, "You cant socket that." );
+	  return;
+	endif
+
+	if( getEnchSlots(tgt) )
+	  SendSysMessage( who, "That is already socketed." );
+	  return;
+	endif
+
+	//Socket ere
+	var socks := cInt(((
+                     GetEffectiveSkill(who,SKILLID_BLACKSMITHY)
+                   + GetEffectiveSkill(who,SKILLID_BOWCRAFT)      //Put your own max sockets ere
+                   + GetEffectiveSkill(who,SKILLID_CARPENTRY)     //This is 1-10
+                   + GetEffectiveSkill(who,SKILLID_INSCRIPTION)   //Based on these skills
+                   + GetEffectiveSkill(who,SKILLID_TINKERING)
+                   + GetEffectiveSkill(who,SKILLID_TAILORING)
+                   + GetEffectiveSkill(who,SKILLID_LOCKPICKING)
+                     )/7)/10);
+
+	if( !socks )
+	  SendSysMessage( who, "You are not good enough to carve sockets." );
+	  return;
+	endif
+
+	///////////////////////////////////////
+	//Put your skill-check algorithm here!!
+	///////////////////////////////////////
+	var skillToCheck := { SKILLID_BLACKSMITHY, SKILLID_BOWCRAFT, SKILLID_CARPENTRY, SKILLID_INSCRIPTION, SKILLID_TINKERING, SKILLID_TAILORING, SKILLID_LOCKPICKING };
+	var skillsPassed := 0;
+	foreach sk in skillToCheck
+	  if( CheckSkill( who, sk, (GetEffectiveSkill(who,sk)-7), 1 ) ) //700 points total - 7 skilld
+	    skillsPassed := skillsPassed + 1;
+	  endif
+	endforeach
+
+	if( skillsPassed < skillToCheck )
+	  SendSysMessage( who, "You fail to carve any sockets into the item." );
+	  return;
+	endif
+
+	setSlots( tgt, socks );
+	SendSysMessage( who, "You carved " + socks + " sockets into the item." );
+
+endprogram
+
+//Put your checking for socketable items in here!
+function canSocket( item )
+	if( item.IsA(POLCLASS_ITEM) )
+	    if( isSocketable( item.objtype ) )
+		return item;
+	    endif
+	else
+		return 0;
+	endif
+endfunction

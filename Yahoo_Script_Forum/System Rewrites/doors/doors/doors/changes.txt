@@ -1,0 +1,45 @@
+Version 1.3a-
+   Fixed bug that allowed the door to "wander" if it was clicked on too many times
+   in rapid succession.
+
+Version 1.3 update- 
+   1) Moved the checks for keys into the include file, so they are accessible
+   to other scripts that might want to be able to access the doors.
+   2) Moved a lot of the functionality into open_door() rather than the doors.ecl-
+   the sleep and then close the door bit is now in open_door, so if that gets called
+   (say, by an AI) the door will close behind it.
+   3) Doors will no longer close if someone is in the tile the door will close into. 
+   Note that doors will still _open_ into mobs, for now.
+   4) open_door is now its own function, rather than an include. Thus it can easily be called by
+   other scripts, such as AIs or dot commands.
+   5) Added a config file. There are three options therein, one to designate whether or not
+   opening a door refreshes a house,  one to designate whether or not some doors (most often
+   those in multis) have an "inside" from which you do not need a key, and one to designate
+   whether or not you can close an open but locked door. Settings for this are
+   described inside the config file.
+
+Version 1.2-
+Thanks to Syzygy, for the original doors pkg.
+Thanks to Zulu, I used his changes code as a reference.
+And thanks to Dundee, for many many helpful comments on the scripting list, and
+for the unlock/open/relock code.
+Unless Syzygy objects, I'll take over maintaining this code-
+  he's got plenty to deal with as it is.
+
+This package removes all the core function calls from door functionality. It
+includes working wooden and metal gates. 
+It adds a new doortype: stone. Stone doors make the same noise as metal ones
+by default. There are no stone doors at the moment, but soon I will add dungeon
+secret doors to the itemdesc and release that. 
+By default any door's open graphic is its closed graphic +1. If you choose to 
+make a door for which this is not the case, set its cprop opengraphic to the
+decimal number of its open graphic. I added that code to the functionality
+believing I might need it to get all the gates working. Turned out not to help,
+but I left it in. Might use it for secret doors.
+
+There is one gate of each type that, when opening, does not change position. I
+believe that it will still prevent players from passing through it, as a solid
+object still remains in that tile. These gates are:
+0x0829, 0x0851, 0x0845, 0x0872. They are all east facing gates with hinges on
+the left side opening counterclockwise.
+

@@ -1,0 +1,42 @@
+// Stone Cantrip
+// Attack cantrip, creates a 1-pt damage spell.
+
+use uo;
+use os;
+use util;
+
+include "include/client";
+include "include/spellrestrictions";
+include "include/spellattack";
+include "spellinc";
+
+program stone(caster)
+
+	const THISSPELL := 106;
+
+	local cast_on := CanTargetSpell(caster, 1, TGTOPT_HARMFUL + TGTOPT_CHECK_LOS );
+	if (!cast_on)
+		CleanUp(caster);
+		return;
+	endif
+
+	if (BrokeCon(caster))
+		SendSysMessage(caster, "You have lost your concentration.");
+		CleanUp(caster);
+		return;
+	endif
+
+	if (DoCast(caster, THISSPELL))
+		CleanUp(caster);
+		return;
+	endif
+
+	local dmg := 1;
+        send_attack(cast_on, caster, 103);
+	PlayMovingEffect(caster, cast_on, FX_MAGIC_ARROW, 5, 0 );
+	sleep(1);
+	PlaySoundEffect(caster, SFX_14B );
+	ApplyRawDamage(cast_on, dmg);
+
+	CleanUp(caster);
+endprogram

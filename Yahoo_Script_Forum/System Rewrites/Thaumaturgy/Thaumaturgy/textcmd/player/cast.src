@@ -1,0 +1,47 @@
+
+use uo;
+use cfgfile;
+use os;
+
+include "include/client";
+include "../../checkspell";
+
+program cast(who, spell)
+
+	spell := lower(spell);
+
+	while (spell[" "])
+		spell[" "] := "";
+	endwhile
+
+	local wordhash := GetGlobalProperty("WoPList");
+	local magicid := wordhash[spell];
+
+	if (!magicid)
+		SendSysMessage(who, "That is not a known spell.");
+		return;
+	endif
+
+	if (GetObjProperty(who, "#casting"))
+		SendSysMessage(who, "You are already casting a spell!");
+		return;
+	endif
+
+	local mageskill := GetSkill(who,SKILLID_THAUMATURGY);
+
+	if (mageskill < 5)
+		SendSysMessage(who, "You are not wise enough in the ways of magic.");
+		return;
+	endif
+
+	var checked := CheckSpell(who, magicid);  // Do they have the spell
+	                                          // in their spellbook?
+
+        var ops := GetObjProperty(who, "casterops");
+        if ((checked) or (ops["NOSPELLBOOK"]) or (who.npctemplate))
+
+           var parms := { who , magicid };
+           start_script(":thaumaturgy:castspell", parms);
+        endif
+
+endprogram

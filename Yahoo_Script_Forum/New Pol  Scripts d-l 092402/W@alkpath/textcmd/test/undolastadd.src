@@ -1,0 +1,35 @@
+//////////////////////////////////////
+//
+// Well needed Undo Command
+//
+//////////////////////////////////////
+
+
+use uo;
+use basicio;
+
+program txtcmd_undoaddpath ( who, params )
+
+	// This will be needed in the future
+	params := SplitWords( params );
+
+	var pathname := params[1];
+
+	var NPCPathList := GetGlobalProperty( pathname );
+
+	// Error checking
+	if ( !NPCPathList )
+		// GPRop does not exist
+		SendSysMessage (who, "Path: " + pathname + " does not exist! ");
+		return;
+	endif
+
+	// Shrink the path array by Path size - 1
+	NPCPathList.shrink( NPCPathList.size() - 1);
+
+	//Resave the path
+	SetGlobalProperty( pathname, NPCPathList );
+
+	SendSysMessage ( who, "Last .addpath rule removed successfuly!");
+
+endprogram

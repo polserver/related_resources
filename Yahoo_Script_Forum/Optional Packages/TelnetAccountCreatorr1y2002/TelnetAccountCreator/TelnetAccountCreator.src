@@ -1,0 +1,44 @@
+// TelnetAccountCreator.src
+// Version: r1y2002
+// © 2002 Maximilian Scherr
+
+use os;
+use uo;
+
+program TelnetAccountCreator(connection)
+  connection.transmit("Please type in your desired account name with an \"s\" in front of it.");
+  var event := wait_for_event(20);
+  var accountname := "";
+  if (event)
+    accountname := CStr(event.value);
+  endif
+  if (accountname[1, 5] = "error")
+    connection.transmit("You have typed in an invalid string!");
+    return;
+  endif
+  if (accountname = "")
+    connection.transmit("You haven't typed in your desired account name!");
+    return;
+  endif
+  connection.transmit("Please type in your desired account password with an \"s\" in front of it.");
+  event := wait_for_event(20);
+  var accountpassword := "";
+  if (event)
+    accountpassword := CStr(event.value);
+  endif
+  if (accountpassword[1, 5] = "error")
+    connection.transmit("You have typed in an invalid string!");
+    return;
+  endif
+  if (accountpassword = "")
+    connection.transmit("You haven't typed in your desired account password!");
+    return;
+  endif
+  var account := CreateAccount(accountname, accountpassword, 1);
+  if (account = error)
+    connection.transmit("Error: "+ account.errortext);
+
+  else
+    connection.transmit("Your account has been successfully created!");
+  endif
+endprogram

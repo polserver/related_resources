@@ -1,0 +1,23 @@
+use uo;
+use os;
+
+program nightsight( param)
+  var who;
+  var clean := 0;
+  if( len( param))
+    who := param[1];
+    clean := param[2];
+  else
+    who := param;
+  endif
+  
+  if( clean)
+    return 1;
+  endif
+  
+  if( who.dead)
+    return 0;
+  endif
+  
+  who.setlightlevel( 0, 900);
+endprogram

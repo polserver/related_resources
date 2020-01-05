@@ -1,0 +1,1796 @@
+// POL - HOUSE MENU SYSTEM v1.0
+// Created by: ???
+// Modified by: Vaticus
+// Supported POL versions: v.092/.093/.094
+
+// FILE LAST UPDATED: Monday, May 13, 2002
+// Pol House Menu System modified by Vaticus
+
+// NOTE:  This file was not created by me.  It is the original package that is included with
+// Pol-Distro, only with extensive changes to update it and make it more attractive.  Also, lots
+// of functions and such have been changed dramatically.  Please report any bugs to ICQ: 40454203
+
+use uo;
+use os;
+
+include "util/key";
+include "util/bank";
+
+const UOBJECT_DOORS_START := 0x0675;
+const UOBJECT_DOORS_END   := 0x06f4;
+const KEYSTART := 0x100e;
+const KEYEND := 0x1013;
+const KEYRING := 0x1011;
+
+var nonlayout := {
+"page 0",
+"gumppic 300 165 100",                    // Top Sign Gump
+"htmlgump 320 190 105 50 14 0 0",         // Sign Gump Name
+};
+
+var layout_public := {
+"100,50",                                 // Position
+"resizepic 90 65 5054 420 400",           // Curved Grey background
+"resizepic 100 75 3000 400 380",          // Curved White background
+"page 0",                                 // Page 0
+"gumppic 230 65 100",                     // Top Sign Gump
+"htmlgump 250 90 105 50 14 0 0",          // Sign Gump Name
+"htmlgump 145 170 25 20 0 0 0",           // Info
+"button 110 169 4005 4007 0 1",           // Opens Info
+"htmlgump 270 170 50 20 1 0 0",           // Friends
+"button 235 169 4005 4007 0 2",           // Opens Friends
+"htmlgump 395 170 50 20 2 0 0",           // Options
+"button 360 169 4005 4007 0 3",           // Opens Options
+"htmlgump 145 420 200 20 11 0 0",         // Change Name
+"button 110 420 4005 4007 1 0 2",         // Change Name
+"page 1",                                 // Page 1
+"htmlgump 110 200 75 20 3 0 0",           // Owner Text
+"htmlgump 220 200 200 20 4 0 0",          // Owner Name
+"htmlgump 110 235 200 20 5 0 0",          // Lock Down
+"htmlgump 415 235 50 20 6 0 0",           // Lock Down #
+"htmlgump 110 255 200 20 34 0 0",         // Max Lock Down
+"htmlgump 415 255 50 20 35 0 0",          // Max Lock Down #
+"htmlgump 110 275 200 20 7 0 0",          // Secure Items
+"htmlgump 415 275 50 20 8 0 0",           // Secure Items #
+"htmlgump 110 295 250 20 36 0 0",         // Max Secure Items
+"htmlgump 415 295 50 20 37 0 0",          // Max Secure Items #
+"htmlgump 110 325 200 20 12 0 0",         // Properly Placed
+"htmlgump 110 345 200 20 13 0 0",         // Modern Design
+"htmlgump 110 375 200 20 9 0 0",          // House Visits
+"htmlgump 415 375 50 20 10 0 0",          // Visit #
+"htmlgump 395 420 200 20 38 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",         // Cancel, button 0
+"page 2",                                 // Page 2
+"htmlgump 153 194 150 20 15 0 0",         // Coowner Text
+"button 125 194 2714 2714 1 0 3",         // List Coowner B
+"htmlgump 340 194 150 20 16 0 0",         // Friends Text
+"button 310 194 2714 2714 1 0 4",         // List Friends B
+"htmlgump 153 216 150 20 17 0 0",         // Coowner Text
+"button 125 216 2714 2714 1 0 5",         // Add Coowner B
+"htmlgump 340 216 150 20 18 0 0",         // Friends Text
+"button 310 216 2714 2714 1 0 6",         // Add Friend B
+"htmlgump 153 238 150 20 19 0 0",         // Remove Text C
+"button 125 238 2714 2714 1 0 7",         // Remove Coowner B
+"htmlgump 340 238 150 20 20 0 0",         // Remove Text F
+"button 310 238 2714 2714 1 0 8",         // Remove Friends B
+"htmlgump 340 260 150 20 21 0 0",         // Clear List Text
+"button 310 260 2714 2714 1 0 9",         // Clear List B
+"htmlgump 153 260 150 20 33 0 0",         // Clear List Co Text
+"button 125 260 2714 2714 1 0 10",        // Clear List Co B
+"htmlgump 225 285 200 20 22 0 0",         // Ban Text
+"button 195 285 2714 2714 1 0 11",        // Ban Button
+"htmlgump 225 306 200 20 23 0 0",         // Eject Text
+"button 195 306 2714 2714 1 0 12",        // Eject Button
+"htmlgump 225 328 200 20 24 0 0",         // Ban Text
+"button 195 328 2714 2714 1 0 13",        // Ban Button
+"htmlgump 225 350 200 20 25 0 0",         // Lift Ban Text
+"button 195 350 2714 2714 1 0 14",        // Lift Ban Button
+"htmlgump 395 420 200 20 38 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",         // Cancel, button 0
+"page 3",                                 // Page 3
+"htmlgump 185 195 275 20 26 0 0",         // Transfer Text
+"button 155 195 2714 2714 1 0 15",        // Transfer Button
+"htmlgump 185 225 275 20 27 0 0",         // Demolish Text
+"button 155 225 2714 2714 1 0 16",        // Demolish Button
+"htmlgump 185 255 275 20 28 0 0",         // Change Sign T
+"button 155 255 2714 2714 0 4",           // Change Sign B
+"htmlgump 185 285 275 20 29 0 0",         // Access Bank T
+"button 155 285 2714 2714 1 0 17",        // Access Bank B
+"htmlgump 185 315 275 20 30 0 0",         // Declare Private T
+"button 155 315 2714 2714 1 0 18",        // Declare Private B
+"htmlgump 395 420 200 20 38 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",         // Cancel, button 0
+"page 4",                                 // Page 4
+"radio 140 203 210 211 0 2980",           // Sign Button
+"tilepic 149 195 2980",                   // Sign Picture
+"radio 140 238 210 211 0 2982",           // Sign Button
+"tilepic 149 230 2982",                   // Sign Picture
+"radio 140 273 210 211 0 2984",           // Sign Button
+"tilepic 149 265 2984",                   // Sign Picture
+"radio 140 308 210 211 0 2986",           // Sign Button
+"tilepic 149 300 2986",                   // Sign Picture
+"radio 195 203 210 211 0 2988",           // Sign Button
+"tilepic 204 195 2988",                   // Sign Picture
+"radio 195 238 210 211 0 2990",           // Sign Button
+"tilepic 204 230 2990",                   // Sign Picture
+"radio 195 273 210 211 0 2992",           // Sign Button
+"tilepic 204 265 2992",                   // Sign Picture
+"radio 195 308 210 211 0 2994",           // Sign Button
+"tilepic 204 300 2994",                   // Sign Picture
+"radio 250 203 210 211 0 2996",           // Sign Button
+"tilepic 259 195 2996",                   // Sign Picture
+"radio 250 238 210 211 0 2998",           // Sign Button
+"tilepic 259 230 2998",                   // Sign Picture
+"radio 250 273 210 211 0 3000",           // Sign Button
+"tilepic 259 265 3000",                   // Sign Picture
+"radio 250 308 210 211 0 3002",           // Sign Button
+"tilepic 259 300 3002",                   // Sign Picture
+"radio 305 203 210 211 0 3004",           // Sign Button
+"tilepic 314 195 3004",                   // Sign Picture
+"radio 305 238 210 211 0 3006",           // Sign Button
+"tilepic 314 230 3006",                   // Sign Picture
+"radio 305 273 210 211 0 3008",           // Sign Button
+"tilepic 314 265 3008",                   // Sign Picture
+"radio 305 308 210 211 0 3010",           // Sign Button
+"tilepic 314 300 3010",                   // Sign Picture
+"radio 360 203 210 211 0 3012",           // Sign Button
+"tilepic 369 195 3012",                   // Sign Picture
+"radio 360 238 210 211 0 3014",           // Sign Button
+"tilepic 369 230 3014",                   // Sign Picture
+"radio 360 273 210 211 0 3016",           // Sign Button
+"tilepic 369 265 3016",                   // Sign Picture
+"radio 360 308 210 211 0 3018",           // Sign Button
+"tilepic 369 300 3018",                   // Sign Picture
+"radio 415 203 210 211 0 3020",           // Sign Button
+"tilepic 424 195 3020",                   // Sign Picture
+"radio 415 238 210 211 0 3022",     	  // Sign Button
+"tilepic 424 230 3022",                   // Sign Picture
+"radio 415 273 210 211 0 3024",           // Sign Button
+"tilepic 424 265 3024",                   // Sign Picture
+"radio 415 308 210 211 0 3026",           // Sign Button
+"tilepic 424 300 3026",                   // Sign Picture
+"htmlgump 305 373 120 20 31 0 0",         // Guild Text
+"button 425 370 252 253 0 5",             // Guild Section
+"htmlgump 395 420 200 20 38 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",         // Cancel, button 0
+"page 5",                                 // Page 5
+"radio 140 203 210 211 0 3028",           // Sign Button
+"tilepic 149 195 3028",                   // Sign Picture
+"radio 140 238 210 211 0 3030",           // Sign Button
+"tilepic 149 230 3030",                   // Sign Picture
+"radio 140 273 210 211 0 3032",           // Sign Button
+"tilepic 149 265 3032",                   // Sign Picture
+"radio 140 308 210 211 0 3034",           // Sign Button
+"tilepic 149 300 3034",                   // Sign Picture
+"radio 140 343 210 211 0 3036",           // Sign Button
+"tilepic 149 335 3036",                   // Sign Picture
+"radio 195 203 210 211 0 3038",           // Sign Button
+"tilepic 204 195 3038",                   // Sign Picture
+"radio 195 238 210 211 0 3040",           // Sign Button
+"tilepic 204 230 3040",                   // Sign Picture
+"radio 195 273 210 211 0 3042",           // Sign Button
+"tilepic 204 265 3042",                   // Sign Picture
+"radio 195 308 210 211 0 3044",           // Sign Button
+"tilepic 204 300 3044",                   // Sign Picture
+"radio 195 343 210 211 0 3046",           // Sign Button
+"tilepic 204 335 3046",                   // Sign Picture
+"radio 250 203 210 211 0 3048",           // Sign Button
+"tilepic 259 195 3048",                   // Sign Picture
+"radio 250 238 210 211 0 3050",           // Sign Button
+"tilepic 259 230 3050",                   // Sign Picture
+"radio 250 273 210 211 0 3052",           // Sign Button
+"tilepic 259 265 3052",                   // Sign Picture
+"radio 250 308 210 211 0 3054",           // Sign Button
+"tilepic 259 300 3054",                   // Sign Picture
+"radio 250 343 210 211 0 3056",           // Sign Button
+"tilepic 259 335 3056",                   // Sign Picture
+"radio 305 203 210 211 0 3058",           // Sign Button
+"tilepic 314 195 3058",                   // Sign Picture
+"radio 305 238 210 211 0 3060",           // Sign Button
+"tilepic 314 230 3060",                   // Sign Picture
+"radio 305 273 210 211 0 3062",           // Sign Button
+"tilepic 314 265 3062",                   // Sign Picture
+"radio 305 308 210 211 0 3064",           // Sign Button
+"tilepic 314 300 3064",                   // Sign Picture
+"radio 305 343 210 211 0 3066",           // Sign Button
+"tilepic 314 335 3066",                   // Sign Picture
+"radio 360 203 210 211 0 3068",           // Sign Button
+"tilepic 369 195 3068",                   // Sign Picture
+"radio 360 238 210 211 0 3070",           // Sign Button
+"tilepic 369 230 3070",                   // Sign Picture
+"radio 360 273 210 211 0 3072",           // Sign Button
+"tilepic 369 265 3072",                   // Sign Picture
+"radio 360 308 210 211 0 3074",           // Sign Button
+"tilepic 369 300 3074",                   // Sign Picture
+"radio 360 343 210 211 0 3076",           // Sign Button
+"tilepic 369 335 3076",                   // Sign Picture
+"radio 415 203 210 211 0 3078",           // Sign Button
+"tilepic 424 195 3078",                   // Sign Picture
+"radio 415 238 210 211 0 3080",           // Sign Button
+"tilepic 424 230 3080",                   // Sign Picture
+"radio 415 273 210 211 0 3082",           // Sign Button
+"tilepic 424 265 3082",                   // Sign Picture
+"radio 415 308 210 211 0 3084",           // Sign Button
+"tilepic 424 300 3084",                   // Sign Picture
+"htmlgump 305 373 120 20 32 0 0",         // Shop Test
+"button 425 370 250 251 0 4",             // Shop Section
+"htmlgump 395 420 200 20 38 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",         // Cancel, button 0
+"nodispose",
+};
+
+var data_public := {
+"INFO",
+"FRIENDS",
+"OPTIONS",
+"Owned by:",
+"", //owner name?
+"Number of locked down items:",
+"",  //lockdown numbers
+"Number of secure containers:",
+"",  //secure numbers
+"Number of visits this house has had:",
+"visits here?",  //visit numbers
+"Change this house's name!",
+"This house is properly placed.",
+"This house is of modern design.",
+"",  //house name
+"List of Co-owners",
+"List of Friends",
+"Add a Co-owner",
+"Add a Friend",
+"Remove a Co-owner",
+"Remove a Friend",
+"Clear Friends list",
+"Ban someone from the house",
+"Eject someone from the house",
+"View list of banned people",
+"Lift a ban",
+"Transfer ownership of the house",
+"Demolish the house & get a deed back",
+"Change the sign type",
+"Access your bank account",
+"Declare this building to be private",
+"Guild Sign Choices",
+"Shop Sign Choices",
+"Clear Co-owner List",
+"Maximum locked down items:",
+"",  //max secures
+"Maximum number of secure containers:",
+"",  //max lockdowns
+"EXIT",
+};
+
+var layout_private := {
+"100,50",                                 // Position
+"resizepic 90 65 5054 420 400",           // Curved Grey background
+"resizepic 100 75 3000 400 380",          // Curved White background
+"page 0",                                 // Page 0
+"gumppic 230 65 100",                     // Top Sign Gump
+"htmlgump 250 90 105 50 12 0 0",          // Sign Gump Name
+"htmlgump 145 170 25 20 0 0 0",           // Info
+"button 110 169 4005 4007 0 1",           // Opens Info
+"htmlgump 270 170 50 20 1 0 0",           // Friends
+"button 235 169 4005 4007 0 2",           // Opens Friends
+"htmlgump 395 170 50 20 2 0 0",           // Options
+"button 360 169 4005 4007 0 3",           // Opens Options
+"htmlgump 145 420 200 20 9 0 0",          // Change Name
+"button 110 420 4005 4007 1 0 2",         // Change Name
+"page 1",                                 // Page 1
+"htmlgump 110 200 75 20 3 0 0",           // Owner Text
+"htmlgump 220 200 200 20 4 0 0",          // Owner Name
+"htmlgump 110 235 200 20 5 0 0",          // Lock Down
+"htmlgump 415 235 50 20 6 0 0",           // Lock Down #
+"htmlgump 110 255 200 20 31 0 0",         // Max Lock Down
+"htmlgump 415 255 50 20 32 0 0",          // Max Lock Down #
+"htmlgump 110 275 200 20 7 0 0",          // Secure Items
+"htmlgump 415 275 50 20 8 0 0",           // Secure Items #
+"htmlgump 110 295 250 20 33 0 0",         // Max Secure Items
+"htmlgump 415 295 50 20 34 0 0",          // Max Secure Items #
+"htmlgump 110 325 200 20 10 0 0",         // Properly Placed
+"htmlgump 110 345 200 20 11 0 0",         // Modern Design
+"htmlgump 395 420 200 20 35 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",         // Cancel, button 0
+"page 2",                                 // Page 2
+"htmlgump 153 194 150 20 13 0 0",         // Coowner Text
+"button 125 194 2714 2714 1 0 3",         // List Coowner B
+"htmlgump 340 194 150 20 14 0 0",         // Friends Text
+"button 310 194 2714 2714 1 0 4",         // List Friends B
+"htmlgump 153 216 150 20 15 0 0",         // Coowner Text
+"button 125 216 2714 2714 1 0 5",         // Add Coowner B
+"htmlgump 340 216 150 20 16 0 0",         // Friends Text
+"button 310 216 2714 2714 1 0 6",         // Add Friend B
+"htmlgump 153 238 150 20 17 0 0",         // Remove Text C
+"button 125 238 2714 2714 1 0 7",         // Remove Coowner B
+"htmlgump 340 238 150 20 18 0 0",         // Remove Text F
+"button 310 238 2714 2714 1 0 8",         // Remove Friends B
+"htmlgump 340 260 150 20 19 0 0",         // Clear List Text
+"button 310 260 2714 2714 1 0 9",         // Clear List B
+"htmlgump 153 260 150 20 30 0 0",         // Clear List Co Text
+"button 125 260 2714 2714 1 0 10",        // Clear List Co B
+"htmlgump 225 285 200 20 20 0 0",         // Ban Text
+"button 195 285 2714 2714 1 0 11",        // Ban Button
+"htmlgump 225 306 200 20 21 0 0",         // Eject Text
+"button 195 306 2714 2714 1 0 12",        // Eject Button
+"htmlgump 225 328 200 20 22 0 0",         // Ban Text
+"button 195 328 2714 2714 1 0 13",        // Ban Button
+"htmlgump 225 350 200 20 23 0 0",         // Lift Ban Text
+"button 195 350 2714 2714 1 0 14",        // Lift Ban Button
+"htmlgump 395 420 200 20 35 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",         // Cancel, button 0
+"page 3",                                 // Page 3
+"htmlgump 185 195 250 20 24 0 0",         // Transfer Text
+"button 155 195 2714 2714 1 3 15",        // Transfer Button
+"htmlgump 185 225 250 20 25 0 0",         // Demolish Text
+"button 155 225 2714 2714 1 3 16",        // Demolish Button
+"htmlgump 185 255 250 20 26 0 0",         // Change Locks T
+"button 155 255 2714 2714 1 3 17",        // Change Locks B
+"htmlgump 185 285 250 20 27 0 0",         // Declare Public T
+"htmlgump 185 305 250 20 28 0 0",         // Declare Public T
+"button 155 285 2714 2714 1 3 18",        // Declare Public B
+"htmlgump 185 335 250 20 29 0 0",         // Access Bank T
+"button 155 335 2714 2714 1 3 19",        // Access Bank B
+"htmlgump 395 420 200 20 35 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",         // Cancel, button 0
+"nodispose",
+};
+
+var data_private := {
+"INFO",                                   // Line 0
+"FRIENDS",
+"OPTIONS",
+"Owned by",
+"",  //owner name
+"Number of locked down items:",           // Line 5
+"",  //lock number
+"Number of secure containers:",
+"",  //secure number
+"Change this house's name!",
+"This house is properly placed.",         // Line 10
+"This house is of modern design.",
+"",  //house name
+"List of Co-owners",
+"List of Friends",
+"Add a Co-owner",                         // Line 15
+"Add a Friend",
+"Remove a Co-owner",
+"Remove a Friend",
+"Clear Friends list",
+"Ban someone from the house",             // Line 20
+"Eject someone from the house",
+"View list of banned people",
+"Lift a ban",
+"Transfer ownership of the house",
+"Demolish the house & get a deed back",   // Line 25
+"Change the house locks",
+"Declare this building to be public. This",
+"will make your front door unlockable!",
+"Access your bank account",
+"Clear Co-owner list",                  //30
+"Maximum locked down items:",
+"",   //max lockdowns
+"Maximum number of secure containers:",
+"",   //max secures
+"EXIT",                                 //35
+};
+
+var layout_list_friends := {
+"100,50",                                // Position
+"page 0",                                // Page 0
+"resizepic 90 65 5054 420 400",          // Curved Grey background
+"resizepic 100 75 3000 400 380",         // Curved White background
+"htmlgump 250 90 200 20 0 0 0",          // Title
+"htmlgump 395 420 50 20 21 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",        // Cancel, button 0
+"page 1",                                // Page 1
+"button 450 425 252 253 0 2",            // Next Page
+"text 170 150 0 1",                      // Friend Name
+"text 170 175 0 2",                      // Friend Name
+"text 170 200 0 3",                      // Friend Name
+"text 170 225 0 4",                      // Friend Name
+"text 170 250 0 5",                      // Friend Name
+"text 170 275 0 6",                      // Friend Name
+"text 170 300 0 7",                      // Friend Name
+"text 170 325 0 8",                      // Friend Name
+"text 170 350 0 9",                      // Friend Name
+"text 170 375 0 10",                     // Friend Name
+"page 2",                                // Page 2
+"button 470 425 250 251 0 1",            // Previous Page
+"text 170 150 0 11",                     // Friend Name
+"text 170 175 0 12",                     // Friend Name
+"text 170 200 0 13",                     // Friend Name
+"text 170 225 0 14",                     // Friend Name
+"text 170 250 0 15",                     // Friend Name
+"text 170 275 0 16",                     // Friend Name
+"text 170 300 0 17",                     // Friend Name
+"text 170 325 0 18",                     // Friend Name
+"text 170 350 0 19",                     // Friend Name
+"text 170 375 0 20",                     // Friend Name
+};
+
+var data_list_friends := {
+"Friends List",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"EXIT",
+};
+
+var layout_remove_friend := {
+"100,50",                                // Position
+"page 0",                                // Page 0
+"resizepic 90 65 5054 420 400",          // Curved Grey background
+"resizepic 100 75 3000 400 380",         // Curved White background
+"htmlgump 200 90 200 20 0 0 0",          // Title
+"htmlgump 360 420 75 20 21 0 0",         // Remove Text
+"button 325 420 4005 4007 1 0 2",        // Remove Button
+"page 1",                                // Page 1
+"button 450 425 252 253 0 2",            // Next Page
+"text 170 150 0 1",                      // Friend Name
+"radio 140 150 210 211 0 3",             // Friend Button
+"text 170 175 0 2",                      // Friend Name
+"radio 140 175 210 211 0 4",             // Friend Button
+"text 170 200 0 3",                      // Friend Name
+"radio 140 200 210 211 0 5",             // Friend Button
+"text 170 225 0 4",                      // Friend Name
+"radio 140 225 210 211 0 6",             // Friend Button
+"text 170 250 0 5",                      // Friend Name
+"radio 140 250 210 211 0 7",             // Friend Button
+"text 170 275 0 6",                      // Friend Name
+"radio 140 275 210 211 0 8",             // Friend Button
+"text 170 300 0 7",                      // Friend Name
+"radio 140 300 210 211 0 9",             // Friend Button
+"text 170 325 0 8",                      // Friend Name
+"radio 140 325 210 211 0 10",            // Friend Button
+"text 170 350 0 9",                      // Friend Name
+"radio 140 350 210 211 0 11",            // Friend Button
+"text 170 375 0 10",                     // Friend Name
+"radio 140 375 210 211 0 12",            // Friend Button
+"page 2",                                // Page 2
+"button 470 425 250 251 0 1",            // Previous Page
+"text 170 150 0 11",                     // Friend Name
+"radio 140 150 210 211 0 13",            // Friend Button
+"text 170 175 0 12",                     // Friend Name
+"radio 140 175 210 211 0 14",            // Friend Button
+"text 170 200 0 13",                     // Friend Name
+"radio 140 200 210 211 0 15",            // Friend Button
+"text 170 225 0 14",                     // Friend Name
+"radio 140 225 210 211 0 16",            // Friend Button
+"text 170 250 0 15",                     // Friend Name
+"radio 140 250 210 211 0 17",            // Friend Button
+"text 170 275 0 16",                     // Friend Name
+"radio 140 275 210 211 0 18",            // Friend Button
+"text 170 300 0 17",                     // Friend Name
+"radio 140 300 210 211 0 19",            // Friend Button
+"text 170 325 0 18",                     // Friend Name
+"radio 140 325 210 211 0 20",            // Friend Button
+"text 170 350 0 19",                     // Friend Name
+"radio 140 350 210 211 0 21",            // Friend Button
+"text 170 375 0 20",                     // Friend Name
+"radio 140 375 210 211 0 22",            // Friend Button
+};
+
+var data_remove_friend := {
+"Remove a friend from the house",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"Remove Now!",
+};
+
+var layout_r_friend_all := {
+"0,0",                                   // Position
+"resizepic 200 175 5054 400 240",        // Curved Grey background
+"resizepic 210 185 3000 380 220",        // Curved White background
+"resizepic 220 195 3000 360 100",        // Curved White box
+"text 260 315 0000 0",                   // Continue Text
+"button 220 315 4005 4007 1 0 1",        // Continue Button
+"text 260 340 0000 1",                   // Cancel Text
+"button 220 340 4005 4007 1 0 2",        // Cancel Button
+"text 230 200 0000 2",                   // Description
+"text 230 215 0000 3",                   // Description
+"text 230 230 0000 4",                   // Description
+"text 230 245 0000 5",                   // Description
+"text 230 272 0000 6",                   // Description
+};
+
+var data_r_friend_all := {
+"No, I do not want to do this after all.",
+"Yes, go ahead and remove all my friends.",
+"If you go ahead with this option, all the current",
+"friendships will be removed from the house, and",
+"any vendors associated with said friends will be",
+"made unwelcome.",
+"Are you sure you want to do this?",
+};
+
+var layout_list_coowners := {
+"100,50",                                // Position
+"page 0",                                // Page 0
+"resizepic 90 65 5054 420 400",          // Curved Grey background
+"resizepic 100 75 3000 400 380",         // Curved White background
+"htmlgump 250 90 200 20 0 0 0",          // Title
+"htmlgump 395 420 50 20 9 0 0",          // Cancel Text
+"button 360 420 4005 4007 1 0 0",        // Cancel, button 0
+"page 1",                                // Page 1
+"text 170 150 0 1",                      // Co-owner Name
+"text 170 175 0 2",                      // Co-owner Name
+"text 170 200 0 3",                      // Co-owner Name
+"text 170 225 0 4",                      // Co-owner Name
+"text 170 250 0 5",                      // Co-owner Name
+"text 170 275 0 6",                      // Co-owner Name
+"text 170 300 0 7",                      // Co-owner Name
+"text 170 325 0 8",                      // Co-owner Name
+};
+
+var data_list_coowners := {
+"Co-owners List",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"EXIT",
+};
+
+var layout_remove_coowner := {
+"100,50",                                // Position
+"page 0",                                // Page 0
+"resizepic 90 65 5054 420 400",          // Curved Grey background
+"resizepic 100 75 3000 400 380",         // Curved White background
+"htmlgump 200 90 250 20 0 0 0",          // Title
+"htmlgump 360 420 75 20 9 0 0",          // Remove Text
+"button 325 420 4005 4007 1 0 2",        // Remove Button
+"page 1",                                // Page 1
+"text 170 150 0 1",                      // Coowner Name
+"radio 140 150 210 211 0 3",             // Coowner Button
+"text 170 175 0 2",                      // Coowner Name
+"radio 140 175 210 211 0 4",             // Coowner Button
+"text 170 200 0 3",                      // Coowner Name
+"radio 140 200 210 211 0 5",             // Coowner Button
+"text 170 225 0 4",                      // Coowner Name
+"radio 140 225 210 211 0 6",             // Coowner Button
+"text 170 250 0 5",                      // Coowner Name
+"radio 140 250 210 211 0 7",             // Coowner Button
+"text 170 275 0 6",                      // Coowner Name
+"radio 140 275 210 211 0 8",             // Coowner Button
+"text 170 300 0 7",                      // Coowner Name
+"radio 140 300 210 211 0 9",             // Coowner Button
+"text 170 325 0 8",                      // Coowner Name
+"radio 140 325 210 211 0 10",            // Coowner Button
+};
+
+var data_remove_coowner := {
+"Remove a co-owner from the house",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"Remove Now!",
+};
+
+var layout_r_coown_all := {
+"0,0",                                   // Position
+"resizepic 200 175 5054 400 240",        // Curved Grey background
+"resizepic 210 185 3000 380 220",        // Curved White background
+"resizepic 220 195 3000 360 100",        // Curved White box
+"text 260 315 0000 0",                   // Continue Text
+"button 220 315 4005 4007 1 0 1",        // Continue Button
+"text 260 340 0000 1",                   // Cancel Text
+"button 220 340 4005 4007 1 0 2",        // Cancel Button
+"text 230 200 0000 2",                   // Description
+"text 230 215 0000 3",                   // Description
+"text 230 230 0000 4",                   // Description
+"text 230 245 0000 5",                   // Description
+"text 230 272 0000 6",                   // Description
+};
+
+var data_r_coown_all := {
+"No, I do not want to do this after all.",
+"Yes, go ahead and remove all my co-owners.",
+"If you go ahead with this option, all the current",
+"co-owners will be removed from the house, and",
+"any vendors associated with said friends will be",
+"made unwelcome.",
+"Are you sure you want to do this?",
+};
+
+var layout_list_bans := {
+"100,50",                                // Position
+"page 0",                                // Page 0
+"resizepic 90 65 5054 420 400",          // Curved Grey background
+"resizepic 100 75 3000 400 380",         // Curved White background
+"htmlgump 225 90 200 20 0 0 0",          // Title
+"htmlgump 395 420 50 20 21 0 0",         // Cancel Text
+"button 360 420 4005 4007 1 0 0",        // Cancel, button 0
+"page 1",                                // Page 1
+"button 450 425 252 253 0 2",            // Next Page
+"text 170 150 0 1",                      // Banned Name
+"text 170 175 0 2",                      // Banned Name
+"text 170 200 0 3",                      // Banned Name
+"text 170 225 0 4",                      // Banned Name
+"text 170 250 0 5",                      // Banned Name
+"text 170 275 0 6",                      // Banned Name
+"text 170 300 0 7",                      // Banned Name
+"text 170 325 0 8",                      // Banned Name
+"text 170 350 0 9",                      // Banned Name
+"text 170 375 0 10",                     // Banned Name
+"page 2",                                // Page 2
+"button 470 425 250 251 0 1",            // Previous Page
+"text 170 150 0 11",                     // Banned Name
+"text 170 175 0 12",                     // Banned Name
+"text 170 200 0 13",                     // Banned Name
+"text 170 225 0 14",                     // Banned Name
+"text 170 250 0 15",                     // Banned Name
+"text 170 275 0 16",                     // Banned Name
+"text 170 300 0 17",                     // Banned Name
+"text 170 325 0 18",                     // Banned Name
+"text 170 350 0 19",                     // Banned Name
+"text 170 375 0 20",                     // Banned Name
+};
+
+var data_list_bans := {
+"Enemies of the house",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"EXIT",
+};
+
+var layout_lift_ban := {
+"100,50",                                // Position
+"page 0",                                // Page 0
+"resizepic 90 65 5054 420 400",          // Curved Grey background
+"resizepic 100 75 3000 400 380",         // Curved White background
+"htmlgump 200 90 200 20 0 0 0",          // Title
+"htmlgump 360 420 75 20 21 0 0",         // Remove Text
+"button 325 420 4005 4007 1 0 2",        // Remove Button
+"page 1",                                // Page 1
+"button 450 425 252 253 0 2",            // Next Page
+"text 170 150 0 1",                      // Banned Name
+"radio 140 150 210 211 0 3",             // Banned Button
+"text 170 175 0 2",                      // Banned Name
+"radio 140 175 210 211 0 4",             // Banned Button
+"text 170 200 0 3",                      // Banned Name
+"radio 140 200 210 211 0 5",             // Banned Button
+"text 170 225 0 4",                      // Banned Name
+"radio 140 225 210 211 0 6",             // Banned Button
+"text 170 250 0 5",                      // Banned Name
+"radio 140 250 210 211 0 7",             // Banned Button
+"text 170 275 0 6",                      // Banned Name
+"radio 140 275 210 211 0 8",             // Banned Button
+"text 170 300 0 7",                      // Banned Name
+"radio 140 300 210 211 0 9",             // Banned Button
+"text 170 325 0 8",                      // Banned Name
+"radio 140 325 210 211 0 10",            // Banned Button
+"text 170 350 0 9",                      // Banned Name
+"radio 140 350 210 211 0 11",            // Banned Button
+"text 170 375 0 10",                     // Banned Name
+"radio 140 375 210 211 0 12",            // Banned Button
+"page 2",                                // Page 2
+"button 470 425 250 251 0 1",            // Previous Page
+"text 170 150 0 11",                     // Banned Name
+"radio 140 150 210 211 0 13",            // Banned Button
+"text 170 175 0 12",                     // Banned Name
+"radio 140 175 210 211 0 14",            // Banned Button
+"text 170 200 0 13",                     // Banned Name
+"radio 140 200 210 211 0 15",            // Banned Button
+"text 170 225 0 14",                     // Banned Name
+"radio 140 225 210 211 0 16",            // Banned Button
+"text 170 250 0 15",                     // Banned Name
+"radio 140 250 210 211 0 17",            // Banned Button
+"text 170 275 0 16",                     // Banned Name
+"radio 140 275 210 211 0 18",            // Banned Button
+"text 170 300 0 17",                     // Banned Name
+"radio 140 300 210 211 0 19",            // Banned Button
+"text 170 325 0 18",                     // Banned Name
+"radio 140 325 210 211 0 20",            // Banned Button
+"text 170 350 0 19",                     // Banned Name
+"radio 140 350 210 211 0 21",            // Banned Button
+"text 170 375 0 20",                     // Banned Name
+"radio 140 375 210 211 0 22",            // Banned Button
+};
+
+var data_lift_ban := {
+"Lift a ban from the house",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"Remove Now!",
+};
+
+var layout_redeed := {
+"0,0",                                   // Position
+"resizepic 200 175 5054 400 240",        // Curved Grey background
+"resizepic 210 185 3000 380 220",        // Curved White background
+"resizepic 220 195 3000 360 100",        // Curved White box
+"text 260 315 0000 0",                   // Continue Text
+"button 220 315 4005 4007 1 0 1",        // Continue Button
+"text 260 340 0000 1",                   // Cancel Text
+"text 260 355 0000 2",                   // Cancel Text
+"button 220 340 4005 4007 1 0 2",        // Cancel Button
+"text 230 200 0000 3",                   // Description
+"text 230 215 0000 4",                   // Description
+"text 230 230 0000 5",                   // Description
+};
+
+var data_redeed := {
+"No, I don't want to lose my vendors!",
+"Yes, demolish the house and put my deed in",
+"my bank box.",
+"Turning your house into a deed will dismiss any",
+"vendors that are associated with this house.",
+"Are you sure you want to do this?",
+};
+
+program UseSign(who, sign)
+  var hserial := GetObjProperty(sign, "house_serial");
+  var house := SystemFindObjectBySerial(CInt(hserial));
+  var isPublic := GetObjProperty(house, "Public");
+  if(isPublic)
+    DClickSignPub(who, house, sign);
+  else
+    DClickSignPri(who, house, sign);
+  endif
+endprogram
+
+function DClickSignPub(who, house, sign)
+  var owneruid := GetObjProperty(house, "ownerserial");
+  SetSignName(sign, house);
+    if(who.serial == owneruid)
+      data_public[5] := who.name;
+      SetObjProperty(sign, "lastownername", who.name);
+    else
+      data_public[5] := GetObjProperty(sign, "lastownername");
+    endif
+  data_public[7]  := GetObjProperty(house, "numlockdowns");
+  data_public[9] := GetObjProperty(house, "numsecure");
+  data_public[36]  := GetObjProperty(house, "maxnumlockdowns");
+  data_public[38] := GetObjProperty(house, "maxnumsecure");
+  var is_friend := 0, is_coowner := 0;
+  var friendlist := GetObjProperty(house, "friendlist");
+  var coownlist := GetObjProperty(house, "coownlist");
+    if(who.serial in friendlist)
+      is_friend := 1;
+    elseif(who.serial in coownlist)
+      is_coowner := 1;
+    endif
+  var result, resultr, reskey;
+  var acct := GetObjProperty(house, "owneracct");
+    if((who.acctname == acct) || (is_coowner) || (is_friend) || (who.cmdlevel > 2))
+      SendSysMessage(who, "Welcome back to the house, friend.", font := 3, color := 0);
+      result := SendDialogGump(who, layout_public, data_public);
+    else
+      SendSysMessage(who, "This house is properly placed.", font := 3, color := 38);
+      SendSysMessage(who, "This house is of modern design.", font := 3, color := 38);
+      SendDialogGump(who, nonlayout, data_public);
+    endif
+    if((owneruid == who.serial) || (is_coowner))
+      SetObjProperty(house, "decay", (ReadGameClock()+ 2592000));
+    endif
+    if((who.acctname == acct) || (is_coowner) || (is_friend) || (who.cmdlevel > 2))
+      case (result[0])
+        1: foreach key in (result.keys)
+             if(key > 2979)
+               reskey := key;
+               ChangeSign(who, house, sign, reskey);
+               DClickSignPub(who, house, sign);
+             endif
+           endforeach
+        2: SendSysMessage(who, "What dost thou wish the sign to say?", font := 3, color := 0);
+           var newname := RequestInput(who, sign, "");
+             if(!newname)
+               SendSysMessage(who, "House renaming canceled.", font := 3, color := 0);
+               SetSignName(sign, house);
+               DClickSignPub(who, house, sign);
+             elseif((len(newname) > 60))
+               SendSysMessage(who, "Your desired house name is too long.", font := 3, color := 0);
+               SetSignName(sign, house);
+               DClickSignPub(who, house, sign);
+             else
+               SetName(sign, newname);
+               SetObjProperty(house, "signname", newname);
+               SetSignName(sign, house);
+               DClickSignPub(who, house, sign);
+             endif
+        3: ListCoowners(who, house, sign);
+        4: ListFriends(who, house, sign);
+        5: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may add co-owners.", font := 3, color := 0);
+             DClickSignPub(who, house, sign);
+           else
+             SendSysMessage(who, "Target the person you wish to name a co-owner of your household.", font := 3, color := 0);
+             AddCoowner(who, house, sign);
+           endif
+        6: if(is_friend)
+             SendSysMessage(who, "Only the house owner may add friends.", font := 3, color := 0);
+             DClickSignPub(who, house, sign);
+           else
+             SendSysMessage(who, "Target the person you wish to name a friend of your household.", font := 3, color := 0);
+             AddFriend(who, house, sign);
+           endif
+        7: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may remove co-owners.", font := 3, color := 0);
+             DClickSignPub(who, house, sign);
+           else
+             RemoveCoowner(who, house, sign);
+           endif
+        8: if(is_friend)
+             SendSysMessage(who, "Only the house owner may remove friends.", font := 3, color := 0);
+             DClickSignPub(who, house, sign);
+           else
+             RemoveFriend(who, house, sign);
+           endif
+        9: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may remove friends.", font := 3, color := 0);
+             DClickSignPub(who, house, sign);
+           else
+             ClearFriendList(who, house, sign);
+           endif
+       10: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may remove co-owners.", font := 3, color := 0);
+             DClickSignPub(who, house, sign);
+           else
+             ClearCoownList(who, house, sign);
+           endif
+       11: SendSysMessage(who, "Target the individual to ban from this house.", font := 3, color := 0);
+           AddBan(who, house, sign);
+       12: SendSysMessage(who, "Target the individual to eject from this house.", font := 3, color := 0);
+           Eject(who, house, sign);
+       13: ListBans(who, house, sign);
+       14: LiftBan(who, house, sign);
+       15: if((owneruid == who.serial) or (who.cmdlevel > 2))
+             if(who.multi.serial == house.serial)
+               SendSysMessage(who, "You can only do this from outside the building.", font := 3, color := 0);
+               DClickSignPub(who, house, sign);
+               return;
+             endif
+             SendSysMessage(who, "Target the person whom you wish to give this house.", font := 3, color := 0);
+             ChangeHouseOwner(who, house);
+           else
+             SendSysMessage(who, "Only the owner may transfer ownership of this house.", font := 3, color := 0);
+             DClickSignPub(who, house, sign);
+           endif
+       16: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may redeed the house.", font := 3, color := 0);
+             DClickSignPub(who, house, sign);
+           else
+             RedeedHouse(who, house, sign);
+           endif
+       17: var bankbox := FindBankBox(who);
+           SendOpenSpecialContainer(who, bankbox);
+       18: var check := 0;
+           foreach mob in (house.mobiles)
+             if(mob.npctemplate == "playervendor")
+               check := 1;
+               break;
+             endif
+           endforeach
+           if(check == 1)
+             SendSysMessage(who, "You have vendors working out of this building. It cannot be declared private until there are no vendors in place.", font := 3, color := 0);
+             return;
+           endif
+           foreach thing in (house.components)
+             if(((thing.y == (sign.y - 1)) or (thing.y == (sign.y))) and (thing.isa(POLCLASS_DOOR)))
+               thing.locked := 1;
+               EraseObjProperty(thing, "Public");
+             endif
+           endforeach
+           sign.graphic := 3026;
+           EraseObjProperty(house, "Public");
+           SetObjProperty(house, "Private", 1);
+           EraseObjProperty(sign, "Public");
+           SetObjProperty(sign, "Private", 1);
+           SendSysMessage(who, "This house is now private.", font := 3, color := 0);
+           DClickSignPri(who, house, sign);
+    endcase
+  endif
+endfunction
+
+function DClickSignPri(who, house, sign)
+  var owneruid := GetObjProperty(house, "ownerserial");
+  SetSignName(sign, house);
+    if(who.serial == owneruid)
+      data_private[5] := who.name;
+      SetObjProperty(sign, "lastownername", who.name);
+    else
+      data_private[5] := GetObjProperty(sign, "lastownername");
+    endif
+  data_private[7]  := GetObjProperty(house, "numlockdowns");
+  data_private[9] := GetObjProperty(house, "numsecure");
+  data_private[33]  := GetObjProperty(house, "maxnumlockdowns");
+  data_private[35] := GetObjProperty(house, "maxnumsecure");
+  var is_friend := 0, is_coowner := 0;
+  var friendlist := GetObjProperty(house, "friendlist");
+  var coownlist := GetObjProperty(house, "coownlist");
+    if(who.serial in friendlist)
+      is_friend := 1;
+    elseif(who.serial in coownlist)
+      is_coowner := 1;
+    endif
+  var result, resultr, reskey;
+  var acct := GetObjProperty(house, "owneracct");
+    if((who.acctname == acct) || (is_coowner) || (is_friend) || (who.cmdlevel > 2))
+      SendSysMessage(who, "Welcome back to the house, friend.", font := 3, color := 0);
+      result := SendDialogGump(who, layout_private, data_private);
+    else
+      SendSysMessage(who, "This house is properly placed.", font := 3, color := 38);
+      SendSysMessage(who, "This house is of modern design.", font := 3, color := 38);
+      SendDialogGump(who, nonlayout, data_public);
+    endif
+    if((owneruid == who.serial) || (is_coowner))
+      SetObjProperty(house, "decay", (ReadGameClock()+ 2592000));
+    endif
+    if((who.acctname == acct) || (is_coowner) || (is_friend) || (who.cmdlevel > 2))
+      case (result[0])
+        1: foreach key in (result.keys)
+             if(key > 2979)
+               reskey := key;
+               ChangeSign(who, house, sign, reskey);
+               DClickSignPri(who, house, sign);
+             endif
+           endforeach
+        2: SendSysMessage(who, "What dost thou wish the sign to say?", font := 3, color := 0);
+           var newname := RequestInput(who, sign, "");
+             if(!newname)
+               SendSysMessage(who, "House renaming canceled.", font := 3, color := 0);
+               SetSignName(sign, house);
+               DClickSignPri(who, house, sign);
+             elseif((len(newname) > 60))
+               SendSysMessage(who, "Your desired house name is too long.", font := 3, color := 0);
+               SetSignName(sign, house);
+               DClickSignPri(who, house, sign);
+             else
+               SetName(sign, newname);
+               SetObjProperty(house, "signname", newname);
+               SetSignName(sign, house);
+               DClickSignPri(who, house, sign);
+             endif
+        3: ListCoowners(who, house, sign);
+        4: ListFriends(who, house, sign);
+        5: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may add co-owners.", font := 3, color := 0);
+             DClickSignPri(who, house, sign);
+           else
+             SendSysMessage(who, "Target the person you wish to name a co-owner of your household.", font := 3, color := 0);
+             AddCoowner(who, house, sign);
+           endif
+        6: if(is_friend)
+             SendSysMessage(who, "Only the house owner may add friends.", font := 3, color := 0);
+             DClickSignPri(who, house, sign);
+           else
+             SendSysMessage(who, "Target the person you wish to name a friend of your household.", font := 3, color := 0);
+             AddFriend(who, house, sign);
+           endif
+        7: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may remove co-owners.", font := 3, color := 0);
+             DClickSignPri(who, house, sign);
+           else
+             RemoveCoowner(who, house, sign);
+           endif
+        8: if(is_friend)
+             SendSysMessage(who, "Only the house owner may remove friends.", font := 3, color := 0);
+             DClickSignPri(who, house, sign);
+           else
+             RemoveFriend(who, house, sign);
+           endif
+        9: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may remove friends.", font := 3, color := 0);
+             DClickSignPri(who, house, sign);
+           else
+             ClearFriendList(who, house, sign);
+           endif
+       10: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may remove co-owners.", font := 3, color := 0);
+             DClickSignPri(who, house, sign);
+           else
+             ClearCoownList(who, house, sign);
+           endif
+       11: SendSysMessage(who, "Target the individual to ban from this house.", font := 3, color := 0);
+           AddBan(who, house, sign);
+       12: SendSysMessage(who, "Target the individual to eject from this house.", font := 3, color := 0);
+           Eject(who, house, sign);
+       13: ListBans(who, house, sign);
+       14: LiftBan(who, house, sign);
+       15: if((owneruid == who.serial) or (who.cmdlevel > 2))
+             if(who.multi.serial == house.serial)
+               SendSysMessage(who, "You can only do this from outside the building.", font := 3, color := 0);
+               DClickSignPri(who, house, sign);
+               return;
+             endif
+             SendSysMessage(who, "Target the person whom you wish to give this house.", font := 3, color := 0);
+             ChangeHouseOwner(who, house);
+           else
+             SendSysMessage(who, "Only the owner may transfer ownership of this house.", font := 3, color := 0);
+             DClickSignPri(who, house, sign);
+           endif
+       16: if((is_friend) || (is_coowner))
+             SendSysMessage(who, "Only the house owner may redeed the house.", font := 3, color := 0);
+             DClickSignPri(who, house, sign);
+           else
+             RedeedHouse(who, house, sign);
+           endif
+       17: if(owneruid == who.serial)                                   //change locks
+             ChangeLocks(who, house);
+           endif
+       18: foreach thing in (house.components)
+             if(((thing.y == (sign.y - 1)) or (thing.y == (sign.y))) and (thing.isa(POLCLASS_DOOR)))
+               thing.locked := 0;
+               SetObjProperty(thing, "Public", 1);
+             endif
+           endforeach
+           SendSysMessage(who, "This house is now public. Friends of the house may now have vendors working out of this building.", font := 3, color := 0);
+           EraseObjProperty(house, "Private");
+           SetObjProperty(house, "Public", 1);
+           EraseObjProperty(sign, "Private");
+           SetObjProperty(sign, "Public", 1);
+           DClickSignPub(who, house, sign);
+       19: var bankbox := FindBankBox(who);
+           SendOpenSpecialContainer(who, bankbox);
+    endcase
+  endif
+endfunction
+
+function AddFriend(who, house, sign)
+  var friendslist := GetObjProperty(house, "friendlist");
+  var coownerlist := GetObjProperty(house, "coownlist");
+  if(!friendslist)
+    friendslist := {};
+  endif
+  if(len(friendslist) >= 20)
+    SendSysMessage(who, "You cannot add anymore friends.", font := 3, color := 0);
+    SendSysMessage(who, "Try removing any unwanted friends to create more space for new ones.", font := 3, color := 0);
+    return;
+  endif
+  var targetchr := Target(who);
+  if(!targetchr)
+    return;
+  endif
+  if(!targetchr.isA(POLCLASS_MOBILE))
+    SendSysMessage(who,"That can't be a friend of the house.", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.isA(POLCLASS_NPC))
+    SendSysMessage(who,"That can't be a friend of the house.", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.acctname == GetObjProperty(house,"owneracct"))
+    SendSysMessage(who, "This person is already an owner of the house!", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.serial in friendslist)
+    SendSysMessage(who, "That person is already a friend of the house!", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.serial in coownerlist)
+    SendSysMessage(who, "That person is a co-owner of the house!", font := 3, color := 0);
+    return;
+  endif
+  checklists(house, targetchr, "friendslist", "coownlist");
+  friendslist.append(targetchr.serial);
+  SetObjProperty(house, "friendlist", friendslist);
+  SendSysMessage(targetchr, "You have been made a friend of this house.", font := 3, color := 0);
+  SendSysMessage(who, targetchr.name + " has been made a friend of the house.", font := 3, color := 0);
+endfunction
+
+function RemoveFriend(who, house, sign)
+  var isPublic := GetObjProperty(house, "Public");
+  var z := 0;
+  var fillname;
+  var retval1 := 0;
+  var friendlist := GetObjProperty(house, "friendlist");
+  if(!friendlist)
+    friendlist := {};
+  endif
+  var newlist := {};
+  var namelist := {};
+  foreach friend in friendlist
+    fillname := SystemFindObjectBySerial(friend);
+    if(!fillname)
+      fillname := SystemFindObjectBySerial(friend, SYSFIND_SEARCH_OFFLINE_MOBILES);
+    endif
+    if(fillname)
+      newlist.append(friend);
+      data_remove_friend[z+2] := fillname.name;
+      z := z + 1;
+    endif
+  endforeach
+  SetObjProperty(house, "friendlist", newlist);
+  retval1 := SendDialogGump(who, layout_remove_friend, data_remove_friend);
+  var friendcheck, returncheck;
+  if(retval1[0] == 2)
+    foreach key in (retval1.keys)
+      var reskey := key;
+      if(key >= 2)
+        returncheck := reskey - 2;
+      endif
+    endforeach
+    friendcheck := friendlist[returncheck];
+    if(returncheck == 0)
+      SendSysMessage(who, "You must select someone to remove first.", font := 3, color := 0);
+      RemoveFriend(who, house, sign);
+      return;
+    endif
+    if(!friendcheck)
+      SendSysMessage(who, "There is nobody in this slot.", font := 3, color := 0);
+      RemoveFriend(who, house, sign);
+      return;
+    else
+      var newlist := {};
+      foreach friend in friendlist
+        if(friend != friendcheck)
+          newlist.append(friend);
+        endif
+      endforeach
+      SendSysMessage(who, "The person has been removed from friendship of the house.", font := 3, color := 0);
+        if(isPublic)
+          DClickSignPub(who, house, sign);
+        else
+          DClickSignPri(who, house, sign);
+        endif
+      SetObjProperty(house, "friendlist", newlist);
+    endif
+  endif
+endfunction
+
+function ListFriends(who, house, sign)
+  var z := 0;
+  var fillname;
+  var friendslist := GetObjProperty(house, "friendlist");
+  if(!friendslist)
+    friendslist := {};
+  endif
+  var newlist := {};
+  var namelist := {};
+  foreach friend in friendslist
+    fillname := SystemFindObjectBySerial(friend);
+    if(!fillname)
+      fillname := SystemFindObjectBySerial(friend, SYSFIND_SEARCH_OFFLINE_MOBILES);
+    endif
+    if(fillname)
+      newlist.append(friend);
+      data_list_friends[z+2] := fillname.name;
+      z := z + 1;
+    endif
+  endforeach
+  SetObjProperty(house, "friendlist", newlist);
+  var retval := SendDialogGump(who, layout_list_friends, data_list_friends);
+endfunction
+
+function ClearFriendList(who, house, sign)
+  var isPublic := GetObjProperty(house, "Public");
+  var retval, result := 0;
+  var friendlistr := GetObjProperty(house, "friendlist");
+    if(!friendlistr)
+      SendSysMessage(who, "You dont have a Friends List yet!", font := 3, color := 0);
+      if(isPublic)
+        DClickSignPub(who, house, sign);
+      else
+        DClickSignPri(who, house, sign);
+      endif
+    else
+      retval := SendDialogGump(who, layout_r_friend_all, data_r_friend_all);
+        if(retval[0] == 2)
+          EraseObjProperty(house, "friendlist");
+          SendSysMessage(who, "Your friends have been successfully removed.", font := 3, color := 0);
+          if(isPublic)
+            DClickSignPub(who, house, sign);
+          else
+            DClickSignPri(who, house, sign);
+          endif
+        endif
+    endif
+endfunction
+
+function AddCoowner(who, house, sign)
+  var friendslist := GetObjProperty(house, "friendlist");
+  var coownerlist := GetObjProperty(house, "coownlist");
+  if(!coownerlist)
+    coownerlist := {};
+  endif
+  if(len(coownerlist) >= 8)
+    SendSysMessage(who, "You cannot add anymore co-owners.", font := 3, color := 0);
+    SendSysMessage(who, "Try removing any unwanted co-owners to create more space for new ones.", font := 3, color := 0);
+    return;
+  endif
+  var targetchr := Target(who);
+  if(!targetchr)
+    return;
+  endif
+  if(!targetchr.isA(POLCLASS_MOBILE))
+    SendSysMessage(who,"That can't be a friend of the house.", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.isA(POLCLASS_NPC))
+    SendSysMessage(who,"That can't be a friend of the house.", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.acctname == GetObjProperty(house,"owneracct"))
+    SendSysMessage(who, "This person is already an owner of the house!", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.serial in coownerlist)
+    SendSysMessage(who, "That person is already a co-owner of the house!", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.serial in friendslist)
+    SendSysMessage(who, "That person is a friend of the house!", font := 3, color := 0);
+    return;
+  endif
+  checklists(house, targetchr, "friendslist", "coownlist");
+  coownerlist.append(targetchr.serial);
+  SetObjProperty(house, "coownlist", coownerlist);
+  SendSysMessage(targetchr, "You have been made a co-owner of this house.", font := 3, color := 0);
+  SendSysMessage(who, targetchr.name + " has been made a co-owner of the house.", font := 3, color := 0);
+endfunction
+
+function RemoveCoowner(who, house, sign)
+  var isPublic := GetObjProperty(house, "Public");
+  var z := 0;
+  var fillname;
+  var retval1 := 0;
+  var coownlist := GetObjProperty(house, "coownlist");
+  if(!coownlist)
+    coownlist := {};
+  endif
+  var newlist := {};
+  var namelist := {};
+  foreach coowner in coownlist
+    fillname := SystemFindObjectBySerial(coowner);
+    if(!fillname)
+      fillname := SystemFindObjectBySerial(coowner, SYSFIND_SEARCH_OFFLINE_MOBILES);
+    endif
+    if(fillname)
+      newlist.append(coowner);
+      data_remove_coowner[z+2] := fillname.name;
+      z := z + 1;
+    endif
+  endforeach
+  SetObjProperty(house, "coownlist", newlist);
+  retval1 := SendDialogGump(who, layout_remove_coowner, data_remove_coowner);
+  var coowncheck, returncheck;
+  if(retval1[0] == 2)
+    foreach key in (retval1.keys)
+      var reskey := key;
+      if(key >= 2)
+        returncheck := reskey - 2;
+      endif
+    endforeach
+    coowncheck := coownlist[returncheck];
+    if(returncheck == 0)
+      SendSysMessage(who, "You must select someone to remove first.", font := 3, color := 0);
+      RemoveCoowner(who, house, sign);
+      return;
+    endif
+    if(!coowncheck)
+      SendSysMessage(who, "There is nobody in this slot.", font := 3, color := 0);
+      RemoveCoowner(who, house, sign);
+      return;
+    else
+      var newlist := {};
+      foreach coowner in coownlist
+        if(coowner != coowncheck)
+          newlist.append(coowner);
+        endif
+      endforeach
+      SendSysMessage(who, "The person has been removed from co-ownership of the house.", font := 3, color := 0);
+      if(isPublic)
+        DClickSignPub(who, house, sign);
+      else
+        DClickSignPri(who, house, sign);
+      endif
+      SetObjProperty(house, "coownlist", newlist);
+    endif
+  endif
+endfunction
+
+function ListCoowners(who, house, sign)
+  var z := 0;
+  var fillname;
+  var coownerlist := GetObjProperty(house, "coownlist");
+  if(!coownerlist)
+    coownerlist := {};
+  endif
+  var newlist := {};
+  var namelist := {};
+  foreach coowner in coownerlist
+    fillname := SystemFindObjectBySerial(coowner);
+    if(!fillname)
+      fillname := SystemFindObjectBySerial(coowner, SYSFIND_SEARCH_OFFLINE_MOBILES);
+    endif
+    if(fillname)
+      newlist.append(coowner);
+      data_list_coowners[z+2] := fillname.name;
+      z := z + 1;
+    endif
+  endforeach
+  SetObjProperty(house, "coownlist", newlist);
+  var retval := SendDialogGump(who, layout_list_coowners, data_list_coowners);
+endfunction
+
+function ClearCoownList(who, house, sign)
+  var isPublic := GetObjProperty(house, "Public");
+  var retval, result := 0;
+  var coownlistr := GetObjProperty(house, "coownlist");
+    if(!coownlistr)
+      SendSysMessage(who, "You dont have a Co-owner List yet!", font := 3, color := 0);
+    else
+      retval := SendDialogGump(who, layout_r_coown_all, data_r_coown_all);
+        if(retval[0] == 2)
+          EraseObjProperty(house, "coownlist");
+          SendSysMessage(who, "Your co-owners have been successfully removed.", font := 3, color := 0);
+          if(isPublic)
+            DClickSignPub(who, house, sign);
+          else
+            DClickSignPri(who, house, sign);
+          endif
+        endif
+    endif
+endfunction
+
+function AddBan(who, house, sign)
+  var friendlist := GetObjProperty(house, "friendlist");
+  var coownlist := GetObjProperty(house, "coownlist");
+  var banlist := GetObjProperty(house, "banlist");
+  if(!banlist)
+    banlist := {};
+  endif
+  if(len(banlist) >= 20)  // Expand to 50 later ??
+    SendSysMessage(who, "Your banning list is full.", font := 3, color := 0);
+    return;
+  endif
+  var targetchr := Target(who);
+  if(!targetchr)
+    return;
+  endif
+  if(!targetchr.isA(POLCLASS_MOBILE))
+    SendSysMessage(who, "You can only ban people!", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.npctemplate = "playervendor")
+    SendSysMessage(who, "You cannot eject a vendor.", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.serial in banlist)
+    SendSysMessage(who, "That person is already banned.", font := 3, color := 0);
+    SendSysMessage(targetchr, "You have been banned from this house!", font := 3, color := 0);
+    MoveCharacterToLocation(targetchr, sign.x, sign.y, GetMapInfo(sign.x, sign.y).z, MOVECHAR_FORCELOCATION);
+    return;
+  endif
+  if(targetchr.multi.serial == house.serial)
+    if(targetchr.acctname == GetObjProperty(house, "owneracct"))
+      SendSysMessage(who, "You cannot eject yourself!", font := 3, color := 0);
+      return;
+    elseif((targetchr.serial in friendlist) || (targetchr.serial in coownlist))
+      SendSysMessage(who, "You cannot ban friends from the house.", font := 3, color := 0);
+      return;
+    elseif(targetchr.cmdlevel > 2)
+      SendSysMessage(who, "It would not be wise to eject a staff member.", font := 3, color := 0);
+      SendSysMessage(who, "Contact your shard administrator if a staff member is behaving inappropriately.", font := 3, color := 54);
+      return;
+    endif
+    checklists(house, targetchr, "friendlist", "coownlist");
+    banlist.append(targetchr.serial);
+    SetObjProperty(house, "banlist", banlist);
+    MoveCharacterToLocation(targetchr, sign.x, sign.y, GetMapInfo(sign.x, sign.y).z, MOVECHAR_FORCELOCATION);
+    SendSysMessage(who, targetchr.name + " has been banned from the house.", font := 3, color := 0);
+    SendSysMessage(targetchr, "You have been banned from the house.", font := 3, color := 0);
+  else
+    SendSysMessage(who, "You may not eject someone who is not in your house!", font := 3, color := 0);
+    return;
+  endif
+endfunction
+
+function LiftBan(who, house, sign)
+  var z := 0;
+  var fillname;
+  var retval1 := 0;
+  var banlist := GetObjProperty(house, "banlist");
+  if(!banlist)
+    banlist := {};
+  endif
+  var newlist := {};
+  var namelist := {};
+  foreach ban in banlist
+    fillname := SystemFindObjectBySerial(ban);
+    if(!fillname)
+      fillname := SystemFindObjectBySerial(ban, SYSFIND_SEARCH_OFFLINE_MOBILES);
+    endif
+    if(fillname)
+      newlist.append(ban);
+      data_lift_ban[z+2] := fillname.name;
+      z := z + 1;
+    endif
+  endforeach
+  SetObjProperty(house, "banlist", newlist);
+  retval1 := SendDialogGump(who, layout_lift_ban, data_lift_ban);
+  var bancheck, returncheck;
+  if(retval1[0] == 2)
+    foreach key in (retval1.keys)
+      var reskey := key;
+      if(key >= 2)
+        returncheck := reskey - 2;
+      endif
+    endforeach
+    bancheck := banlist[returncheck];
+    if(returncheck == 0)
+      SendSysMessage(who, "You must select someone to remove first.", font := 3, color := 0);
+      LiftBan(who, house, sign);
+      return;
+    endif
+    if(!bancheck)
+      SendSysMessage(who, "There is nobody in this slot.", font := 3, color := 0);
+      LiftBan(who, house, sign);
+      return;
+    else
+      var newlist := {};
+      foreach ban in banlist
+        if(ban != bancheck)
+          newlist.append(ban);
+        endif
+      endforeach
+      SetObjProperty(house, "banlist", newlist);
+      SendSysMessage(who, "The ban is lifted.", font := 3, color := 0);
+      LiftBan(who, house, sign);
+    endif
+  endif
+endfunction
+
+function ListBans(who, house, sign)
+  var z := 0;
+  var fillname;
+  var banlist := GetObjProperty(house, "banlist");
+  if(!banlist)
+    banlist := {};
+  endif
+  var newlist := {};
+  var namelist := {};
+  foreach ban in banlist
+    fillname := SystemFindObjectBySerial(ban);
+    if(!fillname)
+      fillname := SystemFindObjectBySerial(ban, SYSFIND_SEARCH_OFFLINE_MOBILES);
+    endif
+    if(!fillname.acct)
+      newlist.append(ban);
+      data_list_bans[z+2] := fillname.name;
+      z := z + 1;
+    else
+      newlist.append(ban);
+      data_list_bans[z+2] := "Account of " + fillname.name;
+      z := z + 1;
+    endif
+  endforeach
+  SetObjProperty(house, "banlist", newlist);
+  var retval := SendDialogGump(who, layout_list_bans, data_list_bans);
+endfunction
+
+function Eject(who, house, sign)
+  var friendlist := GetObjProperty(house, "friendlist");
+  var coownlist := GetObjProperty(house, "coownlist");
+  var targetchr := Target(who);
+  if(!targetchr)
+    return;
+  endif
+  if(!targetchr.isA(POLCLASS_MOBILE))
+    SendSysMessage(who, "You can only eject people!", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.npctemplate = "playervendor")
+    SendSysMessage(who, "You cannot eject a vendor.", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.multi.serial == house.serial)
+      if(targetchr.acctname == GetObjProperty(house, "owneracct"))
+        SendSysMessage(who, "You cannot eject yourself!", font := 3, color := 0);
+        return;
+      elseif((targetchr.serial in friendlist) || (targetchr.serial in coownlist))
+        SendSysMessage(who, "You cannot ekect friends from the house.", font := 3, color := 0);
+        return;
+      elseif(targetchr.cmdlevel > 2)
+        SendSysMessage(who, "It would not be wise to eject a staff member.", font := 3, color := 0);
+        SendSysMessage(who, "Contact your shard administrator if a staff member is behaving inappropriately.", font := 3, color := 54);
+        return;
+      endif
+    checklists(house, targetchr, "friendlist", "coownlist");
+    MoveCharacterToLocation(targetchr, sign.x, sign.y, GetMapInfo(sign.x, sign.y).z, MOVECHAR_FORCELOCATION);
+    SendSysMessage(who, targetchr.name + " has been ejected from the house.", font := 3, color := 0);
+    SendSysMessage(targetchr, "You have been ejected from the house.", font := 3, color := 0);
+  else
+    SendSysMessage(who, "You may not eject someone who is not in your house!", font := 3, color := 0);
+    return;
+  endif
+endfunction
+
+function ChangeSign(who, house, sign, result)
+  var dispid := result[0];
+  if(sign.graphic == 3024 || sign.graphic == 3026)
+    SetObjProperty(house, "retiredinfo", sign.graphic);
+    sign.graphic := dispid;
+  else
+    sign.graphic := dispid;
+  endif
+endfunction
+
+function ChangeHouseOwner(who, house)
+  var friendlist := GetObjProperty(house, "friendlist");
+  var coownlist := GetObjProperty(house, "coownlist");
+  var banlist := GetObjProperty(house, "banlist");
+  var targetchr := Target(who);
+  if(targetchr.acctname == GetObjProperty(house, "owneracct"))
+    SendSysMessage(who, "You cannot transfer a house to yourself, silly.", font := 3, color := 0);
+    return;
+  endif
+  if(!targetchr.isA(POLCLASS_MOBILE))
+    SendSysMessage(who, "You can only transfer house's to other players!", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.isA(POLCLASS_NPC))
+    SendSysMessage(who, "You can only transfer house's to real player characters.", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.acctname)
+    SetObjProperty(house, "ownerserial", targetchr.serial);
+    SetObjProperty(house, "owneracct", targetchr.acctname);
+    EraseObjProperty(house, "friendlist");
+    EraseObjProperty(house, "coownlist");
+    EraseObjProperty(house, "banlist");
+    SendSysMessage(who, "You have transfered ownership of the house.");
+    SendSysMessage(targetchr, "You are now the owner of this house.  All bans and friends have been removed, and the locks have been changed.  New keys have been placed in your backpack and your bank.", font := 3, color := 0);
+    return;
+  endif
+endfunction
+
+function checklists(house, who, list1, list2)
+  var lista := GetObjProperty(house, list1);
+  var listb := GetObjProperty(house, list2);
+  var newarray := {};
+  if(who.serial in lista)
+    foreach thing in lista
+      if(thing != who.serial)
+        newarray.append(thing);
+      endif
+    endforeach
+    SetObjProperty(house, list1, newarray);
+  endif
+  newarray := {};
+  if(who.serial in listb)
+    foreach thing in listb
+      if(thing != who.serial)
+        newarray.append(thing);
+      endif
+    endforeach
+    SetObjProperty(house, list2, newarray);
+  endif
+endfunction
+
+function RedeedHouse(who, house, sign)
+  var lists := GetObjProperty(house, "footage");
+  var itemlist := {};
+  var holder, chk := 0;
+  var retval2 := SendDialogGump(who, layout_redeed, data_redeed);
+  if(retval2[0] == 2)
+    foreach thing in lists
+      holder := ListObjectsInBox(thing[1], thing[2], thing[3], thing[4], thing[5],thing[6]);
+      foreach thing in holder
+        itemlist.append(thing);
+      endforeach
+    endforeach
+    foreach thing in itemlist
+      if(thing.objtype == 0xa390)
+        chk := 100;
+        break;
+      endif
+    endforeach
+    foreach npc in (house.mobiles)
+      if(npc.npctemplate = "playervendor")
+        chk := 200;
+        break;
+      endif
+    endforeach
+    if(chk = 100)
+      SendSysMessage(who, "You cannot redeed the house with a guildstone inside.", font := 3, color := 0);
+      SendSysMessage(who, "Redeeding the house has failed.", font := 3, color := 0);
+      return;
+    elseif(chk = 200)
+      SendSysMessage(who, "You cannot redeed the house with an active vendor inside.", font := 3, color := 0);
+      SendSysMessage(who, "Redeeding the house has failed.", font := 3, color := 0);
+      return;
+    endif
+    if(chk == 0)
+      var lockids := {}, id;
+      foreach thing in (house.components)
+        id := GetObjProperty(thing, "lockid");
+        if(id)
+          lockids.append(id);
+        endif
+      endforeach
+      foreach thing in EnumerateItemsInContainer(who.backpack)
+        id := GetObjProperty(thing, "lockid");
+        if(id)
+          if(id in lockids)
+            DestroyItem(thing);
+          endif
+        endif
+      endforeach
+      var bankbox := FindBankBox(who);
+      if(bankbox)
+        foreach thing in EnumerateItemsInContainer(bankbox)
+          id := GetObjProperty(thing, "lockid");
+          if(id)
+            if(id in lockids)
+              DestroyItem(thing);
+            endif
+          endif
+        endforeach
+      endif
+      case(house.objtype)
+        0x6064: CreateItemInContainer(bankbox,0x6019,1);
+        0x6066: CreateItemInContainer(bankbox,0x601A,1);
+        0x6068: CreateItemInContainer(bankbox,0x6231,1);
+        0x606A: CreateItemInContainer(bankbox,0x601B,1);
+        0x606C: CreateItemInContainer(bankbox,0x601C,1);
+        0x606E: CreateItemInContainer(bankbox,0x601D,1);
+        0x6070: CreateItemInContainer(bankbox,0x601E,1);
+        0x6072: CreateItemInContainer(bankbox,0x601F,1);
+        0x6074: CreateItemInContainer(bankbox,0x6020,1);
+        0x6076: CreateItemInContainer(bankbox,0x6021,1);
+        0x6078: CreateItemInContainer(bankbox,0x6022,1);
+        0x607A: CreateItemInContainer(bankbox,0x6023,1);
+        0x607C: CreateItemInContainer(bankbox,0x6024,1);
+        0x607E: CreateItemInContainer(bankbox,0x6025,1);
+        0x608C: CreateItemInContainer(bankbox,0x6026,1);
+        0x608D: CreateItemInContainer(bankbox,0x6230,1);
+        0x60A0: CreateItemInContainer(bankbox,0x6227,1);
+        0x60A2: CreateItemInContainer(bankbox,0x6228,1);
+        0x6098: CreateItemInContainer(bankbox,0x6229,1);
+        0x609C: CreateItemInContainer(bankbox,0x622A,1);
+        0x609A: CreateItemInContainer(bankbox,0x622B,1);
+        0x609E: CreateItemInContainer(bankbox,0x622C,1);
+        0x6096: CreateItemInContainer(bankbox,0x622D,1);
+        0x6388: CreateItemInContainer(bankbox,0x622E,1);
+        0x6BB8: CreateItemInContainer(bankbox,0x622F,1);
+      endcase
+      var tilelist := GetObjProperty(house, "bantiles");
+      foreach thing in tilelist
+        DestroyItem(SystemFindObjectBySerial(thing));
+      endforeach
+        var z;
+        foreach thing in itemlist
+          if((GetObjProperty(thing,"secure") == 1) && (thing.movable == 0))
+            EraseObjProperty(thing,"secure");
+            if(GetObjProperty(thing, "houseserial") == house.serial)
+              var oldscript := GetObjProperty(thing, "oldscript");
+              if (oldscript == error)
+                oldscript := "";
+              endif
+              thing.usescript := oldscript;
+              thing.movable := 1;
+              EraseObjProperty(thing, "houseserial");
+              EraseObjProperty(thing, "oldscript");
+            endif
+          elseif ((GetObjProperty(thing, "lockeddown") == 1) && (thing.movable == 0))
+            thing.movable := 1;
+            EraseObjProperty(thing, "houseserial");
+            EraseObjProperty(thing, "lockeddown");
+          elseif (thing.movable == 0)
+            if(thing.objtype == 0xa390)
+              MoveItemToLocation(thing, thing.x, thing.y, house.z, MOVEITEM_FORCELOCATION);
+            else
+            DestroyItem(thing);
+            endif
+          endif
+        endforeach
+      DestroyMulti(house);
+      SendSysMessage(who, "Your house's deed has been placed in your safety deposit box.", font := 3, color := 0);
+    endif
+  endif
+endfunction
+
+function SetSignName(sign, house)
+  var signname := GetObjProperty(house, "signname");
+  if(!signname)
+    signname := "";
+    data_public[15] := "<center><basefontcolor=1>" + signname + "</center>";
+    data_private[13] := "<center><basefontcolor=1>" + signname + "</center>";
+  endif
+  data_public[15] := "<center><basefontcolor=1>" + signname + "</center>";
+  data_private[13] := "<center><basefontcolor=1>" + signname + "</center>";
+endfunction
+
+function ChangeLocks(who,house)
+  SendSysMessage(who,"target the new master key.");
+  var addonitem,newkey:=Target(who);
+  if((newkey.objtype>=KEYSTART) &&(newkey.objtype<=KEYEND) &&(newkey.objtype!=KEYRING))
+    var lockid:=AllocLockId();
+    SetObjProperty(newkey,"lockid",lockid);
+    foreach item in(house.components)
+      if(((item.objtype>=UOBJECT_DOORS_START) &&(item.objtype<=UOBJECT_DOORS_END)))
+        item.locked := 1;
+        SetObjProperty(item,"lockid",lockid);
+      endif
+    endforeach
+    addonitem:=CInt(GetObjProperty(house,"component2"));
+    if(addonitem)
+      addonitem.locked:=1;
+      SetObjProperty(addonitem,"lockid",lockid);
+    endif
+    SendSysMessage(who,"Locks have been changed.");
+  else
+    SendSysMessage(who,"That is not a key!");
+  endif
+endfunction

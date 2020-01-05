@@ -1,0 +1,28 @@
+include "include/modules";
+include "include/client";
+
+program quest1(who)
+	PrintTextAbove( who, "I call upon the forces of darkness to attend me!");
+	SetRegionLightLevel( "Background", 15 );
+	foreach item in ListItemsNearLocationOfType( who.x, who.y, who.z, 5, 0x1dae )
+      	sleep(2);
+        	PlaySoundEffect( who, SFX_11C );
+		PlayStationaryEffect( item.x + 1, item.y + 1, item.z, FX_EXPLODE_1, 7, 0x20 );
+        	DestroyItem( item );
+	endforeach
+	sleep(3);
+	PlaySoundEffect( who, SFX_247 );
+	var i;
+	for( i := 1; i <= 3; i := i + 1 )
+		PlayStationaryEffect( who.x - 2 + i, who.y + 3, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( who.x - 2 + i, who.y + 4, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( who.x - 2 + i, who.y + 5, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+	endfor
+	var it := CreateNpcFromTemplate( "daemon", who.x, who.y + 4, who.z );
+	SetObjProperty( it, "master", CInt(who.serial) );
+	it.script := "tamed";
+	RestartScript( it );
+	var name := it.name;
+	PrintTextAbove( who, name + ", you are my slave, and shall answer my questions." );
+	PrintTextAbove( who, "If you resist, you shall return to the darkness that spawned you." );
+endprogram

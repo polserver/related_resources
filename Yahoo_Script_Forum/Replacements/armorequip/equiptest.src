@@ -1,0 +1,22 @@
+use uo;
+use os;
+use cfgfile;
+
+var itemdesc := ReadConfigFile("itemdesc");
+
+program equiptest(who,item)
+	set_critical(1);
+        if (!who or who.npctemplate)
+                return 1;
+        endif
+        var dext := who.dexterity;
+        var penalty := cint(itemdesc[item.objtype].DexPenalty);
+        if (!penalty) return 1; endif
+        if (penalty >= dext)
+        	SendSysMessage(who,"You do not have enough dex to equip this");
+        	return 0;
+        else
+	return 1;
+	endif
+return 1;	
+endprogram

@@ -1,0 +1,27 @@
+//////////////////////////////////////////////////////////////////////
+// TODO:
+// =====
+//
+// - add more justice ( criminal / murderer / reportables ) stuff.
+//   ( respenalties if a gm resurrects a crim ? )
+//
+// - further check UO****** config files for errors
+//
+// - any futher useful textcmds?
+//
+// - move usegmstaff.src gump to SendDialogGump form (for speed)
+//
+// - move textcmd createitem.src gump to SendDialogGump form (for speed)
+//
+// - remove propedit textcommand from this pkg if the(/a) non bugged version
+//   replaces the one in 094 distro (upto SP2).
+//
+// - change gm toggle functionality so clothing/hair is stored in
+//   a storage area (at the moment they are stored in the gm's
+//   bankbox)
+//
+// - make the gmstaff gump more configurable
+//
+// - further bug testing ...  of course :-)  
+//
+//

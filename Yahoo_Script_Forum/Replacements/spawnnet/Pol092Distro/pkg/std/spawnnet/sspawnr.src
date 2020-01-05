@@ -1,0 +1,955 @@
+///////////////////////////////////////////////////
+//
+//   SpawnNet Rune Script v0.95b (2000/10/22)
+//
+//     based on SpawnNet v0.95b
+//       Author: Louds
+//       eMail : louds.geo@yahoo.com
+//
+//     Author: Shinigami
+//     eMail : Shinigami@gmx.net
+//
+//   Modifications:
+//     2000/10/19 Shinigami: ReWrite
+//     2001/03/25 Shinigami: Supports cGroups.cfg
+//
+///////////////////////////////////////////////////
+//
+// ToDo: Mehrfacher ContainerSpawn
+//         (data[9], data[10], layout[17] ausgeblendet)
+//       add misc functions: test group, test spawn area,
+//         spawn rating and other profiling tools
+
+//////////////
+// Libraries
+//////////////
+
+Use uo;
+Use os;
+Use util;
+Use cfgfile;
+
+/////////////
+// Includes
+/////////////
+
+Include "include/spawnnet";
+
+//////////////
+// Constants
+//////////////
+
+Const MsgLanguage:=0; // 1=German / 0=English
+
+/////////////////////
+// Global Variables
+/////////////////////
+
+Global layout:={
+  "page 0",
+  "resizepic 30 100 5120 270 151",
+  "text 45 109 1500 0",
+  "text 156 109 1500 1",
+  "text 51 135 1000 4",
+  "text 194 135 600 5",
+  "text 51 155 1000 6",
+  "text 197 155 600 7",
+  "text 51 175 1000 8",
+  "text 161 175 600 9",
+  "text 51 195 1000 10",
+  "text 161 195 600 11",
+  "text 51 215 1000 12",
+  "text 224 215 600 13",
+
+  "button 264 138 2117 2118 1 0 102",
+  "button 264 158 2117 2118 1 0 103",
+  "button 264 178 2117 2118 1 0 104",
+  "button 264 198 2117 2118 1 0 105",
+
+  "resizepic 30 253 5120 475 85",
+  "text 45 262 1000 14",
+  "text 51 280 600 15",
+  "text 60 305 2000 16",
+  "text 165 305 2000 17",
+  "text 262 305 2000 18",
+  "text 359 305 2000 19",
+
+  "button 125 265 2117 2118 1 0 107",
+  "button 132 308 2117 2118 1 0 108",
+  "button 229 308 2117 2118 1 0 109",
+  "button 325 308 2117 2118 1 0 110",
+  "button 417 308 2117 2118 1 0 111",
+
+  "resizepic 302 100 5120 203 151",
+  "text 310 110 1500 20",
+  "text 310 135 1000 21",
+  "text 410 135 600 22",
+  "text 310 155 1000 23",
+  "text 410 155 600 24",
+  "text 310 175 1000 25",
+  "text 410 175 600 26",
+  "text 310 195 1000 27",
+  "text 410 195 600 28",
+  "text 310 215 1000 37",
+  "text 350 215 600 38",
+
+  "button 474 138 2117 2118 0 2 0",
+  "button 474 158 2117 2118 0 3 0",
+  "button 474 178 2117 2118 1 0 101",
+  "button 474 198 2117 2118 1 0 250",
+  "button 474 218 2117 2118 1 0 106",
+
+  "page 1",
+  "page 2",
+  "resizepic 506 100 5120 100 151",
+  "text 510 135 1000 29",
+  "text 510 155 1000 30",
+  "text 510 175 1000 31",
+  "", // <unbenutzt> "text 510 195 1000 32",
+
+  "button 580 138 1209 1210 1 0 200",
+  "button 580 158 1209 1210 1 0 201",
+  "button 580 178 1209 1210 1 0 202",
+  "", // <unbenutzt> "button 580 198 1209 1210 1 0 203",
+
+  "page 3",
+  "resizepic 506 100 5120 130 151",
+  "text 510 135 1000 33",
+  "text 510 155 1000 34",
+  "text 510 175 1000 35",
+  "text 510 195 1000 36",
+
+  "checkbox 620 138 2362 2361 0 1001",
+  "checkbox 620 158 2362 2361 0 1002",
+  "checkbox 620 178 2362 2361 0 1003",
+  "checkbox 620 198 2362 2361 0 1004",
+  "button 530 218 2130 2129 3 0 300"
+};
+
+Global data:={
+  "SpawnRune # ",
+  "",                  // spawnnet
+  "Template Optionen",
+  "",
+  "Min. SpawnZeit:",
+  "",                  // mintime
+  "Max. SpawnZeit:",
+  "",                  // maxtime
+  "Gesamtzahl:",       // "Gesamtzahl:", "Gesamtzahl:", ""
+  "",                  // maxamount
+  "SpawnBereich:",
+  "",                  // range
+  "", // remove
+  "", // remove
+  "Hinweis:",
+  "",                  // note
+  "Speichern",
+  "Loeschen",
+  "Resetten",
+  "Abbruch",
+  "Template Optionen",
+  "SpawnTyp:",
+  "",                  // "NPC", "Item", "Container"
+  "Flags:",
+  "",                  // Flags (aequivalent zu den CheckBoxen)
+  "Template:",
+  "",                  // template
+  "",                  // "Gruppenanzahl", "Gruppenanzahl", "Loot-Gruppe"
+  "",                  // runeamountnum... runeflags[5, 2]
+  "NPC",
+  "Item",
+  "Container",
+  "",                  // <unbenutzt>
+  "",                  // "Gruppieren", "Gruppieren", "Moving Spawn"
+  "",                  // "Anker", "InContainerSpawn", "CGroups"// "No Check"
+  "",                  // "<inaktiv>", "<inaktiv>", "Container leeren"
+  "",                  // "<inaktiv>", "Alte Items erhalten", "Alte Items erhalten"
+  "",                  // Container-Serial oder Stackmenge - Text
+  ""                   // Container-Serial oder Stackmenge
+};
+
+////////////////
+// Mainprogram
+////////////////
+
+Program SpawnR_Script(who, runeobj)
+  If (MsgLanguage)
+    data[3]:="Template Optionen";
+    data[5]:="Min. SpawnZeit:";
+    data[7]:="Max. SpawnZeit:";
+    data[11]:="SpawnBereich:";
+    data[15]:="Hinweis:";
+    data[17]:="Speichern";
+    data[18]:="Loeschen";
+    data[19]:="Resetten";
+    data[20]:="Abbruch";
+    data[21]:="Template Optionen";
+    data[22]:="SpawnTyp:";
+  Else
+    data[3]:="Template Options";
+    data[5]:="Min. SpawnTime:";
+    data[7]:="Max. SpawnTime:";
+    data[11]:="SpawnRange:";
+    data[15]:="Note:";
+    data[17]:="Save";
+    data[18]:="Delete";
+    data[19]:="Reset";
+    data[20]:="Cancel";
+    data[21]:="Template Options";
+    data[22]:="SpawnType:";
+  EndIf
+
+  DoGump(who, runeobj);
+EndProgram
+
+//////////////////////////////
+// DoGump - Oeffnet das Gump
+//////////////////////////////
+
+Function DoGump(who, runeobj)
+  Local stopped:=0;
+
+  ModifyGump(CInt("0x"+GetRuneFlags(runeobj)[3, 1]));
+
+  While (!stopped)
+    Local spawnnet:=GetObjProperty(runeobj, "spawnnet");
+    If (spawnnet)
+      data[2]:=spawnnet;
+    Else
+      If (MsgLanguage)
+        data[2]:="<inaktiv>";
+      Else
+        data[2]:="<inactive>";
+      EndIf
+    EndIf
+
+    data[6]:=GetObjProperty(runeobj, "mintime");
+    data[8]:=GetObjProperty(runeobj, "maxtime");
+    data[12]:=GetObjProperty(runeobj, "range");
+    data[16]:=GetObjProperty(runeobj, "note");
+    data[27]:=GetObjProperty(runeobj, "template");
+
+    Local aux:=GetObjProperty(runeobj, "aux");
+
+    // Flags der Rune ermitteln
+    /////////////////////////////
+
+    Local runeflags:=GetRuneFlags(runeobj);
+    Local type:=CInt("0x"+runeflags[3, 1]);
+    Local flags:=GetFlags(CInt("0x"+runeflags[4, 1])); // Wandelt 4 Bits in ein Array um
+
+    Local runeamountnum:=CInt("0x"+runeflags[5, 2]);
+    If (runeamountnum<1)
+      runeamountnum:=1;
+    EndIf
+    data[29]:=runeamountnum;
+
+    Case (type)
+      1: data[10]:=GetObjProperty(runeobj, "maxamount");
+
+      2: data[10]:=GetObjProperty(runeobj, "maxamount");
+
+         If (flags[2])
+           If (MsgLanguage)
+             data[37]:="Alte Items erhalten";
+           Else
+             data[37]:="Hold old Items";
+           EndIf
+           layout[68]:="checkbox 620 198 2362 2361 0 1004";
+           data[38]:="";
+           If (aux)
+             If (MsgLanguage)
+               data[39]:="Im Container";
+             Else
+               data[39]:="Inside Container";
+             EndIf
+           Else
+             If (MsgLanguage)
+               data[39]:="Kein Container";
+             Else
+               data[39]:="No Container";
+             EndIf
+           EndIf
+           layout[42]:="text 350 215 600 38";
+         Else
+           data[37]:="";
+           layout[68]:="";
+           If (MsgLanguage)
+             data[38]:="Stackmenge";
+           Else
+             data[38]:="Stackamount";
+           EndIf
+           data[39]:=aux;
+           layout[42]:="text 410 215 600 38";
+         EndIf
+
+      3: If (aux)
+           If (MsgLanguage)
+             data[39]:="Container gefunden";
+           Else
+             data[39]:="Container found";
+           EndIf
+         Else
+           If (MsgLanguage)
+             data[39]:="Kein Container";
+           Else
+             data[39]:="No Container";
+           EndIf
+         EndIf
+    EndCase
+
+    data[25]:="";
+    If (layout[65]<>"")
+      If (flags[1])
+        layout[65][28]:="1";data[25]:=data[25]+"1";
+      Else
+        layout[65][28]:="0";
+      EndIf
+    EndIf
+    If (layout[66]<>"")
+      If (flags[2])
+        layout[66][28]:="1";data[25]:=data[25]+" 2";
+      Else
+        layout[66][28]:="0";
+      EndIf
+    EndIf
+    If (layout[67]<>"")
+      If (flags[3])
+        layout[67][28]:="1";data[25]:=data[25]+" 3";
+      Else
+        layout[67][28]:="0";
+      EndIf
+    EndIf
+    If (layout[68]<>"")
+      If (flags[4])
+        layout[68][28]:="1";data[25]:=data[25]+" 4";
+      Else
+        layout[68][28]:="0";
+      EndIf
+    EndIf
+
+    Local result:=SendDialogGump(who, layout, data);
+    Case (result[0])
+      101: ChangeData(who, runeobj, "template", "s Template", "Template");
+           If (spawnnet)
+             ProcessName(runeobj, type, flags);
+           Else
+             runeobj.name:="SpawnRune";
+           EndIf
+      102: ChangeData(who, runeobj, "mintime", " min. SpawnZeit", "min. SpawnTime");
+      103: ChangeData(who, runeobj, "maxtime", " max. SpawnZeit", "max. SpawnTime");
+      104: ChangeData(who, runeobj, "maxamount", " Gesamtzahl", "max. Amount");
+      105: ChangeData(who, runeobj, "range", " SpawnBereich", "SpawnRange");
+      106: If (((type=2) And flags[2]) Or (type=3))
+             SendSysMessageLang(who, "Die ContainerSerial ist "+
+               "schreibgeschuetzt!", "ContainerSerial is ReadOnly!");
+           Else
+             ChangeData(who, runeobj, "aux", " Stackmenge", "StackAmount");
+           EndIf
+      107: ChangeData(who, runeobj, "note", " Hinweis", "Note");
+      108: Local result:=CheckRune(who, runeobj);
+           If (result=1)
+             AddRefresh(runeobj.serial);
+             SendSysMessageLang(who, "SpawnRune wird im naechsten Zyklus "+
+               "refreshed.", "SpawnRune w'be refreshed in next Cyle.");
+           ElseIf (result=2)
+             AddCreated(runeobj.serial);
+             SendSysMessageLang(who, "SpawnRune wird im naechsten Zyklus "+
+               "erzeugt.", "SpawnRune w'be created in next Cyle.");
+           Else
+             SendSysMessageLang(who, "SpawnRune wurde nicht gespeichert!",
+               "SpawnRune won't be saved!");
+           EndIf
+      109: DestroyItem(runeobj);stopped:=1;
+           SendSysMessageLang(who, "Die SpawnRune wurde geloescht!",
+             "SpawnRune deleted.");
+      110: ResetSpawn(runeobj, 0);
+      200: ChangeType(runeobj, 1); // NPC
+      201: ChangeType(runeobj, 2); // Item
+      202: ChangeType(runeobj, 3); // Container
+      203: //ChangeType(runeobj, 4);
+           SendSysMessageLang(who, "Reserviert", "Reserved");
+      250: ChangeAmount(who, runeobj);
+      300: ChangeFlags(runeobj, result.keys);
+
+      default: SendSysMessageLang(who, "Abbruch", "Cancel");stopped:=1;
+    EndCase
+  EndWhile
+EndFunction
+
+//////////////////////////////////////////////////
+// ModifyGump - Aendert das Gump nach Typwechsel
+//////////////////////////////////////////////////
+
+Function ModifyGump(type)
+  Case (type)
+    1: layout[17]:="button 264 178 2117 2118 1 0 104";
+       data[23]:="NPC";
+       layout[66]:="checkbox 620 158 2362 2361 0 1002";
+       data[36]:="";layout[67]:="";
+       data[37]:="";layout[68]:="";
+       data[38]:="";
+       data[39]:="";
+       layout[42]:="text 350 215 600 38";
+
+       If (MsgLanguage)
+         data[9]:="Gesamtzahl:";
+         data[28]:="Gruppenanzahl";
+         data[34]:="Gruppieren";
+         data[35]:="Anker";
+       Else
+         data[9]:="Max. Amount:";
+         data[28]:="GroupAmount";
+         data[34]:="Grouping";
+         data[35]:="Anchoring";
+       EndIf
+
+    2: layout[17]:="button 264 178 2117 2118 1 0 104";
+       data[23]:="Item";
+       layout[66]:="checkbox 620 158 2362 2361 0 1002";
+       data[36]:="";layout[67]:="";
+
+       If (MsgLanguage)
+         data[9]:="Gesamtzahl:";
+         data[28]:="Gruppenanzahl";
+         data[34]:="Gruppieren";
+         data[35]:="Im Container";
+       Else
+         data[9]:="Max. Amount:";
+         data[28]:="GroupAmount";
+         data[34]:="Grouping";
+         data[35]:="In Container";
+       EndIf
+
+    3: data[10]:="";
+       layout[17]:="";
+       data[23]:="Container";
+       data[34]:="Moving Spawn";
+      // data[35]:="No Check";
+      // layout[66]:="checkbox 620 158 2362 2361 0 1002";
+       data[35]:="Use CGroups";
+       layout[66]:="checkbox 620 158 2362 2361 0 1002";
+       data[35]:="";
+       layout[66]:="";
+       layout[67]:="checkbox 620 178 2362 2361 0 1003";
+       layout[68]:="checkbox 620 198 2362 2361 0 1004";
+       data[38]:="";
+       layout[42]:="text 350 215 600 38";
+
+       If (MsgLanguage)
+         data[9]:="Gesamtzahl:";
+         data[28]:="Loot-Gruppe";
+         data[36]:="Container leeren";
+         data[37]:="Alte Items erhalten";
+       Else
+         data[9]:="Max. Amount:";
+         data[28]:="Loot-Group";
+         data[36]:="Emtpy Container";
+         data[37]:="Hold old Items";
+       EndIf
+
+    default: data[23]:="<inactive>";
+  EndCase
+EndFunction
+
+////////////////////////////////////////////
+// GetRuneFlags - Flags der Rune ermitteln
+////////////////////////////////////////////
+
+Function GetRuneFlags(runeobj)
+  Local runeflags:=CInt(GetObjProperty(runeobj, "flags"));
+  If (runeflags<0x1000)
+    runeflags:=0x1000;
+    SetObjProperty(runeobj, "flags", runeflags);
+  EndIf
+  runeflags:=CStr(Hex(runeflags));
+
+  Return (runeflags);
+EndFunction
+
+////////////////////////////////////
+// ChangeData - Aendert einen Wert
+////////////////////////////////////
+
+Function ChangeData(who, runeobj, type, descriptionger, descriptioneng)
+  Local value;
+  If (MsgLanguage)
+    value:=SendTextEntryGump(who, "Bitte den neuen Wert fuer'"+descriptionger+"' eingeben!", 10);
+  Else
+    value:=SendTextEntryGump(who, "Please enter new value for '"+descriptioneng+"'!", 10);
+  EndIf
+  If (value)
+    If ((CInt(value)>0) Or (value="0"))
+      value:=CInt(value);
+    Else
+      If ((type="template") Or (type="note"))
+        value:=CStr(value);
+      Else
+        If (RandomInt(16)=1)
+          SendSysMessage(who, "Wuahhh.....   Sie werden unverzeuglich in die Trollfahndung eingeliefert.", _DEFAULT_TEXT_FONT, 38);
+          Sleep(1);
+          SendSysMessage(who, "Schwester Fennnnn - helfen sie mir bitte.", _DEFAULT_TEXT_FONT, 68);
+          Sleep(5);
+          SendSysMessage(who, "Ich stelle hiermit einen offiziellen Antrag auf Merkbefreiung...   Haben sie noch ein Formblatt #42 vorraetig?", _DEFAULT_TEXT_FONT, 68);
+          Sleep(5);
+        EndIf
+        SendSysMessageLang(who, "Ungueltiger Datentyp!", "Wrong Type!");
+
+        Return (0);
+      EndIf
+    EndIf
+
+    SetObjProperty(runeobj, type, value);
+    SendSysMessageLang(who, "Neuer Wert fuer"+descriptionger+" = "+value,
+      "New Value for "+descriptioneng+" = "+value);
+  Else
+    SendSysMessageLang(who, "Abbruch", "Cancel");
+  EndIf
+EndFunction
+
+////////////////////////////////////////////
+// ChangeType - Aendert den SpawnRunen-Typ
+////////////////////////////////////////////
+
+Function ChangeType(runeobj, type)
+  ResetSpawn(runeobj, 1);
+
+  Local runeflags:=GetRuneFlags(runeobj);
+  runeflags[3, 1]:=CStr(type);
+  runeflags[4, 1]:="0";
+  SetObjProperty(runeobj, "flags", CInt(runeflags));
+
+  If (type=2)
+    SetObjProperty(runeobj, "aux", 1);
+  Else
+    SetObjProperty(runeobj, "aux", 0);
+  EndIf
+
+  ModifyGump(type);
+EndFunction
+
+/////////////////////////////////////
+// ChangeAmount - Aendert die Menge
+/////////////////////////////////////
+
+Function ChangeAmount(who, runeobj)
+  Local amount;
+  If (MsgLanguage)
+    amount:=SendTextEntryGump(who, "Bitte den neuen Wert fuer '"+data[28]+
+      "' eingeben!", TE_CANCEL_ENABLE, TE_STYLE_NUMERICAL, 255);
+  Else
+    amount:=SendTextEntryGump(who, "Please enter new value for '"+data[28]+
+      "'!", TE_CANCEL_ENABLE, TE_STYLE_NUMERICAL, 255);
+  EndIf
+  If (amount)
+    amount:=CInt(amount);
+    If (amount<=0xff)
+      Local hexamount;
+      If (amount<0x10)
+        hexamount:="0"+CStr(Hex(amount))[3];
+      Else
+        hexamount:=CStr(Hex(amount))[3, 2];
+      EndIf
+
+      Local runeflags:=GetRuneFlags(runeobj);
+      runeflags[5, 2]:=hexamount;
+      SetObjProperty(runeobj, "flags", CInt(runeflags));
+    Else
+      SendSysMessageLang(who, "Ungueltger Wert (Maximum ist 255).",
+        "Wrong Value (Max = 255).");
+    EndIf
+  Else
+    SendSysMessageLang(who, "Abbruch", "Cancel");
+  EndIf
+EndFunction
+
+////////////////////////////////////
+// ChangeFlags - Aendert die Flags
+////////////////////////////////////
+
+Function ChangeFlags(runeobj, flags)
+  Local result:={ };
+  ForEach flag in flags
+    If (flag>1000)
+      result[(flag-1000)]:=1;
+    EndIf
+  EndForEach
+
+  Local value:=0;
+  Local i;
+  For (i:=1; i<5; i:=i+1)
+    If (result[i])
+      value:=value+Exp2(i-1);
+    EndIf
+  EndFor
+  value:=CStr(Hex(value));
+
+  Local runeflags:=GetRuneFlags(runeobj);
+
+  If (CInt("0x"+runeflags[3, 1])=2)
+    ResetSpawn(runeobj, 1);
+
+    If (result[2])
+      SetObjProperty(runeobj, "aux", 0);
+    Else
+      SetObjProperty(runeobj, "aux", 1);
+    EndIf
+  EndIf
+
+  runeflags[4, 1]:=value[3, 1];
+  SetObjProperty(runeobj, "flags", CInt(runeflags));
+EndFunction
+
+/////////////////////////////////////
+// CheckRune - Ueberpruefe die Rune
+/////////////////////////////////////
+
+Function CheckRune(who, runeobj)
+  Local spawnnet:=GetObjProperty(runeobj, "spawnnet");
+  If ((!spawnnet) Or (spawnnet=error))
+    spawnnet:=0;
+  EndIf
+
+  // Gueltigkeit einiger Runeneigenschaften ueberpruefen
+  ////////////////////////////////////////////////////////
+
+  If (Check(who, runeobj, "mintime", "ie min. SpawnZeit", "Min. SpawnTime")=-1)
+    Return (0);
+  EndIf
+  If (Check(who, runeobj, "maxtime", "ie max. SpawnZeit", "Max. SpawnTime")<>0)
+    Return (0);
+  EndIf
+
+  If (GetObjProperty(runeobj, "maxtime")<GetObjProperty(runeobj, "mintime"))
+    SendSysMessageLang(who, "Die max. SpawnZeit muss groesser als die min. SpawnZeit sein!",
+      "Max. SpawnTime must be greater then min. SpawnTime!");
+    Return (0);
+  EndIf
+
+  If (Check(who, runeobj, "range", "er Bereich", "Range")=-1)
+    Return (0);
+  EndIf
+  If (Check(who, runeobj, "maxamount", "ie max. Anzahl", "Max. Amount")<>0)
+    Return (0);
+  EndIf
+
+  // Flags der Rune ueberpruefen
+  ////////////////////////////////
+
+  Local runeflags:=GetRuneFlags(runeobj);
+  Local option:={ };
+
+  option[1]:=CInt("0x"+runeflags[3, 1]); // Runentyp
+  If ((!option[1]) Or (option[1]>3))
+    If (option[1])
+      SendsysmessageLang(who, "Die Rune hat einen falschen Typ ("+option[1]+") !",
+        "Rune has wrong Type ("+option[1]+") !");
+    Else
+      SendsysmessageLang(who, "Die Rune ist deaktiviert!",
+        "Rune was deactivated!");
+    EndIf
+
+    Return (0);
+  EndIf
+
+  option[2]:=CInt("0x"+runeflags[4, 1]); // Runenflags
+  If (option[2]>0xf)
+    SendSysMessageLang(who, "Die Flags der Rune sind ungueltig ("+option[2]+") !",
+      "Flags of Rune are wrong ("+option[2]+") !");
+    Return (0);
+  EndIf
+  option[2]:=GetFlags(option[2]);
+
+  option[3]:=CInt("0x"+runeflags[5, 2]); // Gruppenanzahl der Rune
+  If ((!option[3]) Or (option[3]>0xff))
+    SendSysMessageLang(who, "Die Gruppenanzahl der Rune ist ungueltig ("+option[3]+") !",
+      "GroupAmount is wrong ("+option[3]+") !");
+    Return (0);
+  EndIf
+
+  // Templates der Rune ueberpruefen
+  ////////////////////////////////////
+
+  Local template:=GetObjProperty(runeobj, "template");
+
+  Case (option[1])
+    1: Local npc;
+       If (CInt(template))
+         Local spawngroup:=FindConfigElem(ReadConfigFile("groups"), template);
+         If (spawngroup)
+           Local gtemplate:=GetConfigStringArray(spawngroup, "spawn");
+           If (!gtemplate)
+             SendSysMessageLang(who, "Leeres Group-Template ("+template+") !",
+               "Empty Group-Template ("+template+") !");
+             Return (0);
+           EndIf
+
+		   // Pruefen, ob NPC im Knast create-bar
+           npc:=CreateNpcFromTemplate(gtemplate[RandomInt(CInt(Len(gtemplate)))+1], 5273+RandomInt(17), 1181+RandomInt(9), 0);
+           If (!npc)
+           	 // auf Wasser-NPC noch testen, falls das createn im Knast nicht geklappt hat
+	         npc:=CreateNpcFromTemplate(gtemplate[RandomInt(CInt(Len(gtemplate)))+1], 11+RandomInt(10), 11+RandomInt(10), 0);
+	       endif
+           If (!npc)
+             SendSysMessageLang(who, "Ungueltiges NPC-Template ("+template+") !",
+               "Wrong NPC-Template ("+template+") !");
+             Return (0);
+           EndIf
+         Else
+           SendSysMessageLang(who, "Group-Template ("+template+") existiert nicht!",
+             "Group-Template ("+template+") doesn't exist!");
+           Return (0);
+         EndIf
+       Else
+         npc:=CreateNpcFromTemplate(template, 5273+RandomInt(17), 1181+RandomInt(9), 0);
+         If (!npc)
+           SendSysMessageLang(who, "Ungueltiges NPC-Template ("+template+") !",
+             "Wrong NPC-Template ("+template+") !");
+           Return (0);
+         EndIf
+       EndIf
+
+       If (npc)
+         RevokePrivilege(npc, "invul");
+         SetObjProperty(npc, "guardkill", 1);
+         ApplyRawDamage(npc, npc.maxhp+3);
+       EndIf
+
+       If (option[2][1]) // Ist Bit 0 gesetzt? -> Grouping
+         If (option[3]<1)
+           SendSysMessageLang(who, "Ungueltige Gruppenanzahl!",
+             "Wrong GroupAmount!");
+           Return (0);
+         EndIf
+
+         If (option[3]>CInt(GetObjProperty(runeobj, "maxamount")))
+           SendSysMessageLang(who, "Die Gruppenanzahl ("+option[3]+") kann nicht "+
+             "grosser als die Gesamtzahl ("+CInt(GetObjProperty(runeobj,
+             "maxamount"))+") sein!", "GroupAmount ("+option[3]+") can't be "+
+             "greater then max. Amount ("+CInt(GetObjProperty(runeobj,
+             "maxamount"))+") !");
+           Return (0);
+         EndIf
+       EndIf
+
+    2: Local item;
+       If (CInt(template))
+         Local spawngroup:=FindConfigElem(ReadConfigFile("igroups"), template);
+         If (spawngroup)
+           Local gtemplate:=GetConfigStringArray(spawngroup, "item");
+           If (!gtemplate)
+             SendSysMessageLang(who, "Leeres iGroup-Template ("+template+") !",
+               "Empty iGroup-Template ("+template+") !");
+             Return (0);
+           EndIf
+
+           Local spawn:=gtemplate[RandomInt(CInt(Len(gtemplate)))+1];
+           If (CInt(spawn))
+             spawn:=CInt(spawn);
+           Else
+             spawn:=GetObjtypeByName(spawn);
+           EndIf
+
+           item:=CreateItemAtLocation(5283+RandomInt(7), 1171+RandomInt(7), 0, spawn, 1);
+           If (!item)
+             SendSysMessageLang(who, "Ungueltiges Item-Template ("+template+") !",
+               "Wrong Item-Template ("+template+") !");
+             Return (0);
+           EndIf
+         Else
+           SendSysMessageLang(who, "Group-Template ("+template+") existiert nicht!",
+             "Group-Template ("+template+") doesn't exist!");
+           Return (0);
+         EndIf
+       Else
+         item:=CreateItemAtLocation(5283+RandomInt(7), 1171+RandomInt(7), 0, GetObjtypeByName(template), 1);
+         If (!item)
+           SendSysMessageLang(who, "Ungueltiges Item-Template ("+template+") !",
+             "Wrong Item-Template ("+template+") !");
+           Return (0);
+         EndIf
+       EndIf
+
+       DestroyItem(item);
+
+       If ((option[2][1]) And (option[2][2])) // Ist Bit 0 gesetzt? -> Grouping & Ist Bit 1 gesetzt? -> InContainerSpawn
+         SendSysMessageLang(who, "Gruppieren und ContainerSpawn sind nicht kombinierbar!",
+           "Grouping and ContainerSpawn can't be used at same time!");
+         Return (0);
+       EndIf
+
+       If ((!option[2][2]) And (CInt(GetObjProperty(runeobj, "aux"))<1)) // Ist Bit 1 gesetzt? -> InContainerSpawn
+         SendSysMessageLang(who, "Ungueltige Stackmenge", "Wrong StackAmount");
+         Return (0);
+       EndIf
+
+       If (option[2][1]) // Ist Bit 0 gesetzt? -> Grouping
+         If (option[3]<1)
+           SendSysMessageLang(who, "Ungueltige Gruppenanzahl!", "Wrong GroupAmount!");
+           Return (0);
+         EndIf
+
+         If (option[3]>CInt(GetObjProperty(runeobj, "maxamount")))
+           SendSysMessageLang(who, "Die Gruppenanzahl ("+option[3]+") kann nicht "+
+             "grosser als die Gesamtzahl ("+CInt(GetObjProperty(runeobj,
+             "maxamount"))+") sein!", "GroupAmount ("+option[3]+") can't be "+
+             "greater then max. Amount ("+CInt(GetObjProperty(runeobj,
+             "maxamount"))+") !");
+           Return (0);
+         EndIf
+       EndIf
+
+       If (option[2][2]) // Ist Bit 1 gesetzt? -> InContainerSpawn
+         If (!runeobj.container)
+           SendSysMessageLang(who, "Die Rune befindet sich in keinem Container!",
+             "Rune should be inside Container!");
+           Return (0);
+         Else
+           Local cnt:=runeobj.container;
+           While (cnt.container.serial)
+             cnt:=cnt.container;
+           EndWhile
+
+           If ((!GetObjProperty(cnt, "spawnnet")) And (spawnnet))
+             SetObjProperty(cnt, "spawnnet", spawnnet);
+             SendSysMessageLang(who, "Der OberContainer ist jetzt Besitzer der Rune!",
+               "TopLayer Container is Owner of Rune now!");
+           EndIf
+
+           SetObjProperty(runeobj, "aux", cnt.serial);
+         EndIf
+
+         If (option[2][4]) // Ist Bit 3 gesetzt? -> Alte Items erhalten
+           SendSysMessageLang(who, "'Alte Items erhalten' funktioniert nicht beim InContainerSpawn!",
+             "U can't use 'Hold old Items' and 'In Container' at same time!");
+           Return (0);
+         EndIf
+       EndIf
+
+    3: Local spawn:=template;
+       If (CInt(spawn))
+         spawn:=CInt(spawn);
+       Else
+         spawn:=GetObjtypeByName(spawn);
+       EndIf
+
+       Local container:=CreateItemAtLocation(5273+RandomInt(7), 1171+RandomInt(7), 0, spawn, 1);
+       If (!container)
+         SendSysMessageLang(who, "Ungueltiges Container-Template ("+template+") !",
+           "Wrong Container-Template ("+template+") !");
+         Return (0);
+       EndIf
+
+       If (!container.isa(POLCLASS_CONTAINER))
+         SendSysMessageLang(who, "Template ("+template+") ist kein Container!",
+           "Template ("+template+") isn't a Container!");
+         Return (0);
+       EndIf
+
+       If (option[2][2]) // Ist Bit 1 gesetzt? -> Use CGroups
+         Local spawngroup:=FindConfigElem(ReadConfigFile("cgroups"), template);
+         If (spawngroup)
+           Local gtemplate:=GetConfigStringArray(spawngroup, "item");
+           If (!gtemplate)
+             SendSysMessageLang(who, "Leeres cGroup-Template ("+template+") !",
+               "Empty cGroup-Template ("+template+") !");
+             Return (0);
+           EndIf
+
+           Local spawn:=gtemplate[RandomInt(CInt(Len(gtemplate)))+1];
+           If (CInt(spawn))
+             spawn:=CInt(spawn);
+           Else
+             spawn:=GetObjtypeByName(spawn);
+           EndIf
+
+           If (!CreateItemInContainer(container, spawn, 1))
+             SendSysMessageLang(who, "Ungueltiges Item-Template ("+template+") !",
+               "Wrong Item-Template ("+template+") !");
+             Return (0);
+           EndIf
+         Else
+           SendSysMessageLang(who, "cGroup-Template ("+template+") existiert nicht!",
+             "cGroup-Template ("+template+") doesn't exist!");
+           Return (0);
+         EndIf
+       EndIf
+
+       DestroyItem(container);
+  EndCase
+
+  If (!spawnnet)
+    Return (2);
+  EndIf
+
+  Return (1);
+EndFunction
+
+//////////////////////////////////////////////////////
+// ProcessName - Der SpawnRune einen Namen verpassen
+//////////////////////////////////////////////////////
+
+Function ProcessName(runeobj, type, flags)
+  Local template:=GetObjProperty(runeobj, "template");
+
+  Case (type)
+    1: If (CInt(template))
+         runeobj.name:="NPCSpawnRune (Gruppe = "+template+")";
+       Else
+         runeobj.name:="NPCSpawnRune ("+template+")";
+       EndIf
+
+    2: If (CInt(template))
+         runeobj.name:="ItemSpawnRune (Gruppe = "+template+")";
+       Else
+         Local item:=CreateItemAtLocation(runeobj.x, runeobj.y, runeobj.z, GetObjtypeByName(template), 1);
+         runeobj.name:="ItemSpawnRune ("+item.desc+")";
+         DestroyItem(item);
+       EndIf
+
+    3: Local spawn:=template;
+       If (CInt(spawn))
+         spawn:=CInt(spawn);
+       Else
+         spawn:=GetObjtypeByName(spawn);
+       EndIf
+
+       Local item:=CreateItemAtLocation(runeobj.x, runeobj.y, runeobj.z, spawn, 1);
+       runeobj.name:="ContainerSpawnRune ("+item.desc+")";
+       DestroyItem(item);
+  EndCase
+EndFunction
+
+/////////////////////////////////
+// Check - Ueberprueft den Wert
+/////////////////////////////////
+//
+// -1 -> Fehler
+//  0 -> Alles i.O.
+//  1 -> Wert ist <=0
+
+Function Check(who, runeobj, type, descriptionger, descriptioneng)
+  Local value:=CInt(GetObjProperty(runeobj, type));
+  If (value=error)
+    SendSysMessageLang(who, "D"+descriptionger+" ist fehlerhaft!", descriptioneng+" ist wrong!");
+    Return (-1);
+  EndIf
+
+  If (value<1)
+    Return (1);
+  EndIf
+
+  Return (0);
+EndFunction
+
+///////////////////////
+// SendSysMessageLang
+///////////////////////
+
+Function SendSysMessageLang(who, german, english)
+  If (MsgLanguage)
+    SendSysMessage(who, german);
+  Else
+    SendSysMessage(who, english);
+  EndIf
+EndFunction

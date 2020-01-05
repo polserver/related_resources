@@ -1,0 +1,711 @@
+///////////////////////////////////////////////////////////
+// GMstaff - for gm's who don't like their keyboards much!
+///////////////////////////////////////////////////////////
+//
+// Version: <same as pkg.cfg>
+// Core   : POL094
+// Created: 10 dec 2001
+// Updated: 22 apr 2002
+// Author : dougall
+// Contact: dougalloogle@yahoo.com
+//
+///////////////////////////////////////////////////////////
+// Notes:
+//  - I'm leaving this gump in gumps.inc form for 
+//  now so the gump can continue to evolve easily :-)
+//  (Thanks to Myr for gumps.inc ...)
+//
+
+use uo;
+use os;
+use cfgfile;
+
+include "include/client";
+include "util/bank";
+include "../pkg/foundations/gumps/gumps";
+
+///////////////////////////////////////////////////////////
+// Consts
+
+//////////////////
+// Compile options
+
+const GUMP_X         :=0;   // change these consts to change the
+const GUMP_Y         :=0;   // initial pos of gump if you want...
+
+//////////////////
+
+const MAX_SCRIPTS:=50;
+
+const COLOR_GM_RED:=0x8021;
+
+const UOBJ_SPAWN_POINT:=0xA401;
+
+///////////////////////////////////////////////////////////
+// Global vars
+
+var callscripts:=ReadConfigFile("callscripts");
+var itemscfg:=ReadConfigFile(":*:itemdesc");
+var finished:=0;
+
+// gump update arrays
+var updateidxs:=array;
+var remember:=array;
+// the index for these two arrays is as follows :-
+// 1: itemtype
+// 2: itemamount 
+// 3: npctype
+// 4: zapamount
+// 5: go XYZ
+
+var cloth_layers:={ LAYER_SHOES , LAYER_PANTS , LAYER_SHIRT ,  LAYER_HELM , LAYER_NECK , LAYER_WAIST , LAYER_CHEST , LAYER_TUNIC ,LAYER_ARMS , LAYER_CAPE , LAYER_ROBE , LAYER_SKIRT , LAYER_LEGS , LAYER_HAIR };
+var pages:={ "Action" , " Info" , "Create" , "Scripts" };
+
+///////////////////////////////////////////////////////////
+
+program GM_staff(parms)
+  var gm;
+
+// Check for Control Package use
+  if (parms[1]="ICP")
+    gm:=parms[2];
+  else
+    gm:=parms;
+  endif
+  if (gm=-1)
+    return 1; // ICP test run!
+  endif
+//
+
+  if (gm.cmdlevel<3)
+    sendsysmessage(gm,"This item is much to powerful for you to handle!");
+    ApplyRawDamage(gm,20);
+    PlayLightningBoltEffect( gm );
+    return;
+  endif
+  detach();
+  var pagebuttons:=array;
+  var pagetext:=array;
+  var getbuttons:=array;
+  var gettext:=array;
+  var i;
+
+  remember:={ "", "1","","0", gm.x+" "+gm.y+" "+gm.z };  //default textentry box texts
+
+  GFInitGump(GUMP_X,GUMP_Y);
+  GFPage(1);		//nav_bar only page!
+  GFResizePic(0,0,BKGND_BLACKSLAB,430,50);
+  BuildNavBar();
+  for (i:=1; i<=len(pages); i:=i+1)
+       BuildGMPage(gm,i,getbuttons,gettext);
+       pagebuttons[i]:=getbuttons;
+       pagetext[i]:=gettext;
+  endfor
+  
+  while (!finished)
+    SendGMGump(gm,pagebuttons,pagetext);
+  endwhile
+  
+endprogram
+
+///////////////////////////////////////////////////////////
+
+function SendGMGump(gm,byref pagebuttons,byref pagetext)
+
+  var retval:=GFSendGump(gm);
+  
+  var checkbutton,i;
+  var thesebuttons:=array;
+  var thistext:=array;
+
+  finished:=1; // defaults to close gump to catch right click...
+
+  for (i:=1;i<=len(pagebuttons);i:=i+1)
+     thesebuttons:=pagebuttons[i];
+     thistext:=pagetext[i];
+     if (thesebuttons)
+       for (checkbutton:=1; checkbutton<=len(thesebuttons); checkbutton:=checkbutton+1)
+         if (retval[thesebuttons[checkbutton]])
+           if (ProcessButton(gm,retval,i,checkbutton,thesebuttons,thistext))
+             finished:=0;
+             break;
+           endif
+         endif
+       endfor
+     endif
+  endfor
+  
+  if (!finished) // need to update the gump...
+    var i;
+    for (i:=1;i<=len(updateidxs);i:=i+1);
+      GFSetData(updateidxs[i],remember[i]);
+    endfor
+  endif
+  
+endfunction
+
+///////////////////////////////////////////////////////////
+
+function BuildNavBar(pagenum:=0)
+  var i;
+  GFTilePic(385,11,0x185d);
+  GFTilePic(4,11,0x185e);
+  for (i:=1; i<=len(pages); i:=i+1)
+     if (i!=pagenum)
+       GFButtonPage((i*80)-20, 13 , 0x98b , 0x98c, (i+1));
+       GFTextCrop( (i*80)-14 , 15 , 60, 20, COLOR_GREEN , pages[i]);
+     else
+       GFButtonPage((i*80)-20, 13 , 0x98c , 0x98b, 1);     
+       GFTextCrop( (i*80)-14 , 15 , 60, 20, COLOR_GREEN_LIGHT , pages[i]);
+     endif
+  endfor
+endfunction
+
+///////////////////////////////////////////////////////////
+          
+function BuildGMPage(gm,pagenum,byref pagebuttons,byref pagetext)
+  pagebuttons:={};
+  pagetext:={};
+  
+  GFPage(pagenum+1);
+  GFResizePic(0,0,BKGND_BLACKSLAB,430,260);
+  BuildNavBar(pagenum);
+  
+  case (pagenum)
+	1: BuildActionPage(gm,pagebuttons,pagetext);
+	2: BuildInfoPage(gm,pagebuttons);
+	3: BuildCreatePage(gm,pagebuttons,pagetext);
+	4: BuildScriptPage(pagebuttons);
+  endcase
+endfunction
+
+///////////////////////////////////////////////////////////
+
+function BuildActionPage(gm,byref pagebuttons,byref pagetext);
+  var button:=array;
+  var text:=array;
+  var bx,by;
+//1. Go location
+  GFTextLine(80,165,COLOR_BLUE,"Go:Location");
+  button:=GFButtonID(60,169,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//2. Go char
+  GFTextLine(80,185,COLOR_BLUE,"Go:Char");
+  button:=GFButtonID(60,189,0x04ba,0x04b9,1);  
+  pagebuttons.append(button.keyid);
+//3. Go map
+  GFTextLine(250,165,COLOR_BLUE,"Go:Map");
+  button:=GFButtonID(230,169,0x04ba,0x04b9,1);  
+  pagebuttons.append(button.keyid);
+//4. Go Cursor
+  GFTextLine(250,185,COLOR_BLUE,"Go:Cursor");
+  button:=GFButtonID(230,189,0x04ba,0x04b9,1);  
+  pagebuttons.append(button.keyid);
+//5. Go XYZ
+  GFTextLine(40,140,COLOR_BLUE,"Go: XYZ");
+  button:=GFButtonID(20,143,0x04ba,0x04b9,1);  
+  pagebuttons.append(button.keyid);
+  GFGumpPic(120,137,0x477);
+  text:=GFTextEntry(150,140,150,20,0,remember[5]);
+  pagetext[1]:=text.keyid;
+  updateidxs[5]:=text.dtidx;
+//6. Update XYZ text entry
+  button:=GFButtonID(400,143,0x04ba,0x04b9,1);  
+  pagebuttons.append(button.keyid);
+//7. Call Lightening Raw Damage!    
+  GFTextLine(80,215,COLOR_BLUE,"Call Lightning");
+  GFGumpPic(200,215,0x98c);
+  button:=GFButtonID(60,218,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+  text:=GFTextEntry(210,217,50,20,0,remember[4]);
+  pagetext[2]:=(text.keyid);
+  updateidxs[4]:=text.dtidx;  
+//8. Open GMTools
+  GFTextLine(80,40,COLOR_BLUE,"GM Tools");
+  button:=GFButtonID(60,44,0x04ba,0x04b9,1);  
+  pagebuttons.append(button.keyid);
+//9. Toggle GM
+  GFTextLine(240,40,COLOR_BLUE,"Toggle GM");
+  button:=GFButtonID(220,44,0x04ba,0x04b9,1);  
+  pagebuttons.append(button.keyid);
+//10. Run .refreshme  
+  GFTextLine(80,60,COLOR_BLUE,"Refresh");
+  button:=GFButtonID(60,64,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//11. Toggle Concealed!
+  GFTextLine(240,60,COLOR_BLUE,"Toggle Concealed");
+  button:=GFButtonID(220,64,0x04ba,0x04b9,1);  
+  pagebuttons.append(button.keyid);
+//12. Ressurect Char
+  GFTextLine(80,80,COLOR_BLUE,"Resurrect");
+  button:=GFButtonID(60,84,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//13. Night Sight
+  GFTextLine(240,80,COLOR_BLUE,"NightSight");
+  button:=GFButtonID(220,84,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);  
+//14. GM Broadcast
+  GFTextLine(80,100,COLOR_BLUE,"Broadcast");
+  button:=GFButtonID(60,104,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);  
+//15. Run .msg
+  GFTextLine(240,100,COLOR_BLUE,"SendMessage");
+  button:=GFButtonID(220,104,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);  
+endfunction
+
+///////////////////////////////////////////////////////////
+
+function BuildInfoPage(gm,byref pagebuttons);
+  var button:=array;
+//1. Edit Command Level
+  GFTextLine(120,190,COLOR_BLUE,"Edit Char Command Level");
+  button:=GFButtonID(100,194,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//2. Edit Privs
+  GFTextLine(120,210,COLOR_BLUE,"Edit Char Privileges");
+  button:=GFButtonID(100,214,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//3. Spawn Region Manager
+  GFTextLine(80,50,COLOR_BLUE,"RegionManager");
+  button:=GFButtonID(60,54,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//4. Run .info script
+  GFTextLine(240,50,COLOR_BLUE,"Mobile Info");
+  button:=GFButtonID(220,54,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//5. Run .guildinfo script
+  GFTextLine(80,70,COLOR_BLUE,"GuildInfo");
+  button:=GFButtonID(60,74,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//6. Run .iteminfo script
+  GFTextLine(240,70,COLOR_BLUE,"Item Info");
+  button:=GFButtonID(220,74,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//7. Run .reportables
+  GFTextLine(80,90,COLOR_BLUE,"Reportables");
+  button:=GFButtonID(60,94,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//8. Run Cprop editor script
+  GFTextLine(240,90,COLOR_BLUE,"Cprop Editor");
+  button:=GFButtonID(220,94,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//9. Run .gmpages
+  GFTextLine(80,120,COLOR_BLUE,"GM Pages");
+  button:=GFButtonID(60,124,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//10. Run .counpages
+  GFTextLine(80,140,COLOR_BLUE,"Coun Pages");
+  button:=GFButtonID(60,144,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//11. Run .scriptprofiles
+  GFTextLine(240,120,COLOR_BLUE,"ScriptProfiles");
+  button:=GFButtonID(220,124,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//12. Run .findgreedyscripts
+  GFTextLine(240,140,COLOR_BLUE,"GreedyScripts");
+  button:=GFButtonID(220,144,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+
+endfunction
+
+///////////////////////////////////////////////////////////
+
+function BuildCreatePage(gm,byref pagebuttons,byref pagetext)
+  var button:=array;
+  var text:=array;
+//1.Create Item  
+  GFTextLine(40,50,COLOR_BLUE,"Create Item");
+  GFGumpPic(135,48,0x477);
+  GFGumpPic(316,55,0x035);
+  button:=GFButtonID(20,54,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+  text:=GFTextEntry(145,50,150,20,0,remember[1]);
+  pagetext[1]:=text.keyid;
+  updateidxs[1]:=text.dtidx;
+  text:=GFTextEntry(346,50,50,20,0,remember[2]);
+  pagetext[2]:=text.keyid;
+  updateidxs[2]:=text.dtidx;
+//2. Create POL Item
+  GFTextLine(40,70,COLOR_BLUE,"Create POL Item");
+  button:=GFButtonID(20,74,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//3. Create UO Item
+  GFTextLine(40,90,COLOR_BLUE,"Create UO Item");
+  button:=GFButtonID(20,94,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//4. Destroy Item  
+  GFTextLine(250,70,COLOR_BLUE,"Destroy Item");
+  button:=GFButtonID(230,74,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//5. Destroy Many
+  GFTextLine(250,90,COLOR_BLUE,"Destroy Many");
+  button:=GFButtonID(230,94,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//6. Destroy Radius
+  GFTextLine(250,110,COLOR_BLUE,"Destroy Radius");
+  button:=GFButtonID(230,114,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//7. Enchant Item
+  GFTextLine(40,110,COLOR_BLUE,"Enchant Item");
+  button:=GFButtonID(20,114,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//8. Create NPC
+  GFTextLine(40,150,COLOR_BLUE,"Create NPC");
+  GFGumpPic(135,147,0x477);
+  button:=GFButtonID(20,154,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+  text:=GFTextEntry(145,150,200,20,0,remember[3]);
+  pagetext[3]:=text.keyid;
+  updateidxs[3]:=text.dtidx;
+//9. Select NPC
+  GFTextLine(40,170,COLOR_BLUE,"Select & Create NPC");
+  button:=GFButtonID(20,174,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//10. Kill NPC  
+  GFTextLine(250,170,COLOR_BLUE,"Kill NPC");
+  button:=GFButtonID(230,174,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//11. Create Merchant Node
+  GFTextLine(250,210,COLOR_BLUE,"Create Merchant Node");
+  button:=GFButtonID(230,214,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+//12. Create Spawn Rune
+  GFTextLine(40,210,COLOR_BLUE,"Create Spawn Point");
+  button:=GFButtonID(20,214,0x04ba,0x04b9,1);
+  pagebuttons.append(button.keyid);
+endfunction
+
+///////////////////////////////////////////////////////////
+
+function BuildScriptPage(byref pagebuttons)
+  var button:=array;
+  var text:=array;
+  if (!GetConfigMaxIntKey(callscripts))
+    GFTextLine(60,100,COLOR_GREEN,"!! Missing 'callscripts.cfg' !!");
+  else
+    var gx:=30;
+    var gy:=50;
+    var i:=0;
+    var scriptkey,scriptelem;
+    for (i:=1;i<=GetConfigMaxIntKey(callscripts);i:=i+1)
+      scriptelem:=FindConfigElem(callscripts,i);
+      GFTextCrop(gx,gy,115,20,COLOR_BLUE,GetConfigString(scriptelem,"Desc"));
+      if (callscripts[i].script)
+        button:=GFButtonID(gx-20,gy+2,0x04ba,0x04b9,1);
+        pagebuttons[i]:=button.keyid;
+      else
+        pagebuttons[i]:=0;
+      endif
+      gx:=gx+135;
+      if (gx>400)
+        gx:=30;
+        gy:=gy+20;
+      endif
+      if (i>=MAX_SCRIPTS)
+        break;
+      endif  
+    endfor
+  endif
+endfunction
+
+///////////////////////////////////////////////////////////
+//  ProcessButton
+//
+//  - performs the appropriate action for an actively
+//  pressed button.
+//
+// - returns if the button has been pressed or not
+// (ie.if it's a passive button like a checkbox then
+// returns 0), in order to catch right click on gump.
+//
+///////////////////////////////////////////////////////////
+function ProcessButton(gm,byref retval,byref pageindex,byref buttonnum,byref pagebuttons,byref pagetext)
+
+var check_val,thing,gettext;
+
+case (pageindex)
+
+/////////////////////////
+// 1.Action Page
+//
+
+1:  case (buttonnum)
+      1: RunScript(gm,":gmtools:go");
+      2: RunScript(gm,"::textcmd/coun/goto");
+      3: RunScript(gm,":gmstaff:textcmd/gm/mapgo");
+      4: var where:=TargetCoordinates(gm);
+         if (where)
+           if (!MoveCharacterToLocation(gm,where.x,where.y,where.z,MOVECHAR_FORCELOCATION))
+             sendsysmessage(gm,"You can't teleport there!");
+           endif
+         endif
+      5: gettext:=GFExtractData(pagetext[1],retval);
+         remember[5]:=gettext;
+         var splitit:=splitwords(gettext);
+         if (splitit[1] and splitit[2])
+           if (!splitit[3])
+             splitit[3]:=GetWorldHeight(Cint(splitit[1]),Cint(splitit[2]));
+           endif
+           check_val:=MoveCharacterToLocation(gm,Cint(splitit[1]),Cint(splitit[2]),Cint(splitit[3]));
+           if (!check_val)
+             sendsysmessage(gm,"You can't teleport to that location!");
+           endif
+         endif
+      6: remember[5]:=gm.x+" "+gm.y+" "+gm.z;
+      7: gettext:=GFExtractData(pagetext[2],retval);
+         remember[4]:=gettext;
+         thing:=Target(gm,TGTOPT_NOCHECK_LOS);
+         if (thing.isa(POLCLASS_MOBILE) and Cint(gettext))
+           PlayLightningBoltEffect(thing);
+           if (!thing.npctemplate)
+               PlaySoundEffect(thing, SFX_SPELL_LIGHTNING);
+           endif 
+           PlaySoundEffect(gm, SFX_SPELL_LIGHTNING);
+           ApplyRawDamage(thing,Cint(gettext));
+         elseif (thing.isa(POLCLASS_UOBJECT))
+           PlayLightningBoltEffect(thing);
+         endif
+     8: RunScript(gm,":gmtools:textcmd/gm/gmtools");
+     9: ToggleGM(gm);
+    10: thing:=Target(gm,TGTOPT_NOCHECK_LOS);
+        if (!thing or (thing.isa(POLCLASS_MOBILE) and !thing.npctemplate) )
+          if ( (RunScript(gm,"::textcmd/seer/refreshme",thing)) and (thing!=gm) )
+            SendSysMessage(gm,gm.name+" has refreshed you!");
+          endif
+        elseif (thing)
+          sendsysmessage(gm,"You may only refresh Characters!");
+        endif
+    11: gm.concealed:=(!gm.concealed);
+    12: if (gm.dead)
+            Resurrect(gm);
+            PlaySoundEffect(gm, SFX_SPELL_RESSURECTION);
+        else
+          thing:=Target(gm,TGTOPT_NOCHECK_LOS);
+          if ((thing.dead) and (!thing.npctemplate))
+            Resurrect(thing);
+            PlaySoundEffect(thing, SFX_SPELL_RESSURECTION);
+          elseif (thing)
+            sendsysmessage(gm,"Can't Resurrect That!");
+          endif
+        endif
+    13: thing:=Target(gm,TGTOPT_NOCHECK_LOS);
+        if (thing.isa(POLCLASS_MOBILE) and !thing.npctemplate)
+          thing.setlightlevel( 0, 600 );
+          if (thing!=gm)
+            PlaySoundEffect(thing, SFX_SPELL_NIGHT_SIGHT );
+          endif
+        else
+          gm.setlightlevel( 0, 600 );
+        endif
+    14: var gmbcast:=SendTextEntryGump(gm,"Enter Message to Broadcast");
+        if (gmbcast)
+          foreach char in (EnumerateOnlineCharacters())
+            if (char.cmdlevel>0)
+              SendSysMessage(char,"GM Broadcast from "+gm.name+" : "+gmbcast);
+            endif
+          endforeach
+        endif
+    15: RunScript(gm,"::textcmd/coun/msg");
+    endcase
+    return 1;
+
+/////////////////////////
+// 2.Info Page
+//
+
+2:  case (buttonnum)
+     1: RunScript(gm,":gmstaff:textcmd/gm/cmdlevel");
+     2: RunScript(gm,":gmstaff:textcmd/gm/editprivs");
+     3: RunScript(gm,":spawnregion:textcmd/gm/regionmanager");
+     4: RunScript(gm,"::textcmd/gm/info");
+     5: RunScript(gm,":gmstaff:textcmd/gm/guildinfo");
+     6: RunScript(gm,"::textcmd/gm/iteminfo");
+     7: RunScript(gm,":gmstaff:textcmd/gm/reportables");
+     8: RunScript(gm,":gmstaff:textcmd/gm/propedit");
+     9: RunScript(gm,"::textcmd/gm/gmpage");
+    10: RunScript(gm,"::textcmd/coun/counpage");
+    11: RunScript(gm,":gmstaff:textcmd/gm/scriptprofiles");
+    12: RunScript(gm,":gmstaff:textcmd/gm/findgreedyscripts");
+    endcase
+    return 1;
+
+/////////////////////////
+// 3.Create Page
+//
+3:  case(buttonnum)
+     1: gettext:=GFExtractData(pagetext[1],retval);
+        var thisamount:=GFExtractData(pagetext[2],retval);
+        var thisobjtype;
+        remember[1]:=gettext;
+        remember[2]:=Cstr(thisamount);
+        if (!Cint(gettext))
+          thisobjtype:=GetObjtypeByName(gettext);
+        else
+          thisobjtype:=Cint(gettext);
+        endif
+        if (!itemscfg[thisobjtype])
+          sendsysmessage(gm,"That item has no itemdesc.cfg entry!");
+          return 1;
+        endif
+        thing:=TargetCoordinates(gm);
+        if (!thing)
+          thing:={};
+          thing.+x:=gm.x;
+          thing.+y:=gm.y;
+          thing.+z:=gm.z;
+        endif
+        check_val:=CreateItemAtLocation(thing.x,thing.y,thing.z,thisobjtype,Cint(thisamount));
+        if (check_val.errortext["not stackable"])
+          sendsysmessage(gm,"Item not stackable!!");
+          check_val:=CreateItemAtLocation(thing.x,thing.y,thing.z,thisobjtype,1);
+        endif
+        if (!check_val)
+          sendsysmessage(gm,"Can't create item. "+check_val.errortext);
+        else
+          SetObjProperty(check_val,"Created",gm.name);
+        endif
+     2: RunScript(gm,":gmstaff:textcmd/gm/createitem");
+     3: RunScript(gm,":gmstaff:textcmd/gm/selectitem");
+     4: thing:=Target(gm,TGTOPT_NOCHECK_LOS);
+        if (thing.isa(POLCLASS_ITEM))
+          check_val:=destroyitem(thing);
+          if (check_val.errortext)
+            sendsysmessage(gm,check_val.errortext);
+          endif
+        else
+           sendsysmessage(gm,"You may only destroy items!");
+        endif
+     5: var finished:=0;
+        while (!finished)
+          thing:=Target(gm,TGTOPT_NOCHECK_LOS);
+          if (thing.isa(POLCLASS_ITEM))
+            check_val:=destroyitem(thing);
+            if (check_val.errortext)
+              sendsysmessage(gm,check_val.errortext);
+            endif
+          elseif (thing)
+            sendsysmessage(gm,"You may only destroy items!");
+          else
+            finished:=1;
+          endif
+        endwhile
+     6: var getcoords:=TargetCoordinates(gm);
+        if (getcoords)
+          var radius:=SendTextEntryGump(gm,"  Enter Radius to Destroy",TE_CANCEL_ENABLE,TE_STYLE_NUMERICAL,100," ( NB. destroys items only )" );
+          if (Cint(radius))
+            foreach destroy_thing in (ListItemsNearLocation(gm.x, gm.y, gm.z, Cint(radius) ))
+              DestroyItem(destroy_thing);
+            endforeach
+          endif
+        endif
+     7: RunScript(gm,":gmstaff:textcmd/gm/enchantitem");
+     8: gettext:=lower(GFExtractData(pagetext[3],retval));
+        sendsysmessage(gm,"Where will you create the NPC?");
+        var getcoords:=array;
+        getcoords:=TargetCoordinates(gm);
+        remember[3]:=gettext;
+        thing:=CreateNpcFromTemplate( gettext, getcoords.x, getcoords.y, getcoords.z);
+        if (!thing)
+          sendsysmessage(gm,"Can't create npc :"+thing.errortext);
+        endif
+      9: RunScript(gm,":gmstaff:textcmd/gm/makenpc");
+     10: thing:=Target(gm,TGTOPT_NOCHECK_LOS);
+         if (thing.isa(POLCLASS_NPC))
+            RevokePrivilege( thing, "invul" );
+            setobjproperty( thing, "guardkill", 1);
+            var thinghp:=Cint(GetVital(thing,"Life")/ 100);
+            ApplyRawDamage(thing, 10+thinghp);
+            if (!thing.dead)
+               sendsysmessage(gm,"Couldn't Kill them!");
+            endif
+         endif
+     11: RunScript(gm,":gmtools:textcmd/gm/createnode");
+     12: var where:=array;
+         where:=TargetCoordinates(gm);
+         if (where)
+           thing:=CreateItemAtLocation(where.x,where.y,where.z,UOBJ_SPAWN_POINT,1);
+           if (!thing)
+             sendsysmessage(gm,"Can't make spawnpoint :"+thing.errortext);
+           else
+             sendsysmessage(gm,"Double Click spawnpoint to activate it....");
+           endif
+         endif
+    endcase
+    return 1;
+
+/////////////////////////
+// 4.Scripts Page
+//
+4:  var callscripts_elem:=FindConfigElem(callscripts,buttonnum);
+    RunScript(gm,GetConfigString(callscripts_elem,"Script"));
+    return 1;
+
+endcase
+
+return 0;
+endfunction
+
+///////////////////////////////////////////////////////////
+
+function RunScript(gm,scriptname,parm:=0)
+  if (!parm)
+    parm:=gm;
+  endif
+  if (Find(scriptname,":",2))
+    var pkgname:=scriptname[(Find(scriptname,":",1)+1),(Find(scriptname,":",2)-2)];
+    if (len(pkgname))
+      if (!(pkgname in polcore().packages))
+        sendsysmessage(gm,"Can't run script : package "+pkgname+" is not enabled/installed!");
+        return 0;
+      endif
+    endif
+  endif
+  var check_script:=start_script(scriptname,parm);
+  if (check_script.errortext)
+    sendsysmessage(gm,"Can't run script :"+check_script.errortext);
+    return 0;
+  endif
+  return 1;
+endfunction
+
+///////////////////////////////////////////////////////////
+// Note: Clothing/Hair is stored in the gm's bankbox !!
+//
+// TODO: -maybe this should be changed to storage area
+//
+function ToggleGM(gm)
+  var bankbox:=FindBankBox(gm);
+  var cloth_item;
+  if (gm.graphic=CID_GM)
+    gm.color:=gm.truecolor;
+    if (gm.gender)
+      gm.graphic:=CID_HUMAN_FEMALE;
+    else
+      gm.graphic:=CID_HUMAN_MALE;
+    endif
+    foreach cloth_item in (EnumerateItemsInContainer(bankbox))
+      if (getobjproperty(cloth_item,"GMcloths"))
+        EquipItem(gm,cloth_item);
+        EraseObjProperty(cloth_item,"GMcloths");
+      endif
+    endforeach
+  else
+    var gmrobe_colour:=getobjproperty(gm,"GMRobeColor");
+    if (!gmrobe_colour)
+      gmrobe_colour:=COLOR_GM_RED;
+      setobjproperty(gm,"GMRobeColor",gmrobe_colour);
+    endif
+    gm.color:=gmrobe_colour;
+    gm.graphic:=0x3db;
+    foreach layer in (cloth_layers)
+      cloth_item:=GetEquipmentByLayer(gm,layer);
+      if (cloth_item)
+        SetObjProperty(cloth_item,"GMcloths",1);
+        MoveItemToContainer(cloth_item,bankbox);
+      endif
+    endforeach
+  endif
+endfunction
+
+///////////////////////////////////////////////////////////

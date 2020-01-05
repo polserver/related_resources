@@ -1,0 +1,63 @@
+use cfgfile;
+use uo;
+
+include "../../cleric";
+
+program testpiety(who)
+	var y := 70;
+	var config := ReadConfigFile("clerics");
+	var gods := GetConfigStringArray(config["religions"], "god");
+	var layout := 
+	{
+		"page 0",
+		"resizepic 10 10 3600 500 400",
+		"text 30 30 1153 0",
+		"text 30 50 1153 1",
+		"text 160 50 1153 2",
+		//"text 260 50 1153 3",
+		"text 360 50 1153 4",
+	};
+	var data := 
+	{
+		"Online players -> " + numonline(),
+		"Religion",
+		"Piety",
+		"Online",
+	};
+	foreach god in gods		
+		data.append(god);
+		layout.append("text 30 " + y + " 1153 " + (len(data)-1));
+		
+		data.append(devotionpiety(god));
+		layout.append("text 175 " + y + " 1153 " + (len(data)-1));
+		
+		data.append(totalmembers(god));
+		layout.append("text 375 " + y + " 1153 " + (len(data)-1));
+		
+		y:=y+20;
+	endforeach
+	senddialoggump(who, layout, data);
+
+endprogram
+
+function numonline()
+	var online := 0;
+	foreach person in EnumerateOnlineCharacters()
+		if (person.cmdlevel < 2)
+			online := online+1;
+		endif
+	endforeach
+	return online;
+endfunction
+
+function totalmembers(faithname)
+	var count := 0;
+	foreach person in EnumerateOnlineCharacters()
+		if (person.cmdlevel < 2)
+			if (GetObjProperty(person, "Devotion") == faithname)
+				count := count+1;
+			endif
+		endif
+	endforeach
+	return count;
+endfunction

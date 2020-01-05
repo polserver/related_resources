@@ -1,0 +1,16 @@
+use uo;
+
+var radius;
+
+program unlockradius( who, text )
+	if( text )
+		radius := CInt( text );
+	else
+		radius := SendTextEntryGump( who, "What radius would you like to unlock?" );
+		radius := CInt( radius );
+	endif
+	foreach thingie in ListItemsNearLocation( who.x, who.y, who.z, radius );
+		thingie.movable := 1;
+	endforeach
+	SendSysMessage(who, "Everything in a radius of " + radius + " is now movable." );
+endprogram

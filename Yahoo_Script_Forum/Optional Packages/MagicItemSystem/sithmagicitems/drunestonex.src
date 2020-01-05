@@ -1,0 +1,61 @@
+use uo;
+include "sench";
+
+//runestone script
+//run from ItemID.
+
+program drunestone( parms )
+
+	var who := parms[1];
+	var stone := parms[2];
+	var tgtitem := parms[3];
+
+	if( !ReserveItem(stone) )
+	  return;
+	endif
+
+	var enchs := GetObjProperty( stone, "Enchantments" );
+	
+	if( !enchs || !len(enchs) )
+	    SendSysMessage( who, "Double click on an enchanted scroll to add enchantments to runes." );
+	    return;
+	endif
+
+	if( tgtitem.intelligence )
+	    SendSysMessage( who, "Thats not an item!" );
+	    return;
+	endif
+
+	if( !getFreeEnchSlots( tgtitem ) )
+	    SendSysMessage( who, "That item has no free sockets." );
+	    return;
+	endif
+
+	foreach enchantment in enchs
+		if( hasConflicts( enchantment, tgtitem ) )
+		  SendSysMessage( who, "This enchantment conflicts one already existing on the item." );
+		  return;
+		endif
+	endforeach
+
+	//Skill Checks Here
+
+	var theReturn;
+	foreach e in enchs
+	    if( getFreeEnchSlots( tgtitem ) )
+		theReturn := convEnch( stone, tgtitem, e );
+	        if( theReturn != 420 )
+		  SendSysMessage( who, theReturn );
+		  return;
+		endif 
+		fillEnchSlots( tgtitem, e, getEnchConfigProp(e,"level","integer") );
+	    endif
+	endforeach
+	refreshEnchNames( tgtitem );
+
+	//Error-checking for this?
+	DestroyItem(stone);
+
+	SendSysMessage( who, "The runestone was succesfully inserted" );
+
+endprogram

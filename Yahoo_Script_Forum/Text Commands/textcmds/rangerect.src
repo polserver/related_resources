@@ -1,0 +1,88 @@
+////////////////////////////////////////////////////////////////////////////////////////
+//  RANGERECT.SRC - ingame command
+//  This is a "fastbuild" command you supply itemnumber start, itemnumber end and Z height as
+//  arguments. If Z is left out it takes the first coordinates Z as
+//  the Z to be built on. This command is great for putting down floors
+//  Todo://   Clean up the code when abs() is avail. and C-style for loops
+//   don't require initialization.
+//  Author: ens 1999/01/02
+//  Recent Modifications:]
+//      1999/01/25 Ignatius Created the command TILE.
+//      2000/02/15 Angreal modified into rangerect.
+/////////////////////////////////////////////////////////////////////////////////////////
+use uo;
+use util;
+
+program textcmd_rangerect( who, input )    
+    
+    if ( ! input )        
+	SendSysmessage( who, "No arguments supplied. Usage: .tile [start] [end] ([z])." );        
+	return;
+    endif
+
+    local argArray := SplitWords( input ); // split the arguments.
+    local rangeItemstart  := CInt( argArray[ 1 ] );
+    local rangeItemend    := CInt( argArray[ 2 ] );    
+    local tileZ           := CInt( argArray[ 3 ] );    
+    local zValid := 1;  // assume z is correct for now.
+    
+    if ( ! tileZ )
+        SendSysmessage( who, "No Z supplied. Using target #1 Z instead." );
+        zValid := 0;
+    else
+        if ( ( tileZ  < -127 ) OR ( tileZ > 128 ) ) // check the bounds.
+            SendSysmessage( who, "Z is out of bounds. Using target #1 Z instead." );
+            zValid := 0;
+        endif
+    endif
+    SendSysmessage( who, "Select coordinate #1" );
+    local coordStructOne := TargetCoordinates( who );
+        SendSysmessage( who, "Select coordinate #2" );
+    local coordStructTwo := TargetCoordinates( who );
+    if ( ( ! coordStructOne ) OR ( ! coordStructTwo ) ) // check that we got two valid coordstructs.
+        SendSysmessage( who, "Missing coordinate. Aborting." );
+        return;
+    endif
+    if ( ! zValid ) // if we are to use the coord #1 Z, check it out.
+        if ( coordStructOne.z < -127 OR coordStructOne.z > 128 )
+            SendSysmessage( who, "Z is out of bounds. Aborting." );
+            return;
+        endif
+    endif
+    if ( ! zValid )
+        tileZ := coordStructOne.z;
+    endif    // dummy variables, won't be needed after rewrite of command.
+    local startX;
+    local startY;
+    local endX;
+    local endY;
+    if ( coordStructOne.x <= coordStructTwo.x )
+        startX  := coordStructOne.x;
+        endX    := coordStructTwo.x;
+    else
+        startX  := coordStructTwo.x;
+        endX    := coordStructOne.x;
+    endif
+    if ( coordStructOne.y <= coordStructTwo.y )
+        startY  := coordStructOne.y;
+        endY    := coordStructTwo.y;
+    else
+        startY  := coordStructTwo.y;
+        endY    := coordStructOne.y;
+    endif
+    local fooY := StartY; // store the original startY for use after each iteration.
+
+    
+    while ( startX <= endX )
+        while ( startY <= endY )
+	   local B    := (rangeItemend - rangeItemstart) + 1;
+           local rint := RandomInt(B);
+           local tileItem := rangeItemstart + rint;	
+           CreateItemAtLocation( startX , startY , tileZ, tileItem , 1 );
+           startY := startY + 1;
+        endwhile
+        startY := fooY;
+        startX := startX + 1;
+    endwhile
+    SendSysmessage( who, "Command completed." );
+endprogram

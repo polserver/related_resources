@@ -1,0 +1,80 @@
+// updated November 4, 2000
+// zulu (zulu@zuluhotel.com)
+
+use uo;
+use os;
+
+Const UOBJECT_DOORS_START:=0x0675;
+Const UOBJECT_DOORS_END:=0x06f4;
+const UOBJ_GUILDSTONE:=0xa390;
+const UOBJ_GUILDSTONE_GRAPHIC:=0x0EDD;
+
+program packed_stone(who,stone)
+
+if(!ReserveItem(stone)) return; endif
+
+local guild_id:=getobjproperty(stone,"guild_id");
+local guild:=FindGuild(guild_id);
+local gm:=findgm(guild);
+
+if(gm[2]<>who.serial) SendSysMessage(who,"Only the Guild Master can place the stone."); return; endif
+if(not Accessible(who,stone)) SendSysMessage(who,"You cannot access that item!"); return; endif
+
+//bishops add for statichouses
+
+ local signs := ListItemsNearLocationOfType(who.x, who.y, who.z, 30, 0x7060);
+  var check := 0;
+  foreach item in signs
+    var infoarr := GetObjProperty(item, "homeinfo");
+    if(infoarr)
+     if((who.x >= infoarr[2]) and (who.x <= infoarr[4]) and (GetObjProperty(item, "owneracct" ) = who.acctname) and (who.y >= infoarr[3]) and (who.y <= infoarr[5]))
+        check := 1;  
+     endif
+    endif
+  endforeach
+/*end of bishops paramsearch for staticsign*/
+/*
+below modified by Marquis to work for both static and multi
+stones cant be placed outside of houses 
+*/
+if(GetObjProperty(who.multi,"ownerserial")=who.serial)
+  check :=1; 
+endif
+if(check = 0)
+      SendSysMessage(who, "You must be in a house you own to  place this.");
+return;
+endif
+
+foreach item in ListItemsNearLocation(who.x,who.y,who.z,2)
+If ((item.objtype>=UOBJECT_DOORS_START) AND (item.objtype<=UOBJECT_DOORS_END))
+SendSysMessage(who,"This is too close to the door.");
+return;
+endif
+endforeach
+
+foreach item in ListItemsNearLocation(who.x,who.y,who.z,30)
+if(item.objtype=UOBJ_GUILDSTONE and (item.multi.serial=who.multi.serial))
+SendSysMessage(who,"Only one guildstone can be placed in a house.");
+return;
+endif
+endforeach
+
+stone.movable :=1;
+MoveItemToLocation(stone,who.x,who.y,who.z,MOVEITEM_FORCELOCATION);
+stone.movable:=0;
+stone.graphic:=UOBJ_GUILDSTONE_GRAPHIC;
+stone.usescript:="";
+
+endprogram
+
+function findgm(guild)
+
+local returninfo:={"In Vote","0"},i,all:=guild.members,gm:=guild.getprop("gm");
+
+for(i:=1;i<=all.size();i:=i+1)
+if (all[i].serial=gm) returninfo[1]:=all[i].name; returninfo[2]:=all[i].serial; endif
+endfor
+
+return returninfo;
+
+endfunction

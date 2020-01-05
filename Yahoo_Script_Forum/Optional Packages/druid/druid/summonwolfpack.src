@@ -1,0 +1,56 @@
+use uo;
+use os;
+use util;
+
+include "include/client";
+include "druid";
+
+program cast_wolfpack(caster)
+
+	if(!checkstaff(caster))
+		return;
+	endif
+	
+  checkdruidopts(caster, 3);
+	
+  usemana(caster, 3);
+
+  local amount := RandomDiceRoll("3d3");
+  local thecritter;
+
+  local parms := {};
+  local npctemplate := "blank";
+
+  parms .+ script := "tamed";
+
+  While(amount>0)
+
+	local creature := RandomDiceRoll("1d8");
+	Case (creature)
+		1:
+			npctemplate := "whitewolf";
+		2:
+			npctemplate := "greywolf";
+		3:
+			npctemplate := "direwolf";
+		4:
+			npctemplate := "whitewolf";
+		5:
+			npctemplate := "direwolf";
+		6:
+			npctemplate := "frostwolf";
+		7:
+			npctemplate := "whitewolf";
+		8:
+			npctemplate := "whitewolf";
+	endcase
+
+    	local casttarg := targetcoordinates (caster);
+			
+	thecritter := CreateNPCfromTemplate(npctemplate, casttarg.x, casttarg.y,casttarg.z, parms);
+	SetObjProperty(thecritter,"master", caster.serial);
+    	PlaySoundEffect(caster, 0x022b);
+	amount := amount - 1;
+    endWhile
+
+endprogram

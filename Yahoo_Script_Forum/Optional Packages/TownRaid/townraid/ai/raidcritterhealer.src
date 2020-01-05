@@ -1,0 +1,66 @@
+/////////////////////////////////////////////////////////////////////////////
+//
+//  raidcritterhealer.src v0.6
+//  Doesent work that well
+//
+/////////////////////////////////////////////////////////////////////////////
+
+
+use npc;
+use os;
+use cfgfile;
+use math;
+
+include "include/eventid";
+include "include/randname";
+include "include/objtype";
+include "include/npccast";
+include "include/dist";
+include "include/anchors";
+include "ai/main/mainloopraider";
+include "ai/combat/raiderfight";
+include "ai/main/defaultnoncombatevent";
+include "ai/combat/healercombatevent";
+include "ai/setup/setup";
+
+const HALT_THRESHOLD := 8; // how close before he attacks?
+Const SOUND_EFFECT_RES := 0x215;
+Const ACTION_EFFECT_CAST2 := 0x11;
+Const REACT_THRESHOLD := 2;
+
+program HealerAI()
+
+	Equipfromtemplate(me, "creature_spellcaster");
+
+	SetProperty ("noloot", 1);
+
+	SetWarMode( 0 );
+
+	main_AI_loop();
+
+endprogram
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//  CloseDistance - close the distance between self and an opponent.
+//  Returns: 1 if distance is 0 or 1 (no move necessary)
+//           0 if distance is >= 2 (may still need to move)
+//
+//  This is a .EM-file candidate.
+//
+/////////////////////////////////////////////////////////////////////////////
+function CloseDistance( opponent )
+
+	local edist := Distance( me, opponent );
+	if (edist > 6)
+		return 2;
+	elseif (edist > 1)
+       	RunToward( opponent );
+	    return 0;
+	else
+		return 1;
+	endif
+
+endfunction
+

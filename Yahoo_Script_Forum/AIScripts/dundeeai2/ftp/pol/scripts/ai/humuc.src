@@ -1,0 +1,430 @@
+use npc;
+use os;
+use uo;
+
+include "include/eventid";
+include "include/NPCBackpacks";
+include "include/npccast";
+include "include/dist";
+
+const HALT_THRESHOLD := 15;
+Const MOVING_EFFECT_FIREBALL  := 0x36D4; 
+const EVID_ALL_FOLLOW_CMD := 0x11;
+Const STARTHAIR := 0x2030;
+Const ENDHAIR := 0x2060;
+
+global me := Self();
+global masterserial := GetObjProperty( me , "master" );
+global master := SystemFindObjectBySerial( masterserial );
+global mypack := FindMyPack(me.serial);
+
+global saywords := 1;
+global summons := 0;
+global chaseloop := 0;
+
+global following := 0;
+global nextwatch := ReadGameClock();
+
+me.setmaster( master );
+
+if (!me.backpack)
+	local newbackpack := CreateItemAtLocation(5288 , 1176 , 0, 0xe75,1);
+	EquipItem(me, newbackpack);
+endif
+
+program TamedAI()
+
+	SetAnchor( me.x, me.y, 20, 0 );
+
+    EnableEvents( EVID_SPEECH, 12 );
+    EnableEvents( EVID_ENGAGED + EVID_DAMAGED );
+
+    SetWarMode( 0 );
+    SetObjProperty(me, "serial", me.serial);
+
+    MainAILoop();
+
+endprogram
+
+function CloseDistance( opponent )
+
+    case Distance( me, opponent )
+        1:
+        0:
+            return 1;
+        default:
+            if(!RunToward( opponent ))
+               return 1;
+            else
+               return 0;
+            endif
+    endcase
+
+endfunction
+
+function Fetch()
+
+	local tobj := Target(master);   //object I'm supposed to get
+	if (tobj.container)        
+		return;
+	endif
+
+	SayOk();
+
+	local times := 0;
+	while ( (distance(me, tobj) > 1) and times < 10 and CheckLineOfSight(me,tobj) )
+		if( !runtoward(tobj))
+			sleepms(500);
+			times := times + 1;
+		else
+			times := 0;
+		endif
+	endwhile
+
+	if ( (tobj.movable) and (accessible(me,tobj)) )
+		MoveItemToContainer(tobj, mypack);
+	endif
+
+endfunction
+
+function drop()
+
+	SayWhat();
+	foreach myitems in enumerateitemsincontainer(mypack)
+		if (myitems.container.serial = mypack.serial)
+        		moveitemtolocation(myitems, me.x, me.y, me.z,0);
+			sleepms(100);
+		endif
+	endforeach
+
+endfunction
+
+function MainAILoop()
+
+    local ev;
+    local evtext;
+    local mename := lower(me.name);
+
+    nextwatch := ReadGameClock();
+    local waittime := 0;
+
+    while (1)
+        ev := os::wait_for_event( waittime );
+        case (ev.type)
+	EVID_SPEECH:
+		ProcessSpeech(ev);
+	EVID_ENGAGED:
+	EVID_DAMAGED:
+		if (ev.source)
+			Fight( ev.source );
+		endif
+	EVID_ALL_FOLLOW_CMD:
+		following := master;
+        endcase
+
+	if (following) 
+		waittime := 0;
+		Follow();
+	elseif (master)
+		waittime := 7;
+		Guard();
+	else
+		waittime := 120;
+	endif
+
+    endwhile
+
+endfunction
+
+function Guard()
+
+	if (ReadGameClock() > NextWatch)
+		if (CheckLineOfSight(me,master))
+			if (master.hp < (master.maxhp/2) )
+                    		CastSpell( me , master, "gheal");
+				sleep(3);
+			endif
+			if (cint(GetObjProperty(master,"poison_level")) !=0 )
+				CastSpell( me, master, "cure");
+				sleep(3);
+			endif
+		else
+			if (RandomInt(20)=1)
+				TeletoMaster();
+			endif
+		endif
+		NextWatch := ReadGameClock()+5;
+		if (RandomInt(10)=1)
+			SayWhat();
+		endif
+	endif
+
+endfunction
+
+function Follow()
+
+	if ( (me.frozen) )
+		sleep(10);
+		return;
+	endif
+
+	me.dexterity_mod := 5000;
+	local d := Distance( me, following );
+	if (d < 2)
+		sleep(1);
+		chaseloop := 0;
+	elseif (( d > 10 ) or ( chaseloop > 50 ))
+		MoveCharacterToLocation( me, following.x, following.y, following.z,
+			MOVECHAR_FORCELOCATION );
+		chaseloop := 0;
+		sleep(1);
+	else
+		RunToward(following);
+		chaseloop := chaseloop + 1;
+	endif
+
+	if ( (!following.strength) or (following.dead) )
+		following := 0;
+	endif
+	me.dexterity_mod := 0;
+	if (master)
+		Guard();
+	endif
+
+endfunction
+
+function ProcessSpeech(ev)
+
+	if( ev.source.serial != masterserial )
+		return;
+	endif
+
+	if (!master)
+		RestartScript( me );
+	endif
+
+	if (me.name != master.name)
+		me.name := master.name;
+	endif
+
+	sayOk();
+
+	local evtext := lower(ev.text);
+	local mename := lower(me.name);
+
+	if( evtext[mename + " stop"] or evtext["all stop"])
+		following := 0;
+	elseif ((evtext[mename + " come"]) or (evtext["all come"]))
+		local done := 0;
+		chaseloop := 0;
+		while( done = 0 )
+			chaseloop := chaseloop +1;
+			done := CloseDistance( ev.source );
+			if (chaseloop > 25)
+				done :=1;
+			endif
+		endwhile
+	elseif (evtext["follow"])
+		following  := ev.source;
+	elseif (evtext["fetch"]  or (evtext["get"]))
+		fetch();
+	elseif (evtext["drop"])
+		drop();
+	elseif (evtext[mename + " speak"]  or (evtext["all speak"]))
+		SayOk();
+	elseif (evtext["cure"])
+		castspell(me,master,"cure");
+		sleep(3);
+	elseif (evtext["heal"])
+		castspell(me,master,"gheal");
+		sleep(3);
+	elseif (evtext["light"])
+		castspell(me,master,"nightsight");
+		sleep(3);
+	elseif (evtext["loot"])
+		GrabLoot();
+		return 1;
+	elseif (evtext["give"])
+		GiveLoot();
+		return 1;
+	endif
+
+endfunction
+
+function AllCommand(evtype,what)
+
+	var mobs := ListMobilesNearLocation( master.x, master.y, master.z, 9 );
+	var eve array;
+	eve.+type := evtype;
+	eve.+source := me;
+	eve.+target := what;
+	SendEvent( me , eve );
+	foreach mob in mobs 
+		if( GetObjProperty( mob , "master" ) = me.master.serial )
+			SendEvent( mob , eve );
+		endif
+	endforeach
+
+endfunction
+
+function cast_meteor()
+
+    local targets := ListMobilesInLineofSight(me, 3);
+
+    foreach mobile in targets
+	   Local dmg := randomint((cint( cint(me.maxhp/2.5) * me.hp)/me.maxhp))+5;
+	   PlayMovingEffect(me, mobile ,MOVING_EFFECT_FIREBALL, 10,1,1);
+	   applydamage(mobile, dmg);           
+    endforeach
+
+endfunction
+
+function DoPoison( you )
+
+	if ( (distance(me,you)<2) and (RandomInt(8)=1) )
+
+		local p_level := cint(me.maxhp/10);
+		local poison_level := Cint(GetObjProperty(you, "poison_level"));
+
+		if (p_level >= poison_level)
+			SendSysmessage (you, "You have been poisoned by " + me.name +"!");
+			SetObjProperty(you, "poison_level",cstr(p_level));
+			start_script( ":spells:poisondamage", you ); 
+		endif
+
+	endif
+
+endfunction
+
+function fight(opponent)
+
+	me.dexterity_mod := 0;
+	if (opponent.serial = me.serial)
+		return;
+	endif
+	SayWhat();
+
+	following := 0;
+	local runs := 0;
+	while ( (distance(me, opponent) < 20) and (runs < 50) )
+		runawayfrom(opponent);
+		runs := runs +1;
+		wait_for_event(0);
+	endwhile
+
+	me.hidden := 1;
+
+endfunction
+
+function SayWhat()
+
+	PlaySoundEffect( me , 0x259 );
+
+endfunction
+
+function SayOK()
+
+	PlaySoundEffect( me , 0x254 );
+
+endfunction
+
+function giveloot();
+
+	SayWhat();
+	local done := 0;
+	chaseloop := 0;
+	while( done = 0 and chaseloop < 50 )
+		chaseloop := chaseloop +1;
+		done := CloseDistance( master );
+	endwhile
+
+	if (done)
+
+	  local bag := Target(master);
+	  if (bag.container.serial != master.backpack.serial)
+		bag := master.backpack;
+	  endif
+	  foreach myitems in enumerateitemsincontainer(mypack)
+		if (myitems.container.serial = mypack.serial)
+        		moveitemtocontainer(myitems, bag);
+			sleepms(100);
+		endif
+	  endforeach
+
+	endif
+
+endfunction
+
+function grabloot()
+
+	local numitems := 0;
+	if (!getobjproperty(me,"serial"))
+		setobjproperty(me, "serial", me.serial);
+	endif
+
+	Local Near_Items := ListItemsNearLocation(me.x, me.y, me.z,6);
+
+     foreach item in Near_Items
+	if( CheckLineOfSight( me, item ) )
+	
+	if ( (item.movable) and ((item.objtype < STARTHAIR or item.objtype > ENDHAIR))  )
+		RunToIt(me,item);
+		if ( (distance(me, item) < 2) and (moveitemtocontainer(item, mypack)) )
+				say( "*yoink*" );
+				sleep(1);
+		else
+			return;
+		endif
+	elseif (item.objtype = UOBJ_CORPSE)
+		local items := EnumerateItemsInContainer(item);
+		if (len(items))
+			RunToIt(me,item);
+			if (distance(me, item) < 2)
+				foreach thingie in items
+					if (thingie.objtype < STARTHAIR or thingie.objtype > ENDHAIR)
+					    if (thingie.container.serial = item.serial)
+					      if ( moveitemtocontainer(thingie, mypack) )
+							say( "*yoink*" );
+							sleep(1);
+					      endif
+					    endif
+					endif 
+				endforeach
+			else
+				return;
+			endif 
+		endif 
+	endif 
+
+	endif 
+     endforeach
+
+endfunction
+
+function RunToIt(me,item)
+
+	local numsteps;
+	for (numsteps := 0; numsteps < 6; numsteps := numsteps +1)
+		if ( distance(me, item) < 2 )
+			return;
+		else
+			runtoward(item);
+		endif
+	endfor
+
+endfunction
+
+function teletomaster();
+
+	master := SystemFindObjectBySerial( masterserial );
+	if (master)
+		me.hidden := 0;
+		say("Kal Ort Por");
+		PlaySoundEffect( me, SFX_210 );
+		sleepms(250);
+		MoveCharacterToLocation( me, master.x, master.y, master.z, MOVECHAR_FORCELOCATION );
+		following := master;
+		PlaySoundEffect( me, SFX_SPELL_RECALL );
+	endif
+
+endfunction

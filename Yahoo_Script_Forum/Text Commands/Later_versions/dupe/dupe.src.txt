@@ -1,0 +1,82 @@
+// Script for use under POL v0.95 
+// Copyright (C) 2003 Jacobo Lata Fernández aka choofi aka Shoikan aka Cairn 
+// choofi@infoactiva.net 
+// 
+// 
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 2 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, write to the Free Software
+//  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+//
+// 
+// 
+// Originally created for the Gallaecia Shard - http://gallaecia.infoactiva.net 
+// 
+// 
+// /scripts/textcmd/gm/dupe.src 
+// 
+// Command to dupe objects 
+// CmdLevel: 3 (gm) 
+
+
+use uo; 
+
+program textcmd_dupe( who , text ) 
+   var amount := CInt( text ); 
+   if( !amount ||amount < 0 ) 
+      amount := 1; 
+   elseif( amount > 100 ) 
+      SendSysMessage( who , "Amount may not be higher than 100" ); 
+      amount := 100; 
+   endif 
+   if( amount == 1 ) 
+      SendSysMessage( who , "What object do you want to dupe?" ); 
+   else 
+      SendSysMessage( who , "What object do you want to dupe " + amount + " times?" ); 
+   endif 
+   var tgt := TargetCoordinates( who ); 
+   if( !tgt ) 
+      SendSysMessage( who , "Cancelled" ); 
+      return 0; 
+   endif 
+   var object_to_dupe := tgt.item; 
+   if( object_to_dupe ) 
+      var i := amount; 
+      while( i ) 
+         var duped_object := CreateItemCopyAtLocation( object_to_dupe.x , object_to_dupe.y , object_to_dupe.z , object_to_dupe ); 
+         if( object_to_dupe.container ) 
+            MoveItemToContainer( duped_object , object_to_dupe.container , object_to_dupe.x , object_to_dupe.y ); 
+         endif 
+         if( object_to_dupe.isa( POLCLASS_CONTAINER ) ) 
+            var new_object; 
+            foreach objeto in EnumerateItemsInContainer( object_to_dupe ) 
+               new_object := CreateItemCopyAtLocation( duped_object.x , duped_object.y , duped_object.z , objeto ); 
+               MoveItemToContainer( new_object , duped_object , objeto.x , objeto.y ); 
+            endforeach 
+         endif 
+         var carrier := SystemFindObjectBySerial( object_to_dupe.container.serial , SYSFIND_SEARCH_OFFLINE_MOBILES ); 
+         if( carrier ) 
+            MoveItemToContainer( duped_object , carrier.backpack ); 
+         endif 
+         i := i - 1; 
+      endwhile
+      // if you want to log the command...
+      //if( amount > 1 ) 
+         //print( "ACCOUNT:'" + who.acctname + "' :: PLAYER:'" + who.name + "' -> (DUPE) Duped object '" + object_to_dupe.desc + "' " + amount + " times" ); 
+      //else 
+         //print( "ACCOUNT:'" + who.acctname + "' :: PLAYER:'" + who.name + "' -> (DUPE) Duped object '" + object_to_dupe.desc + "'" ); 
+      //endif 
+   else 
+      SendSysMessage( who , "That's not an object!" ); 
+   endif 
+endprogram 

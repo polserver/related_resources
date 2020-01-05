@@ -1,0 +1,189 @@
+include "include/modules";
+include "include/coreconstants";
+include "include/attributes";
+
+/*
+Here's how it works: type .writenpc. You'll be prompted to target an NPC. That npc's graphic, color, and all stats and skills will be written to npcdesc. You'll then be propmted for any CProps for the critter (for those new to us, CProps are "custom properties" for an NPC, and are visible with the .props command. TYpical cprops are "Decay 1", which causes all of its weapons and armor to decay on death. "Rise" is another good on -- it rises whatever template you want when the critter is killed.). When you enter cprops, it's important that you enter the CProp like it is in npcdesc.cfg, without the "CProp" part. In other words, if you want it to show up in npcdesc.cfg like
+cprop rise sLiche
+you must enter "rise sLiche" at the prompt. For cprops you have to enter the variable type code (s for string, i for integer) before the value (hence the "sLiche" entry : s means it's a string, Liche is the value).
+
+important entries (for some critters)
+MerchantType (string) : the type of merchant he is, duh!
+Rise (string) : on death the creature will rise whatever npc template is specified here
+Decay (integer): on death, all weapons and armor of the critter will decay
+Equipt (string) : the equipment that a MERCHANT will be equipped from
+Guardkill(integer) : when killed, the body will decay and leave no loot
+
+Finally, you're prompted for other, non-custom properties.Any entries other than skills and stats are filled in here. You don't need to enter the type declaration code here, just the value. Important entries:
+
+AttackSkillId: the skill he uses to attack. Use swordsmanship, macefighting, archery, fencing, or wrestling. Most non-human critters use wrestling.
+AttackSpeed : uhh, the attack damage
+AttackDamage: the damage the critter does. If the critter is using a weapon, that damage is used instead
+Equip : the template from which the critter should be equipped
+AttackHitSound  : self-explainatory. Use the sounds from inside UO, including the "0x" part
+AttackMissSound  : self-explainatory. Use the sounds from inside UO, including the "0x" part
+tameskill: the skill needed to tame this creature
+provokeskill: the skill needed to provoke this critter
+lootgroup : the entry from nlootgroup that this critter has
+
+*/
+
+program write_npctemplate(who)
+
+var ncfg := ReadConfigFile("::npcdesc");
+SendSysMessage(who, "Select an NPC");
+
+var what := Target(who, TGTOPT_NOCHECK_LOS);
+if (!what)
+
+        return;
+endif
+var parms := {};
+var parm := {};
+var scfg := ReadConfigFile("::skills");
+parm.+pname;
+parm.+pval;
+
+parm.pname := "ObjType";
+parm.pval := CStr(what.objtype);
+
+parms[1] := parm;
+
+parm.pname := "color";
+parm.pval := CStr(what.color);
+parms[2] := parm;
+
+parm.pname := "script";
+parm.pval := what.script;
+parms[3] := parm;
+
+parm.pname := "Strength";
+parm.pval := CStr(GetStrength(what));
+parms[4] := parm;
+
+parm.pname := "Dexterity";
+parm.pval := CStr(GetDexterity(what));
+parms[5] := parm;
+
+parm.pname := "Intelligence";
+parm.pval := CStr(GetIntelligence(what));
+parms[6] := parm;
+
+parm.pname := "hp";
+parm.pval := CStr(GetHP(what));
+parms[7] := parm;
+
+parm.pname := "mana";
+parm.pval := CStr(GetMana(what));
+parms[8] := parm;
+
+parm.pname := "stam";
+parm.pval := CStr(GetStamina(what));
+parms[9] := parm;
+
+parm.pname := "TrueColor";
+parm.pval := CStr(what.color);
+parms[10] := parm;
+
+
+parm.pname := "Name";
+parm.pval := what.name;
+parms[11] := parm;
+
+var i;
+parm.pname := "AttackSkillID";
+parm.pval := CStr(ncfg[what.npctemplate].attackskillid);
+parms[12] := parm;
+
+parm.pname := "AttackHitSound";
+parm.pval := CStr(ncfg[what.npctemplate].attackhitsound);
+parms[13] := parm;
+
+parm.pname := "AttackMissSound";
+parm.pval := CStr(ncfg[what.npctemplate].attackmisssound);
+parms[14] := parm;
+
+parm.pname := "Gender";
+parm.pval := "0";
+parms[15] := parm;
+
+
+var curparm := 16;
+var skl;
+
+for (i:= 0; i <= 48; i := i  + 1)
+        skl := GetEffectiveSkill(what, i);
+       
+        if (skl)
+                SendSysMessage(who, "Skill " + i + " = " + skl);
+                parm.pname :=   scfg[i].name;
+                parm.pval := CStr(skl);
+                parms[curparm] := parm;
+                curparm := curparm + 1;
+        endif
+endfor
+
+var ok;
+
+ok := SendTextEntryGump(who, "You must now enter CProps (custom properties) for the creature, with their value");
+var cprop;
+cprop  := SendTextEntryGump(who, "Enter cprops, or cancel to stop");
+
+while((cprop) && (cprop != ""))
+        parm.pname := "CProp";
+        parm.pval := cprop;
+        parms[curparm] := parm;
+        curparm := curparm + 1;
+        sleep(1);
+        cprop := SendTextEntryGump(who, "Enter cprops, or cancel to stop");
+endwhile
+
+ok := "";
+
+ok := SendTextEntryGump(who, "You must now enter other properties for the creature, with their value");
+
+
+cprop := SendTextEntryGump(who, "Enter property, or cancel to stop");
+
+while((cprop) && (cprop != ""))
+        parm.pname := "";
+        parm.pval := cprop;
+        parms[curparm] := parm;
+        curparm := curparm + 1;
+        sleep(1);
+        cprop := SendTextEntryGump(who, "Enter propery, or cancel to stop");
+endwhile
+
+
+
+ok := SendTextEntryGump(who, "NPC Complete! Enter OK to save");
+
+if (lower(ok) != "ok")
+        SendSysMessage(who, "NPC Cancelled");
+        return;
+endif
+
+
+
+var tname := SendTextEntryGump(who, "Enter the name for this npc template");
+if (!tname)
+        return;
+endif
+
+
+if (ncfg[tname])
+        SendSysMessage(who, "That template already exists! ");
+        return;
+        var tname := SendTextEntryGump(who, "Enter the name for this npc template");
+        sleep(1);
+        if (!tname)
+                return;
+        endif
+endif
+what.script := parms[3].pval;
+AppendConfigFileElem( "npcdesc", "npctemplate", tname, parms );
+SendSysMessage(who, "Creation complete!");
+UnloadConfigFile("::npcdesc");
+
+
+endprogram

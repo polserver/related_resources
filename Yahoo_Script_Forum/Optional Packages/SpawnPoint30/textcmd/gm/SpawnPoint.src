@@ -1,0 +1,19 @@
+///////////////////////////////////////////////////////////
+// SpawnPoint.src
+//
+// Text command creates a spawn point.  Same as:
+//	.create spawnpoint
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+use uo;
+
+program textcmd_CreateSpawnPoint(who)
+	CreateItemAtLocation(who.x, who.y, who.z, "SpawnPoint", 1);
+endprogram

@@ -1,0 +1,106 @@
+use cfgfile;
+use util;
+use uo;
+
+var config := "hashcfg";
+var element := "hash";
+
+program makehashcfg( who )
+ var digit;
+ UnloadConfigFile( config );
+ var hashfile := ReadConfigFile( config );
+ var hashelem := FindConfigElem( hashfile, "a" );
+ if( hashelem.digit )
+  SendSysMessage( who, "Hash Config file already initialized, no need to run it again." );
+  print( "Hash config file already initialized, no need to run it again." + hashelem.digit );
+ else
+  digit := "a";
+  get_hash( digit );
+  digit := "b";
+  get_hash( digit );
+  digit := "c";
+  get_hash( digit );
+  digit := "d";
+  get_hash( digit );
+  digit := "e";
+  get_hash( digit );
+  digit := "f";
+  get_hash( digit );
+  digit := "g";
+  get_hash( digit );
+  digit := "h";
+  get_hash( digit );
+  digit := "i";
+  get_hash( digit );
+  digit := "j";
+  get_hash( digit );
+  digit := "k";
+  get_hash( digit );
+  digit := "l";
+  get_hash( digit );
+  digit := "m";
+  get_hash( digit );
+  digit := "n";
+  get_hash( digit );
+  digit := "o";
+  get_hash( digit );
+  digit := "p";
+  get_hash( digit );
+  digit := "q";
+  get_hash( digit );
+  digit := "r";
+  get_hash( digit );
+  digit := "s";
+  get_hash( digit );
+  digit := "t";
+  get_hash( digit );
+  digit := "u";
+  get_hash( digit );
+  digit := "v";
+  get_hash( digit );
+  digit := "w";
+  get_hash( digit );
+  digit := "x";
+  get_hash( digit );
+  digit := "y";
+  get_hash( digit );
+  digit := "z";
+  get_hash( digit );
+  digit := "0";
+  get_hash( digit );
+  digit := "1";
+  get_hash( digit );
+  digit := "2";
+  get_hash( digit );
+  digit := "3";
+  get_hash( digit );
+  digit := "4";
+  get_hash( digit );
+  digit := "5";
+  get_hash( digit );
+  digit := "6";
+  get_hash( digit );
+  digit := "7";
+  get_hash( digit );
+  digit := "8";
+  get_hash( digit );
+  digit := "9";
+  get_hash( digit );
+  UnloadConfigFile( config );
+  SendSysMessage( who, "Done creating " + config + ".cfg file." );
+  print( "Done creating " + config + ".cfg file." );
+ endif
+endprogram
+
+function get_hash( digit )
+ var prop := { };
+ var log := { };
+ prop .+ pname := "digit";
+ prop .+ pvalue := digit;
+ log[1] := prop;
+ var rand := RandomInt( 99999 ) + 100000;
+ prop.pname := "value";
+ prop.pvalue := rand;
+ log.append( prop );
+ AppendConfigFileElem( config, element, digit, log );
+endfunction

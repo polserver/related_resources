@@ -1,0 +1,14 @@
+All .src and .ecl need be unzipped to your /pol/script/console folder.
+
+console.cfg need be unzipped to /pol/config/.
+
+All commands have been tested for 30 days without error.
+
+For any comments or suggestions please email me at bvaters@home.com.
+
+Last updated - 03/16/00
+
+
+
+
+Cassandra White of Nirvana Shard

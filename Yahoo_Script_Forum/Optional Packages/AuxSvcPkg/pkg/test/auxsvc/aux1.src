@@ -1,0 +1,13 @@
+use os;
+
+program auxtest( connection )
+    var ev;
+    while (connection)
+        ev := wait_for_event( 5 );
+        if (ev)
+            print( "event: " + ev );
+            connection.transmit( { "response", ev } );
+        endif
+    endwhile
+    print( "aux connection closed" );
+endprogram

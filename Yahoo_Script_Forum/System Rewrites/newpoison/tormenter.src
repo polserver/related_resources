@@ -1,0 +1,177 @@
+use uo;
+use npc;
+use os;
+use util;
+include "include/eventid";
+const EVID_TAUNT := 901;
+Const CRAPTOSS := 0x09;
+Const CRAPHIT := 0x14;
+
+global me := self();
+program imp()
+ 
+me.concealed := 1;
+
+
+while(1)
+	local ev := wait_for_event(1);
+ 
+	if (ev.type = EVID_TAUNT)
+		taunt(ev);
+	endif
+endwhile
+endprogram
+
+function taunt(ev)
+
+local who := ev.targ;
+ 
+if (!who)
+	return;
+endif
+
+local tt := randomint(42) + 1;
+local t  ; //taunt to say
+local e  ; //emote to print above
+
+// replace name with char name, hisher with gender-based his or her, race with the character's race
+case (tt)
+	1: t := "name sucks!";
+	2: e := "makes a rude gesture at name";
+	3: t := "name looks like an orc's buttocks, but smells worse!";
+	4: t := "To say name 's mother is ugly is like saying the ocean is damp";
+	5: t := "go take a bath, name , you smell like an unwashed troll on a really hot day";
+	6: t := "name has more hair on hisher back then an ettin has on its whole body!";
+	7: t := "name has the conscience of a drow, the morality of a drunken orc, and the stench of a stack of zombies in summer";
+	8: t := "Hey name , is that your nose, or is it a disease?";
+	9: t := "Don't forget, name : it's inhale, THEN exhale. Repeat as necessary";
+	10: t := "I've seen brighter expressions on trolls, name !";
+	11:  e := "wonders how name could be so stupid and so damned ugly";
+	12:  e := "wonders what ettin mated with name 's mother to create a child so ugly";
+	13: t := "Even a skeleton has more brains than name";
+	14: t :=  "Hey name , I think I hear your mommy calling you";
+	15: t := "name fights like a mage, but thinks like a dwarven brawler";
+	16: t := "name has a face that would curdle milk";
+	17: t := "name stinks bad enough to gag an orc";
+	18: t := "name , are you really a race ? You look more like a harpy that got dressed in the dark";
+	19: t := "name has  slept with more sheep than Thoros, and look worse in a dress than Austin";
+	20: t := "name likes underage dwarves!" ;
+	21: t := "name smells like poo!";
+	22: e := "prances annoyingly around name";
+	23: e := "sticks out its tongue at name";
+	24: t := "Look at the big scary race ! Face it, name , you pretty much suck!";
+	25: t := "La la la la la. You can't catch me, name !";
+	26: t := "name couldn't get lucky in an orcish whorehouse!";
+	27: t := "name is about as bright as a drow's bedroom at night!";
+	28: t := "Hey everyone! Let's all gather around and watch name make a fool of himself again!";
+	29: t := "name fights like a drunken dwarf and smells twice as bad";
+	30: t := "name is so ugly even Thule wouldn't want him";
+	31: t := "I've seen better heads on a glass of milk, name";
+	32: t := "You know, name , you look about as sharp as a hammer";
+	33: t := "name 's momma was a cheap barroom whore!";
+	34: t := "Yer breath could turn a water elemental to steam at 100 paces, name !";
+	35: t := "A face like that could wilt a Yew Tree, name !";
+	36: t := "Your breath could make both heads on an ettin cry, name ";
+	37: t := "Did a mage cast greater UGLY on you, name ?";
+	38: t := "name 's  face could make a Lich feel better about himself";
+	39: t := "Hey everybody! name is living proof that a ratman and a sheep can successfully mate!";
+	40: t := "A face like that could make a corpser climb a tree, name";
+	41: t := "A face like name 's could make a sea serpent take a dirt road";
+	42: t := "name looks like a headless wearing a really ugly hat";
+ 
+endcase
+if (t)
+t := fixit(who,t);
+endif
+if (e)
+e := fixit(who,e);
+endif
+
+
+movecharactertolocation(me, who.x + (randomint(10) - 5), who.y + (randomint(10) - 5), who.z, MOVECHAR_FORCELOCATION);
+me.concealed := 0;
+if (t)
+	say(t);
+	print (t);
+endif
+if (e)	
+	e := "* " + e + " *";
+	printtextabove(me, e);
+	print (e);
+endif
+if (randomint(5) = 1)
+	syslog("Imp tossing crap at " + who.name);
+	tosscrap(me, who);
+endif
+sleep(4);
+me.concealed := 1;
+
+movecharactertolocation(me, 2,2,1, MOVECHAR_FORCELOCATION);
+applydamage(me, 10000);
+endfunction
+
+
+function fixit(who,what)
+	what := replace(what, "name", getname(who));
+	local gender;
+	if (!who.gender)
+		gender := "his";
+	else
+		gender := "her";
+	endif
+	what := replace(what, "hisher", gender);
+	
+	what := replace(what, "race", getobjproperty(who, "racename"));
+	return what;
+endfunction
+
+function getname(who)
+	local n := who.name;
+	if (n["["])
+		n["[", 1000] := "";
+	endif
+	return n;
+endfunction
+
+function replace(  line,  findword, replaceword)
+	local stuff := splitwords(line);
+	local this;
+	local sent := "";
+	foreach this in stuff
+		if (lower(this) = lower(findword))
+			this := replaceword;
+		endif
+		sent := sent + " " + this;
+	endforeach
+		
+	return sent;
+endfunction
+
+
+function tosscrap(who, targ)
+	 
+	var MOVING_EFFECT_CRAP := 0x3900;
+	performaction(who, CRAPTOSS);
+	
+	PlayMovingEffectXYZ( who.x, who.y, who.z+15, targ.x, targ.y, targ.z, MOVING_EFFECT_CRAP, 8, 0, 0 );
+	local ev := {};
+	ev.+type;
+	ev.+source;
+	ev.source := who;
+	ev.type := EVID_ENGAGED;
+	if (targ.script["tamed"])
+     	else
+     		sendevent(targ, ev);
+	endif
+	 
+	sleepms(750);
+
+	if (targ.graphic == 400 || targ.graphic == 401)
+	performaction(targ, CRAPHIT);
+	printtextabove(targ, "*splat*");
+	else
+	printtextabove(targ, "*splat*");
+	endif
+	start_script(":combat:stinker", {targ});
+	 
+endfunction

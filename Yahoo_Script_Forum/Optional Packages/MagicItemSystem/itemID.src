@@ -1,0 +1,335 @@
+use uo;
+use os;
+use basic;
+use cfgfile;
+
+include "include/client";
+include "include/string";
+include "include/skillPoints";
+include "../../systems/sithmagicitems/sench";
+
+program do_itemid( who )
+  EraseObjProperty(who, "IsMeditating");
+  EraseObjProperty(who, "HealTimer");
+  var thepoints := get_default_points(SKILLID_ITEMID);
+  var theItem;
+  var ncharges;
+  SendSysMessage( who, "Select an object to identify." );
+  theItem := TargetCoordinates(who).item;
+  if(!theItem)
+    SendSysMessage(who, "Targetting cancelled.");
+    return;
+  endif
+  if(!theItem.isA(POLCLASS_ITEM))
+    SendSysMessage(who, "That's not an item!");
+    return;
+  endif
+  if(!Accessible(who,theItem))
+    SendSysMessage(who, "You can't reach that!" );
+    return;
+  endif
+  if(CheckSkill(who, SKILLID_ITEMID, -1, thepoints))
+    var sench := GetObjProperty(theItem, "Enchantments");
+    var isench := GetObjProperty(theItem, "unnamedsench");
+    if( isench || getEnchSlots(theItem) || sench )
+      detach();
+      if( isench )
+	refreshEnchNames( theItem );
+	EraseObjProperty( theItem, "unnamedsench");
+      endif
+      enchFixName(theItem);
+      if( theItem.objtype != ID_RUNESTONE && theItem.objtype != ID_ENCHSCROLL ) //These const's in sench.inc
+        drawUpGump( sench, theItem, who );
+      else
+        drawRuneScrollGump( sench, theItem, who );
+      endif
+      return;
+    endif
+    var cfgfile := ReadConfigFile(":*:itemdesc");
+    var elem := FindConfigElem(cfgfile, theItem.objtype);
+    var name := "";
+    var itsname := theItem.desc;
+    var true_name := elem.desc;
+    if(GetObjProperty(theItem, "silvermod"))
+      name :=  "silver" + name;
+    endif
+    if(GetObjProperty(theItem, "durability"))
+      name := name + " " + GetObjProperty(theItem, "durability");
+    endif
+    if(GetObjProperty(theItem, "accuracy"))
+      name := name + " " + GetObjProperty(theItem, "accuracy");
+    endif
+    itsname["a "] := "";
+    itsname["an "] := "";
+    itsname["magic "] := "";
+    name := name + " " + itsname;
+    if(GetObjProperty(theItem, "damagemod"))
+      name := name + " " + GetObjProperty(theItem, "damagemod");
+    endif
+    name.erase(1);
+    if((!GetObjProperty(theItem, "IDed")) and (name != ""))
+      SetName(theItem, name);
+    endif
+    var msg := "It appears to be";
+    itsname := theItem.desc;
+    if(itsname[1] = " ")
+      if(Cint(itsname[2]) = 0)
+        case(Cstr(itsname[2]))
+          "a": msg := msg + " an";
+          "e": msg := msg + " an";
+          "i": msg := msg + " an";
+          "o": msg := msg + " an";
+          "u": msg := msg + " an";
+        endcase
+      endif
+    else
+      msg := msg + " ";
+      if(Cint(itsname[1]) = 0)
+        case(Cstr(itsname[1]))
+          "a": msg := msg + " an ";
+          "e": msg := msg + " an ";
+          "i": msg := msg + " an ";
+          "o": msg := msg + " an ";
+          "u": msg := msg + " an ";
+        endcase
+      endif
+    endif
+    msg := msg + itsname;
+    SendSysMessage( who, msg);
+    SetObjProperty( theItem, "IDed", 1 );
+    if(GetObjProperty(theItem, "charges") )
+	  ncharges := CStr(GetObjProperty(theItem, "charges") );
+	  if(ncharges)
+	    SendSysMessage(who, "It has " + ncharges + " charges.");
+  	  endif
+    endif
+    if(GetObjProperty(theItem, "type") == "cursed")
+	  if(CheckSkill(who, SKILLID_ITEMID, 65, 0) )
+	    SendSysMessage(who, "* This item is cursed! *");
+	  endif
+    endif
+  else
+    SendSysMessage(who, "I'm not sure . . .");
+  endif
+endprogram
+
+function drawRuneScrollGump( sench, item, who )
+
+  //It is a general rule that runes + scrolls only contain one enchantment,
+  //This still supports multiple however, it is untested.//
+
+  var mainLayout := {
+		    "page 0",
+		    "resizepic 0 0 2600 500 100",
+		    };
+
+  var mainData := {};
+  
+  var ypos := 16;
+
+  mainData.append( lower(item.desc) );
+  mainLayout.append( "text 19 " + cStr(ypos) + " 5 " + cStr( len(mainData)-1 ) ); //Light Blue
+  ypos := ypos + 15;
+
+  foreach ench in sench
+    mainData.append( grabEnchString(item,ench) );
+    if( getEnchConfigProp(ench,"unique","integer") )
+      mainData[len(mainData)] := mainData[len(mainData)] + " [Unique]";
+      mainLayout.append( "text 19 " + cStr(ypos) + " 154 " + cStr( len(mainData)-1) );
+    else
+      mainLayout.append( "text 19 " + cStr(ypos) + " 261 " + cStr( len(mainData)-1) );
+    endif
+    ypos := ypos + 15;
+  endforeach
+
+  //May as well tell em wot it can be added to (save confusion)//
+  //Runes//
+  if( item.objtype != ID_ENCHSCROLL )
+	  var bias := getBias( sench[1] ); //This only effects the first enchantment. See first comment.//
+	  if( "all" in bias )
+	    mainData.append( "This rune can be added to all items." );
+	  else
+	    var nString := "This rune can be added to ";
+	    foreach b in bias
+	      if( b != bias[1] )
+	        if( findPositionInArray(b,bias) < len(bias) )
+	          nString := nString + ", ";
+	        else
+		  nString := nString + " and ";
+		endif
+	      endif
+	      if( getItemGroupString(b) )
+	        nString := nString + getItemGroupString(b);
+	      endif
+	    endforeach
+	    mainData.append( nString );
+	  endif  
+  else //scrolls//
+	mainData.append( "Use this scroll to enchant a runestone." );
+  endif
+  mainLayout.append( "text 19 " + cStr(ypos) + " 261 " + cStr( len(mainData)-1) );
+
+  //Fix up the height of the gump.//
+  mainLayout[2] := "resizepic 0 0 3600 500 " + cStr( 38 + (len(mainData)*15) );
+
+  SendDialogGump( who, mainLayout, mainData );
+
+endfunction
+
+function drawUpGump( sench, ite, who )
+
+  var mLayout := {
+		"page 0",
+		"resizepic 0 0 3600 500 340", //Backround - TEST. 2600 default.
+		 };
+  mLayout.append( "tilepic 430 30 " + cInt(ite.graphic) );
+
+  var ypos := 20;
+  var stringArr := {};
+  var tSlots := GetObjProperty( ite, "eSlots" );
+  stringArr.append( ite.desc );
+  mLayout.append( "text 25 " + cStr(ypos) + " 5 " + cStr(len(stringArr)-1) );
+  
+  var naturalCol := 95;
+  var runeCol := 50;
+  var runeStrings;
+
+  foreach zse in sench
+    runeStrings := getEnchStringArray( ite, zse );
+    foreach rstring in runeStrings
+      stringArr.append( rstring );
+      ypos := ypos + 15;
+      if( getEnchConfigProp(zse,"unique","integer") ) //Unique Enchantment
+        mLayout.append( "text 25 " + cStr(ypos) + " 154 " + cStr(len(stringArr)-1) );
+      elseif( isSocketedIn(zse,ite) ) //Socketed in a slot.
+        mLayout.append("text 25 "+cStr(ypos)+" "+cStr(runeCol)+" "+cStr(len(stringArr)-1));
+        runeCol := runeCol - 1;
+        if( runeCol < 46 )
+          runeCol := 50;
+        endif
+      else //Natural Enchantment.
+        mLayout.append( "text 25 "+cStr(ypos)+" "+cStr(naturalCol)+" "+cStr(len(stringArr)-1) );
+        naturalCol := naturalCol - 1;
+        if( naturalCol < 91 )
+          naturalCol := 95;
+        endif
+      endif
+    endforeach
+  endforeach
+
+  //Slots
+  if( getEnchSlots( ite ) )
+    stringArr.append( "Slots Free " + cStr(getFreeEnchSlots(ite)) + "/" + cStr(getEnchSlots(ite)) );
+    mLayout.append( "text 362 80 261 " + cStr(len(stringArr)-1) );
+  endif
+  
+  //Make the 'enchant with' button
+  mLayout.append( "button 458 297 2644 2645 1 0 420" );
+  stringArr.append( "[Enchant With]" );
+  mLayout.append( "text 340 300 261 " + cStr(len(stringArr)-1) );
+
+  var newPages := {};
+  var txpos := 345;
+  var typos := 90;
+  var slotNum := 0;
+  var zPre, zSuf;
+  var senchName;
+  var socketOffsets;
+  var rcount;
+  
+  foreach eslot in tSlots
+      if( eslot != 1 && eslot &&!len(eslot[1]) )                          //This is an old-school socketed item, saving only the enchantment.
+        senchName := eslot;					          //enchantment, name of item, graphic to display, item ID.
+        eslot := { senchName, "dwarven runestone", 6249, ID_RUNESTONE };
+      endif
+  endforeach
+
+  foreach eslot in tSlots
+    if( eslot && cInt(eslot) != 1 )
+      newPages.append( {} );
+    endif
+  endforeach
+  foreach eslot in tSlots
+    if( eslot && cInt(eslot) != 1 )
+      slotNum := slotNum + 1;
+      runeStrings := getEnchStringArray( ite, eslot[1] );
+      newPages[slotNum].append( "page " + cStr(slotNum) );
+      newPages[slotNum].append( "resizepic 385 " + cStr(typos + (slotNum * 20) - 10 ) + " 83 360 " + cStr(43+(len(runeStrings)*14)) );
+        //add the name of the 'rune' @ the top...
+	zPre := GetConfigString( FindConfigElem(eConfig,eslot[1]), "Prefix" );
+	zSuf := GetConfigString( FindConfigElem(eConfig,eslot[1]), "Suffix" );
+	if( zSuf )
+	  stringArr.append( "a "+eslot[2]+" of " + zSuf );
+	elseif( zPre )
+	  stringArr.append( "a " + zPre + " "+eslot[2] );
+        else
+          stringArr.append( "an unnamed "+eslot[2] );
+	endif
+	if( getEnchConfigProp(eslot[1],"unique","integer") )
+	  //Gold for uniques
+          newPages[slotNum].append( "text 405 " + cStr(typos + (slotNum*20) ) + " 154 " + cStr(len(stringArr)-1) );
+	else
+	  //norm green
+	  newPages[slotNum].append( "text 405 " + cStr(typos + (slotNum*20) ) + " 261 " + cStr(len(stringArr)-1) );
+	endif
+	
+      //Add the rune effect(s)
+      rcount := 0;
+      foreach rstring in runeStrings
+      	stringArr.append( rstring );
+      	if( getEnchConfigProp(eslot[1],"unique","integer") )
+	    //Gold for uniques
+            newPages[slotNum].append( "text 405 " + cStr(typos+(slotNum*20)+15+rcount) + " 154 " + cStr( len(stringArr)-1 ) );
+      	else
+	    //norm green
+	    newPages[slotNum].append( "text 405 " + cStr(typos + (slotNum*20)+15+rcount) + " 261 " + cStr(len(stringArr)-1) );
+      	endif
+      	rcount := rcount + 14;
+      endforeach
+
+    endif
+  endforeach
+  slotNum := 0;
+  foreach eslot in tSlots
+    if( eslot && cInt(eslot) != 1 )
+      slotNum := slotNum + 1;
+      socketOffsets := SplitWords(getEnchConfigProp( "socketAlignments", hex(eslot[4]), "string" ));
+      newPages[slotNum].append( "tilepic " + cStr(txpos+cInt(socketOffsets[1]) + " " + cStr(typos+(slotNum*20)+cInt(socketOffsets[2])) + " " + cStr(eslot[3]) )); //Pic of runestone (selected one)
+      //'Button's of runestone on other pages.
+      foreach npage in newPages
+        if( npage != newPages[slotNum] )
+          npage.append( "button " + cStr(txpos+17) + " " + cStr(typos + (slotNum*20) ) + " 2104 2103 0 " + cStr(slotNum) );
+        endif
+      endforeach
+    endif
+  endforeach
+
+  //Put the new pages onto the gump
+  foreach newPage in newPages
+    foreach pageBit in newPage
+      mLayout.append( pageBit );
+    endforeach
+  endforeach
+  
+  SetObjProperty( ite, "eSlots", tSlots );
+
+  //Send the gump
+  var ret := SendDialogGump( who, mLayout, stringArr );
+  if( ret[0] == 420 )
+  	//Let them select something to socket.
+  	SendSysMessage( who, "Select an item to insert." );
+  	var tgtSocket := Target( who, TGTOPT_CHECK_LOS );
+  	if( !tgtSocket )
+  		SendSysMessage( who, "Cancelled." );
+  		return;
+  	endif
+  	var theScript := getEnchConfigProp( 420, hex(tgtSocket.objtype), "string" );
+  	if( !theScript )
+  		print( tgtSocket.objtype );
+  		SendSysMessage( who, "You cannot insert that!" );
+  		return;
+  	endif
+  	start_script( theScript, { who, tgtSocket, ite } );
+  endif
+
+endfunction

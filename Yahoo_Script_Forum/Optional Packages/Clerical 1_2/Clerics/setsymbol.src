@@ -1,0 +1,14 @@
+use uo;
+
+program setsymbol(who, symbol)
+	if (GetObjProperty(symbol, "Owner"))
+		SendSysMessage(who, "This symbol has already been set.");
+		return;
+	endif
+	var devotion := GetObjProperty(who, "Devotion");
+	SetObjProperty(symbol, "Devotion", devotion);
+	SetObjProperty(symbol, "Owner", who.serial);
+	SendSysMessage(who, "Symbol has been set for only you.");
+	SendSysMessage(who, "Keep it equipped for piety boost and as a symbol of your religion.");
+	SetName(symbol, "High priest's symbol of " + devotion);
+endprogram

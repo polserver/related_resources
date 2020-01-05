@@ -1,0 +1,42 @@
+// dupe an item
+// by olor, 26.04.2001
+use uo;
+
+program textcmd_dupe (me)
+
+    var item, amount, objtype;
+    
+    SendSysmessage (me, "Select an item" );
+    item :=  Target (me, TGTOPT_NOCHECK_LOS );
+
+    if (!item or item.intelligence)
+       SendSysmessage (me, "Invalid selection");
+       return;
+    endif
+
+    objtype := GetObjType (item);    
+    if (!objType)
+      SendSysmessage (me, "Can't define object type");
+      return;
+    endif
+
+    amount := GetAmount (item);        
+    if (!amount)
+       amount := 1;
+    endif
+
+  var what;
+  if (item.container)
+    what := CreateItemInContainer (item.container, objtype, amount);
+  else
+    what := CreateItemAtLocation (item.x+1, item.y+1, me.z, objtype, amount);
+  endif
+
+  if (what)
+     SendSysmessage (me, "Dupe successful");
+  else
+     SendSysmessage (me, ""+ what.errortext);
+  endif
+
+endprogram
+

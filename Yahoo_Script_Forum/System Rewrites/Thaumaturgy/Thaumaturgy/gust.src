@@ -1,0 +1,63 @@
+// Gust Cantrip
+// Moves an item one space away from the caster.
+
+use uo;
+use os;
+use util;
+include "include/spellrestrictions";
+include "spellinc";
+include "include/client";
+
+program gust(caster)
+
+	const THISSPELL := 103;
+
+	local x := caster.x;
+	local y := caster.y;
+
+	local cast_on := Target(caster, TGTOPT_CHECK_LOS );
+
+	if ((caster.x != x) or (caster.y != y) or (BrokeCon(caster)))
+		SendSysMessage(caster, "You have lost your concentration.");
+		CleanUp(caster);
+		return;
+	endif
+
+	if (DoCast(caster, THISSPELL))
+		CleanUp(caster);
+		return;
+	endif
+
+	local newx;
+	local newy;
+	local gust_noise := 0x0015;
+
+	if (!cast_on)
+		CleanUp(caster);
+		return;
+	endif
+
+	if (caster.x > cast_on.x)
+		newx:=cast_on.x-1;
+	elseif (caster.x < cast_on.x)
+		newx:=cast_on.x+1;
+	else
+		newx:=cast_on.x;
+	endif
+
+	if (caster.y > cast_on.y)
+		newy:=cast_on.y-1;
+	elseif (caster.y < cast_on.y)
+		newy:=cast_on.y+1;
+	else
+		newy:=cast_on.y;
+	endif
+
+	local newz:=cast_on.z;
+
+	PlaySoundEffect(cast_on, gust_noise);
+	MoveItemToLocation(cast_on, newx, newy, newz, MOVEITEM_NORMAL);
+
+	CleanUp(caster);
+
+endprogram

@@ -1,0 +1,1576 @@
+
+use uo;
+use os;
+
+include "util/key";
+include "include/yesno";
+
+Const UOBJECT_DOORS_START := 0x0675;
+Const UOBJECT_DOORS_END   := 0x06f4;
+Const KEYSTART := 0x100E;
+Const KEYEND := 0x1013;
+Const KEYRING := 0x1011;
+
+global nonlayout := {
+ "page 0",
+ "gumppic 240 0 100",
+ "text 270 200 48 0",
+};
+ 
+global nondata := {
+"",
+};
+
+
+
+
+global layout := array( 
+"page 0",
+"resizepic 100 45 2600 412 300",
+"gumppic 240 0 100",
+"text 290 30 48 0",
+"text 290 50 48 31",
+"resizepic 115 100 5100 382 25",
+"text 125 102 0 1",
+"button 178 104 5209 5003 0 1 0",
+"text 245 102 0 2",
+"button 330 104 5209 5003 0 2 0",
+"text 375 102 0 3",
+"button 460 104 5209 5003 0 3 0",
+"button 150 308 247 248 1 0 0",
+"page 1",
+"text 140 140 2302 4",
+"text 220 140 0 5",
+"text 135 180 2302 6",
+"text 350 180 0 7",
+"text 135 200 2302 8",
+"text 350 200 0 9",
+"text 250 308 2302 14",
+"button 430 308 2714 2715 1 0 1",
+"page 2",
+"text 155 130 2302 15",
+"button 125 130 2714 2715 1 0 2",
+"text 155 152 2302 16",
+"button 125 152 2714 2715 1 0 3",
+"text 155 174 2302 17",
+"button 125 174 2714 2715 1 0 4",
+"text 350 130 2302 18",
+"button 125 194 2714 2715 1 0 17",
+"text 155 194 2302 19",
+"button 320 130 2714 2715 1 0 5",
+"text 350 152 2302 20",
+"button 320 152 2714 2715 1 0 6",
+"text 350 174 2302 21",
+"button 320 174 2714 2715 1 0 7",
+"text 350 196 2302 22",
+"button 320 196 2714 2715 1 0 8",
+"text 245 218 2302 23",
+"button 215 218 2714 2715 1 0 11",
+"text 245 240 2302 24",
+"button 215 240 2714 2715 1 0 9",
+"text 245 262 2302 25",
+"button 215 262 2714 2715 1 0 12",
+"text 245 284 2302 26",
+"button 215 284 2714 2715 1 0 10",
+"page 3",
+"text 190 130 2302 27",
+"button 160 130 2714 2715 1 0 13",//transfer ownership
+"text 190 160 2302 28",
+"button 160 160 2714 2715 1 0 14",//demolish
+"text 190 190 2302 29",
+//"button 60 190 2714 2715 1 0 16",//change - key/sign
+"text 190 220 2302 30",
+"button 160 220 2714 2715 1 0 19",//declare priv/pub
+
+"page 4",                                 // Page 4
+"button 140 153 210 211 1 4 2980",          // Sign Button
+"tilepic 149 145 2980",                   // Sign Picture 
+"button 140 188 210 211 1 4 2982",          // Sign Button
+"tilepic 149 180 2982",                   // Sign Picture
+"button 140 223 210 211 1 4 2984",          // Sign Button
+"tilepic 149 215 2984",                   // Sign Picture
+"button 140 258 210 211 1 4 2986",          // Sign Button
+"tilepic 149 250 2986",                   // Sign Picture
+"button 195 153 210 211 1 4 2988",          // Sign Button
+"tilepic 204 145 2988",                   // Sign Picture
+"button 195 188 210 211 1 4 2990",          // Sign Button
+"tilepic 204 180 2990",                   // Sign Picture
+"button 195 223 210 211 1 4 2992",          // Sign Button
+"tilepic 204 215 2992",                   // Sign Picture
+"button 195 258 210 211 1 4 2994",          // Sign Button
+"tilepic 204 250 2994",                   // Sign Picture
+"button 250 153 210 211 1 4 2996",          // Sign Button
+"tilepic 259 145 2996",                   // Sign Picture
+"button 250 188 210 211 1 4 2998",          // Sign Button
+"tilepic 259 180 2998",                   // Sign Picture
+"button 250 223 210 211 1 4 3000",          // Sign Button
+"tilepic 259 215 3000",                   // Sign Picture
+"button 250 258 210 211 1 4 3002",          // Sign Button
+"tilepic 259 250 3002",                   // Sign Picture
+"button 305 153 210 211 1 4 3004",          // Sign Button
+"tilepic 314 145 3004",                   // Sign Picture
+"button 305 188 210 211 1 4 3006",          // Sign Button
+"tilepic 314 180 3006",                   // Sign Picture
+"button 305 223 210 211 1 4 3008",          // Sign Button
+"tilepic 314 215 3008",                   // Sign Picture
+"button 305 258 210 211 1 4 3010",          // Sign Button
+"tilepic 314 250 3010",                   // Sign Picture
+"button 360 153 210 211 1 4 3012",          // Sign Button
+"tilepic 369 145 3012",                   // Sign Picture
+"button 360 188 210 211 1 4 3014",          // Sign Button
+"tilepic 369 180 3014",                   // Sign Picture
+"button 360 223 210 211 1 4 3016",          // Sign Button
+"tilepic 369 215 3016",                   // Sign Picture
+"button 360 258 210 211 1 4 3018",          // Sign Button
+"tilepic 369 250 3018",                   // Sign Picture
+"button 415 153 210 211 1 4 3020",          // Sign Button
+"tilepic 424 145 3020",                   // Sign Picture
+"button 415 188 210 211 1 4 3022",          // Sign Button
+"tilepic 424 180 3022",                   // Sign Picture
+"button 415 223 210 211 1 4 3024",          // Sign Button
+"tilepic 424 215 3024",                   // Sign Picture
+"button 415 258 210 211 1 4 3026",          // Sign Button
+"tilepic 424 250 3026",                   // Sign Picture
+"text 275 303 995 32",                    // Guild Text
+"button 425 290 252 253 0 5 45",          // Guild Section
+"page 5",                                 // Page 5
+"button 140 153 210 211 1 5 3028",          // Sign Button
+"tilepic 149 145 3028",                   // Sign Picture
+"button 140 188 210 211 1 5 3030",          // Sign Button
+"tilepic 149 180 3030",                   // Sign Picture
+"button 140 223 210 211 1 5 3032",          // Sign Button
+"tilepic 149 215 3032",                   // Sign Picture
+"button 140 258 210 211 1 5 3034",          // Sign Button
+"tilepic 149 250 3034",                   // Sign Picture
+"button 140 283 210 211 1 5 3036",          // Sign Button
+"tilepic 149 285 3036",                   // Sign Picture
+"button 195 153 210 211 1 5 3038",          // Sign Button
+"tilepic 204 145 3038",                   // Sign Picture
+"button 195 283 210 211 1 5 3040",          // Sign Button
+"tilepic 204 285 3040",                   // Sign Picture
+"button 195 223 210 211 1 5 3042",          // Sign Button
+"tilepic 204 215 3042",                   // Sign Picture
+"button 195 258 210 211 1 5 3044",          // Sign Button
+"tilepic 204 250 3044",                   // Sign Picture
+"button 195 183 210 211 1 5 3046",          // Sign Button
+"tilepic 204 185 3046",                   // Sign Picture
+"button 250 153 210 211 1 5 3048",          // Sign Button
+"tilepic 259 145 3048",                   // Sign Picture
+"button 250 283 210 211 1 5 3050",          // Sign Button
+"tilepic 259 285 3050",                   // Sign Picture
+"button 250 223 210 211 1 5 3052",          // Sign Button
+"tilepic 259 215 3052",                   // Sign Picture
+"button 250 258 210 211 1 5 3054",          // Sign Button
+"tilepic 259 250 3054",                   // Sign Picture
+"button 250 183 210 211 1 5 3056",          // Sign Button
+"tilepic 259 185 3056",                   // Sign Picture
+"button 305 153 210 211 1 5 3058",          // Sign Button
+"tilepic 314 145 3058",                   // Sign Picture
+"button 305 188 210 211 1 5 3060",          // Sign Button
+"tilepic 314 180 3060",                   // Sign Picture
+"button 305 223 210 211 1 5 3062",          // Sign Button
+"tilepic 314 215 3062",                   // Sign Picture
+"button 305 258 210 211 1 5 3064",          // Sign Button
+"tilepic 314 250 3064",                   // Sign Picture
+"button 305 283 210 211 1 5 3066",          // Sign Button
+"tilepic 314 285 3066",                   // Sign Picture
+"button 360 153 210 211 1 5 3068",          // Sign Button
+"tilepic 369 145 3068",                   // Sign Picture
+"button 360 188 210 211 1 5 3070",          // Sign Button
+"tilepic 369 180 3070",                   // Sign Picture
+"button 360 223 210 211 1 5 3072",          // Sign Button
+"tilepic 369 215 3072",                   // Sign Picture
+"button 360 258 210 211 1 5 3074",          // Sign Button
+"tilepic 369 250 3074",                   // Sign Picture
+"button 360 283 210 211 1 5 3076",          // Sign Button
+"tilepic 369 285 3076",                   // Sign Picture
+"button 415 153 210 211 1 5 3078",          // Sign Button
+"tilepic 424 145 3078",                   // Sign Picture
+"button 415 188 210 211 1 5 3080",          // Sign Button
+"tilepic 424 180 3080",                   // Sign Picture
+"button 415 223 210 211 1 5 3082",          // Sign Button
+"tilepic 424 215 3082",                   // Sign Picture
+"button 415 258 210 211 1 5 3084",          // Sign Button
+"tilepic 424 250 3084",                   // Sign Picture
+"text 275 313 995 33",                    // Shop Test
+"button 425 310 250 251 0 4",             // Shop Section
+
+
+"nodispose"
+);
+
+global data := array(   
+"",
+"INFO",
+"FRIENDS",
+"OPTIONS",
+"Owned by:",
+"<NAME>",
+"Number of locked down items:",
+"",
+"Number of secure containers:",
+"",
+"Number of visits this building has had:",
+"This house is improperly placed.",
+"",
+"This house is of #### design.",
+"Change the house name!",
+"List of co-owners",
+"Add a co-owner",
+"Remove a co-owner",
+"List of friends",
+"Clear Co-owner List",
+"Add a friend",
+"Remove a friend",
+"Clear friend list",
+"List of banned people",
+"Ban someone from the house",
+"Remove a ban",
+"Eject someone from the house",
+"Transfer ownership of the house",
+"Demolish the house & get a deed back",
+"Change the master key",
+"Change the sign type",
+"",
+"Shop Sign Choices",
+"Guild Sign Choices",
+""
+);
+
+
+
+global layoutbanlift := {
+"page 0",                                // Page 0
+"resizepic 100 100 2600 400 300",        // Grey background 
+"resizepic 147 359 5100 310 25",         // Square Grey box
+"text 185 118 995 0",                    // Title
+"button 270 360 247 248 1 0 1",          // Okay, button 1
+"button 145 335 2714 2714 1 0 2",        // Remove Button
+"text 165 335 995 24",                    // Remove Text
+"page 1",                                // Page 1
+"button 425 363 5224 5224 0 2 16",       // Next Page
+"text 180 155 0 1",                      // Banned Name
+"button 150 155 210 211 1 0 3",          // Banned Button
+"text 180 180 0 2",                      // Banned Name
+"button 150 180 210 211 1 0 4",          // Banned Button
+"text 180 205 0 3",                      // Banned Name
+"button 150 205 210 211 1 0 5",          // Banned Button
+"text 180 230 0 4",                      // Banned Name
+"button 150 230 210 211 1 0 6",          // Banned Button
+"text 180 255 0 5",                      // Banned Name
+"button 150 255 210 211 1 0 7",          // Banned Button
+"text 180 280 0 6",                      // Banned Name
+"button 150 280 210 211 1 0 8",          // Banned Button
+"text 180 305 0 7",                      // Banned Name
+"button 150 305 210 211 1 0 9",          // Banned Button
+"page 2",				      // Page 2
+"text 180 155 0 8",                      // Banned Name
+"button 150 155 210 211 1 0 10",         // Banned Button
+"text 180 180 0 9",                      // Banned Name
+"button 150 180 210 211 1 0 11",         // Banned Button
+"text 180 205 0 10",                     // Banned Name
+"button 150 205 210 211 1 0 12",         // Banned Button
+"text 180 230 0 11",                     // Banned Name
+"button 150 230 210 211 1 0 13",        // Banned Button
+"text 180 255 0 12",                     // Banned Name
+"button 150 255 210 211 1 0 14",         // Banned Button
+"text 180 280 0 13",                     // Banned Name
+"button 150 280 210 211 1 0 15",         // Banned Button
+"text 180 305 0 14",                    // Banned Name
+"button 150 305 210 211 1 0 16",          // Banned Button
+"button 160 363 5223 5223 0 1 30",          // Previous Page
+
+
+};
+
+global databanlift := {
+"Lift a Ban",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"Remove Now!",
+"",
+};
+
+
+
+
+global layoutfriendremove := {
+"page 0",                                // Page 0
+"resizepic 100 100 2600 400 300",        // Grey background 
+"resizepic 147 359 5100 310 25",         // Square Grey box
+"text 185 118 995 0",                    // Title
+"button 270 360 247 248 1 0 1",          // Okay, button 1
+"button 145 335 2714 2714 1 0 2",        // Remove Button
+"text 165 335 995 24",                    // Remove Text
+"page 1",                                // Page 1
+"button 425 363 5224 5224 0 2 16",       // Next Page
+"text 180 155 0 1",                      // Banned Name
+"button 150 155 210 211 1 0 3",          // Banned Button
+"text 180 180 0 2",                      // Banned Name
+"button 150 180 210 211 1 0 4",          // Banned Button
+"text 180 205 0 3",                      // Banned Name
+"button 150 205 210 211 1 0 5",          // Banned Button
+"text 180 230 0 4",                      // Banned Name
+"button 150 230 210 211 1 0 6",          // Banned Button
+"text 180 255 0 5",                      // Banned Name
+"button 150 255 210 211 1 0 7",          // Banned Button
+"text 180 280 0 6",                      // Banned Name
+"button 150 280 210 211 1 0 8",          // Banned Button
+"text 180 305 0 7",                      // Banned Name
+"button 150 305 210 211 1 0 9",          // Banned Button
+"page 2",				      // Page 2
+"text 180 155 0 8",                      // Banned Name
+"button 150 155 210 211 1 0 10",         // Banned Button
+"text 180 180 0 9",                      // Banned Name
+"button 150 180 210 211 1 0 11",         // Banned Button
+"text 180 205 0 10",                     // Banned Name
+"button 150 205 210 211 1 0 12",         // Banned Button
+"text 180 230 0 11",                     // Banned Name
+"button 150 230 210 211 1 0 13",        // Banned Button
+"text 180 255 0 12",                     // Banned Name
+"button 150 255 210 211 1 0 14",         // Banned Button
+"text 180 280 0 13",                     // Banned Name
+"button 150 280 210 211 1 0 15",         // Banned Button
+"text 180 305 0 14",                    // Banned Name
+"button 150 305 210 211 1 0 16",          // Banned Button
+"button 160 363 5223 5223 0 1 30",          // Previous Page
+
+
+};
+
+global datafriendremove := {
+"Remove a friend",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"Remove Now!",
+"",
+};
+
+
+global layoutfriendlist := {
+"page 0",                                // Page 0
+"resizepic 100 100 2600 400 300",        // Grey background 
+"resizepic 147 359 5100 310 25",         // Square Grey box
+"text 185 118 995 0",                    // Title
+"button 270 360 247 248 1 0 1",          // Okay, button 1
+//"button 145 335 2714 2714 1 0 2",        // Remove Button
+"text 165 335 995 24",                    // Remove Text
+"page 1",                                // Page 1
+"button 425 363 5224 5224 0 2 16",       // Next Page
+"text 180 155 0 1",                      // Banned Name
+
+"text 180 180 0 2",                      // Banned Name
+
+"text 180 205 0 3",                      // Banned Name
+
+"text 180 230 0 4",                      // Banned Name
+
+"text 180 255 0 5",                      // Banned Name
+
+"text 180 280 0 6",                      // Banned Name
+
+"text 180 305 0 7",                      // Banned Name
+
+"page 2",				      // Page 2
+"text 180 155 0 8",                      // Banned Name
+
+"text 180 180 0 9",                      // Banned Name
+
+"text 180 205 0 10",                     // Banned Name
+
+"text 180 230 0 11",                     // Banned Name
+
+"text 180 255 0 12",                     // Banned Name
+
+"text 180 280 0 13",                     // Banned Name
+
+"text 180 305 0 14",                    // Banned Name
+
+"button 160 363 5223 5223 0 1 30",          // Previous Page
+
+
+};
+
+global datafriendlist := {
+"Friends of the house",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+};
+
+
+global layoutbanlist := {
+"page 0",                                // Page 0
+"resizepic 100 100 2600 400 300",        // Grey background 
+"resizepic 147 359 5100 310 25",         // Square Grey box
+"text 185 118 995 0",                    // Title
+"button 270 360 247 248 1 0 1",          // Okay, button 1
+//"button 145 335 2714 2714 1 0 2",        // Remove Button
+"text 165 335 995 24",                    // Remove Text
+"page 1",                                // Page 1
+"button 425 363 5224 5224 0 2 16",       // Next Page
+"text 180 155 0 1",                      // Banned Name
+
+"text 180 180 0 2",                      // Banned Name
+
+"text 180 205 0 3",                      // Banned Name
+
+"text 180 230 0 4",                      // Banned Name
+
+"text 180 255 0 5",                      // Banned Name
+
+"text 180 280 0 6",                      // Banned Name
+
+"text 180 305 0 7",                      // Banned Name
+
+"page 2",				      // Page 2
+"text 180 155 0 8",                      // Banned Name
+
+"text 180 180 0 9",                      // Banned Name
+
+"text 180 205 0 10",                     // Banned Name
+
+"text 180 230 0 11",                     // Banned Name
+
+"text 180 255 0 12",                     // Banned Name
+
+"text 180 280 0 13",                     // Banned Name
+
+"text 180 305 0 14",                    // Banned Name
+
+"button 160 363 5223 5223 0 1 30",          // Previous Page
+
+
+};
+
+global databanlist := {
+"Enemies of the house",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+};
+
+
+
+
+global layoutcownremove := {
+"page 0",                                // Page 0
+"resizepic 100 100 2600 400 300",        // Grey background 
+"resizepic 147 359 5100 310 25",         // Square Grey box
+"text 185 118 995 0",                    // Title
+"button 270 360 247 248 1 0 1",          // Okay, button 1
+"button 145 335 2714 2714 1 0 2",        // Remove Button
+"text 165 335 995 24",                    // Remove Text
+"page 1",                                // Page 1
+"text 180 155 0 1",                      // Banned Name
+"button 150 155 210 211 1 0 3",          // Banned Button
+"text 180 180 0 2",                      // Banned Name
+"button 150 180 210 211 1 0 4",          // Banned Button
+"text 180 205 0 3",                      // Banned Name
+"button 150 205 210 211 1 0 5",          // Banned Button
+"text 180 230 0 4",                      // Banned Name
+"button 150 230 210 211 1 0 6",          // Banned Button
+"text 180 255 0 5",                      // Banned Name
+"button 150 255 210 211 1 0 7",  
+};
+
+global datacownremove := {
+"Remove a Co-owner",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"Remove Now!",
+"",
+};
+
+
+global layoutcownlist := {
+"page 0",                                // Page 0
+"resizepic 100 100 2600 400 300",        // Grey background 
+"resizepic 147 359 5100 310 25",         // Square Grey box
+"text 185 118 995 0",                    // Title
+"button 270 360 247 248 1 0 1",          // Okay, button 1
+//"button 145 335 2714 2714 1 0 2",        // Remove Button
+"text 165 335 995 24",                    // Remove Text
+"page 1",                                // Page 1
+"text 180 155 0 1",                      // Banned Name
+
+"text 180 180 0 2",                      // Banned Name
+
+"text 180 205 0 3",                      // Banned Name
+
+"text 180 230 0 4",                      // Banned Name
+
+"text 180 255 0 5",                      // Banned Name
+
+
+
+};
+
+global datacownlist := {
+"Co-owners of the house",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+};
+
+
+program textcmd_sign( who , sign )
+
+local hserial := getobjproperty( sign , "house_serial" );
+if(!hserial) return; endif
+local house := systemfindobjectbyserial( cint(hserial) );
+local oserial := getobjproperty( house , "ownerserial" );
+local addonitem,founditem;
+
+        SetPlaqueName( sign, house );
+
+if(GetObjProperty(house, "private"))
+data[31] := "Declare this house Private";
+data[30] := "Change the sign type";
+layout.append("page 3");
+layout.append("button 160 190 2714 2715 0 4 26");
+else
+data[31] := "Declare this house Public";
+data[30] := "Change the master key";
+layout.append("page 3");
+layout.append("button 160 190 2714 2715 1 4 16");
+endif
+
+
+
+        if( who.serial = oserial )
+            data[6] := who.name;
+            setobjproperty( sign , "lastownername" , who.name );
+        else
+            data[6] := getobjproperty( sign , "lastownername" );
+        endif
+
+        if( (getobjproperty( house , "numlockdowns" ) = error) or (getobjproperty( house , "numsecure" ) = error) )
+            AssignDefaultContainers( house );
+        endif
+
+        data[8] := getobjproperty( house , "numlockdowns" );
+        data[10] := getobjproperty( house , "numsecure" );
+
+	local i;
+
+	if (house.objtype=0x6070 or house.objtype=0x6072)
+	  for(i := 38; i <= 45; i := i + 1)
+		layout[i] :="";
+          endfor
+          layout[51]:="";
+          layout[52]:="";
+	endif
+
+
+
+
+
+
+       local friend_;
+
+          for(i := 0; i <= 5; i := i + 1)
+            if(cint(getobjproperty( house , "Friend" + i )) = who.serial)
+               friend_ := 1;
+               break;
+            endif
+          endfor
+
+
+
+       local cown;
+
+          for(i := 0; i <= 5; i := i + 1)
+            if(cint(getobjproperty( house , "Co-owner" + i )) = who.serial)
+               cown := 1;
+               break;
+            endif
+          endfor
+
+
+local result;
+if( cown = 1 or friend_ = 1 or who.serial = oserial)
+	result := SendDialogGump( who, layout, data );
+else
+	SendDialogGump(who, nonlayout, data);
+endif
+
+
+if((oserial = who.serial) or (cown))
+setobjproperty(house,"decay", (ReadGameClock()+ 2592000));
+endif
+
+        if(( oserial = who.serial ) or (cown))
+	 RefreshHouseItems( house );
+
+if(result[0] > 2979 and result[0] < 3085)
+ChangeSign(who, house, sign, result[0]);
+endif
+
+            case (result[0])
+                1:
+                  local newname := RequestInput( who, sign, "Enter a name for this house. (esc to exit)" );
+                  if (!newname)
+                  sendsysmessage( who, "Canceled!" );
+                  elseif( (len(newname) > 20) )
+                      sendsysmessage( who , "House sign names may not be longer than 20 characters." );
+                  elseif( len(SplitWords( newname )) > 5)
+                      sendsysmessage( who , "House sign names are limited to 5 words or less." );
+                  else
+                      SetName( sign , newname );
+                      SetObjProperty(house, "signname", newname);
+                  endif
+                2:ListCoowner( house, who );
+                3:AddCoowner( house, who );
+                4:DeleteCoowner( house, who );
+                5:ListFriend( house, who );
+                6:AddFriend( house, who );
+                7:DeleteFriend( house, who );
+                8:ClearFriend( house, who );
+                9:AddBan( house, who,sign );
+                10:Eject( house,who,sign );
+                11:ListBan( house, who );
+                12:DeleteBan( house, who );
+
+                13:if( oserial = who.serial )
+                   local targetow := target( who );
+                   sendsysmessage( who , "Transfer the house to who?" );
+                   if (ChangeHouseOwner(targetow,house)=1)
+			sendsysmessage( who , "House transfer was successful." );
+                   else
+                   	sendsysmessage( who , "House transfer was NOT successful." );
+                   endif
+                   endif
+                14:if( oserial = who.serial )
+                   case (house.objtype)
+                           0x6064: CreateItemInBackpack(who,0x6019,1);
+                           0x6066: CreateItemInBackpack(who,0x601A,1);
+                           0x6068: CreateItemInBackpack(who,0x6231,1);
+                           0x606A: CreateItemInBackpack(who,0x601B,1);
+                           0x606C: CreateItemInBackpack(who,0x601C,1);
+                           0x606E: CreateItemInBackpack(who,0x601D,1);
+                   	   0x6070: CreateItemInBackpack(who,0x601E,1);
+                   	   0x6072: CreateItemInBackpack(who,0x601F,1);
+                           0x6074: CreateItemInBackpack(who,0x6020,1);
+                           0x6076: CreateItemInBackpack(who,0x6021,1);
+                           0x6078: CreateItemInBackpack(who,0x6022,1);
+                           0x607A: CreateItemInBackpack(who,0x6023,1);
+                           0x607C: CreateItemInBackpack(who,0x6024,1);
+                           0x607E: CreateItemInBackpack(who,0x6025,1);
+                           0x608C: CreateItemInBackpack(who,0x6026,1);
+                           0x608D: CreateItemInBackpack(who,0x6230,1);
+                           0x60A0: CreateItemInBackpack(who,0x6227,1);
+                           0x60A2: CreateItemInBackpack(who,0x6228,1);
+                           0x6098: CreateItemInBackpack(who,0x6229,1);
+                           0x609C: CreateItemInBackpack(who,0x622A,1);
+                           0x609A: CreateItemInBackpack(who,0x622B,1);
+                           0x609E: CreateItemInBackpack(who,0x622C,1);
+                           0x6096: CreateItemInBackpack(who,0x622D,1);
+                           0x6388: CreateItemInBackpack(who,0x622E,1);
+			   0x6BB8: CreateItemInBackpack(who,0x622F,1);
+                   endcase
+		     
+		     local setz;
+		     
+		     for(setz := 0; setz <= 15; setz := setz + 1)
+		     
+		     local destroythis := Cint(GetObjProperty(house, "bantile"+setz));
+		     
+		     Destroyitem(systemfindobjectbyserial(destroythis));
+		     local destroy2 := Cint(GetObjProperty(house, "bantile"));
+		     DestroyItem(systemfindobjectbyserial(destroy2));
+		     		     
+
+		endfor
+		
+		local z;
+
+
+		foreach item in (house.items)
+		if(GetObjProperty(item, "secure"))
+		eraseobjproperty(item,"secure");
+  		if(GetObjProperty( item , "houseserial" ) = house.serial)
+		local oldscript := getobjproperty(item,"oldscript");
+		    if (oldscript = error)
+		      oldscript := "";
+		    endif
+		    item.usescript := oldscript;
+				
+		endif
+		endif
+      
+	       endforeach  
+		     
+		     addonitem := cint(getobjproperty( house, "component1" ));
+		     if (addonitem) destroyitem(systemfindobjectbyserial(addonitem)); endif
+		     addonitem := cint(getobjproperty( house, "component2" ));
+		     if (addonitem) destroyitem(systemfindobjectbyserial(addonitem)); endif
+		     addonitem := cint(getobjproperty( house, "component3" ));
+		     if (addonitem) destroyitem(systemfindobjectbyserial(addonitem)); endif
+		     addonitem := cint(getobjproperty( house, "builtdeed" ));
+		     if (addonitem)
+		     founditem := destroyitem(systemfindobjectbyserial(addonitem));
+		     if (founditem<>1) founditem:=destroyitem(systemfindobjectbyserial(addonitem,1)); endif
+		     if (founditem<>1) destroyitem(systemfindobjectbyserial(addonitem,2)); endif
+		     endif
+
+		     if (house.objtype=0x608D)
+		     	foreach item in ListItemsNearLocation( sign.x, sign.y, 0, 8 )
+			   if((item.objtype=0x177d) or (item.objtype=0xb41) or (item.objtype=0xb42))
+			      destroyitem(item);
+			   endif
+			endforeach
+		     endif
+		     DestroyMulti( house );
+                   endif
+                16: if( oserial = who.serial )
+                      ChangeLocks( who , house );
+                    endif
+                17: ClearCown(house, who);
+                19: if( oserial = who.serial )
+                      DeclarePrivPub(who, house, sign);
+                    endif
+                    
+            endcase
+
+        endif
+
+endprogram
+
+function SetPlaqueName( sign, house )
+
+    local signname := GetObjProperty(house, "signname");
+
+if(!signname)
+signname := " ";
+endif
+    local split := SplitWords( signname );
+
+    local j;
+    for( j := 1 ; j <= 5 ; j := j + 1 )
+        if( !split[j] )
+            split[j] := "";
+        endif
+    endfor
+
+    if( len(signname) <= 12 )
+        data[1] := signname;
+    elseif( (len(split[1]) + len(split[2]) + len(split[3]) + 2) <= 12 )
+        data[1] := split[1] + " " + split[2] + " " + split[3];
+        data[32] := split[4] + " " + split[5];
+    elseif( len(split[1]) + len(split[2]) + 1 <= 12 )
+        data[1] := split[1] + " " + split[2];
+        data[32] := split[3] + " " + split[4] + " " + split[5];
+    elseif( len(split[1]) <= 12 )
+        data[1] := split[1];
+        data[32] := split[2] + " " + split[3] + " " + split[4] + " " + split[5];
+    endif
+
+
+endfunction
+
+
+function ChangeLocks(who,house)
+
+  sendsysmessage(who,"target the new master key.");
+
+  local addonitem,newkey:=target(who);
+
+    if((newkey.objtype>=KEYSTART) and (newkey.objtype<=KEYEND) and (newkey.objtype!=KEYRING))
+        local lockid:=AllocLockId();
+
+        setobjproperty(newkey,"lockid",lockid); 
+
+        foreach item in (house.components)
+            if( ((item.objtype>=UOBJECT_DOORS_START) and (item.objtype<=UOBJECT_DOORS_END)) )
+                item.locked := 1;
+                setobjproperty(item,"lockid",lockid);
+            endif
+        endforeach
+
+   addonitem:=cint(getobjproperty(house,"component2"));
+   if (addonitem)
+        addonitem.locked:=1;
+        setobjproperty(addonitem,"lockid",lockid);
+   endif
+
+        sendsysmessage(who,"Locks have been changed.");
+    else
+        sendsysmessage(who,"That is not a key!");
+    endif
+endfunction
+
+
+function RefreshHouseItems( house )
+
+    local addonitem;
+
+
+    foreach item in (house.items)
+  	if (item.corpsetype=error or !item.corpsetype or item.corpsetype="")
+            item.decayat:=readgameclock()+5184000;  //60 RL days in the future
+	endif
+    endforeach
+
+   addonitem:=cint(getobjproperty(house,"component1"));
+   if (addonitem)
+     addonitem.decayat:=readgameclock()+5184000;
+   endif
+   addonitem:=cint(getobjproperty(house,"component2"));
+   if (addonitem)
+     addonitem.decayat:=readgameclock()+5184000;
+   endif
+   addonitem:=cint(getobjproperty(house,"component3"));
+   if (addonitem)
+     addonitem.decayat:=readgameclock()+5184000;
+   endif
+
+endfunction
+
+function AssignDefaultContainers( house )
+
+    case (house.objtype)
+       0x6064: setobjproperty(house,"numlockdowns",25);
+               setobjproperty(house,"numsecure",1);
+       0x6066: setobjproperty(house,"numlockdowns",25);
+               setobjproperty(house,"numsecure",1);
+       0x6068: setobjproperty(house,"numlockdowns",25);
+               setobjproperty(house,"numsecure",1);
+       0x606A: setobjproperty(house,"numlockdowns",25);
+               setobjproperty(house,"numsecure",1);
+       0x606C: setobjproperty(house,"numlockdowns",25);
+               setobjproperty(house,"numsecure",1);
+       0x606E: setobjproperty(house,"numlockdowns",25);
+               setobjproperty(house,"numsecure",1);
+       0x6074: setobjproperty(house,"numlockdowns",86);
+               setobjproperty(house,"numsecure",3);
+       0x6076: setobjproperty(house,"numlockdowns",108);
+               setobjproperty(house,"numsecure",5);
+       0x6078: setobjproperty(house,"numlockdowns",108);
+               setobjproperty(house,"numsecure",5);
+       0x607A: setobjproperty(house,"numlockdowns",244);
+               setobjproperty(house,"numsecure",12);
+       0x607C: setobjproperty(house,"numlockdowns",375);
+               setobjproperty(house,"numsecure",19);
+       0x607E: setobjproperty(house,"numlockdowns",577);
+               setobjproperty(house,"numsecure",29);
+       0x608C: setobjproperty(house,"numlockdowns",86);
+               setobjproperty(house,"numsecure",4);
+       0x608D: setobjproperty(house,"numlockdowns",86);
+               setobjproperty(house,"numsecure",4);
+       0x60A0: setobjproperty(house,"numlockdowns",42);
+               setobjproperty(house,"numsecure",3);
+       0x60A2: setobjproperty(house,"numlockdowns",42);
+               setobjproperty(house,"numsecure",3);
+       0x6098: setobjproperty(house,"numlockdowns",58);
+               setobjproperty(house,"numsecure",4);
+       0x609C: setobjproperty(house,"numlockdowns",85);
+               setobjproperty(house,"numsecure",6);
+       0x609A: setobjproperty(house,"numlockdowns",110);
+               setobjproperty(house,"numsecure",8);
+       0x609E: setobjproperty(house,"numlockdowns",110);
+               setobjproperty(house,"numsecure",8);
+       0x6096: setobjproperty(house,"numlockdowns",137);
+               setobjproperty(house,"numsecure",10);
+       0x6388: setobjproperty(house,"numlockdowns",137);
+               setobjproperty(house,"numsecure",10);
+       0x6BB8: setobjproperty(house,"numlockdowns",15);
+               setobjproperty(house,"numsecure",1);
+    endcase
+endfunction
+
+
+function AddFriend(house,who)
+
+local start_test := 0;
+local check := 0;
+
+for(start_test := 0; start_test <= 15; start_test := start_test + 1)
+    if(GetObjProperty(house, "Friend"+start_test))
+	check := check + 1;
+    endif
+endfor
+
+if(check = 15)
+SendSysMessage(who, "This house cannot have any more friends");
+return;
+endif
+
+local numb;
+local valueret;
+local z := 0;
+
+for(z := 0; z <= 15; z := z + 1)
+    if(!GetObjProperty(house, "Friend"+z))
+    numb := z;
+    z := 15;
+    endif
+
+endfor
+
+    
+    sendsysmessage(who,"Select character.");
+    local targetchr:=target(who);
+
+    if(!targetchr) sendsysmessage(who,"Canceled."); return; endif
+    if(!targetchr.acctname) sendsysmessage(who,"That cannot be added to the list."); return; endif
+   // if(targetchr.acctname=getobjproperty(house,"owneracct")) sendsysmessage(who,"Canceled."); return; endif
+
+    setobjproperty(house,"Friend"+numb,targetchr.serial);
+    sendsysmessage(who,"Friend added.");
+
+
+endfunction
+
+
+function DeleteFriend(house,who)
+
+    //local numb:=cint(sendtextentrygump(who,"What Friend Number? (1-20)",40));
+    //if (!numb or numb>20) sendsysmessage(who,"Error Number!"); return; endif
+
+
+ local numb;
+    local z;
+    local testcheck;
+    local fillname;
+    local oldvalue;
+    for(z := 0; z < 20; z := z + 1)
+    fillname := systemfindobjectbyserial(getobjproperty(house,"Friend"+z));
+
+    
+	if(fillname)
+
+	datafriendremove[z+2] := fillname.name;
+	else
+		z :=20;
+				
+	endif
+    endfor
+
+
+local retval2 := SendDialogGump(who, layoutfriendremove, datafriendremove);
+
+
+local friendcheck, checkret;
+if(retval2[0] > 2 and retval2[0] <= 15)
+checkret := retval2[0]-3;
+friendcheck := GetObjProperty(house, "Friend"+checkret);
+print(friendcheck);
+
+if(!friendcheck)
+SendSysMessage(who, "There is no friend in that slot");
+return;
+
+else
+oldvalue := retval2[0]-3;	
+EditStackFriends(house, who, oldvalue);
+
+endif
+	
+endif
+
+
+    //eraseobjproperty(house,"friend"+numb);
+    //sendsysmessage(who,"Friend "+numb+" deleted.");
+
+endfunction
+
+
+
+
+function ListFriend(house,who)
+
+
+    
+ local numb;
+    local z;
+    local testcheck;
+    local fillname;
+    local oldvalue;
+    for(z := 0; z < 16; z := z + 1)
+    fillname := systemfindobjectbyserial(getobjproperty(house,"Friend"+z));
+
+    
+	if(fillname)
+	datafriendlist[z+2] := fillname.name;
+	else
+		z :=16;
+				
+	endif
+    endfor
+
+local retval := SendDialogGump(who, layoutfriendlist, datafriendlist);
+
+
+
+
+
+endfunction
+
+
+function ClearFriend(house,who)
+
+    local i;
+
+    if (YesNo(who,"Clear List?"))
+      for(i:=0;i<16;i:=i+1)
+        eraseobjproperty(house,"Friend"+i);
+      endfor
+      sendsysmessage(who,"Friend list has been cleared.");
+    else
+      sendsysmessage(who,"Canceled!");
+    endif
+
+endfunction
+
+
+
+function EditStackFriends(house, who, oldvalue)
+local testi := 0;
+local temp;
+
+
+
+EraseObjProperty(house, "Friend"+oldvalue);
+
+for(testi:=0; testi <= 20; testi := testi + 1)
+
+
+if(GetObjProperty(house, "Friend"+testi))
+if(testi > oldvalue)
+temp := getobjproperty(house, "Friend"+testi);
+EraseObjProperty(house, "Friend"+Cstr(testi));
+SetObjProperty(house, "Friend"+Cstr(testi-1), temp); 
+endif
+endif
+
+
+
+endfor
+
+
+
+endfunction
+
+
+
+
+function AddBan(house,who,sign)
+
+local start_test;
+local check;
+
+for(start_test := 0; start_test <= 15; start_test := start_test + 1)
+    if(GetObjProperty(house, "Banned"+start_test))
+	check := check + 1;
+    endif
+endfor
+
+if(check = 15)
+SendSysMessage(who, "This house cannot have any more bans");
+return;
+endif
+local numb;
+local valueret;
+local z := 0;
+
+for(z := 0; z <= 20; z := z + 1)
+    if(!GetObjProperty(house, "Banned"+z))
+    numb := z;
+    z := 20;
+    endif
+
+endfor
+
+
+
+    sendsysmessage(who,"Select character.");
+    local targetchr:=target(who);
+
+    if ((!targetchr.multi) and (distance(who,sign)>20)) return; endif
+    if(!targetchr) sendsysmessage(who,"Canceled."); return; endif
+    if(!targetchr.acctname) sendsysmessage(who,"That cannot be added to the list."); return; endif
+    if(targetchr.acctname=getobjproperty(house,"owneracct")) sendsysmessage(who,"Canceled."); return; endif
+
+    setobjproperty(house,"Banned"+numb,targetchr.serial);
+    sendsysmessage(who,targetchr.name + " was banned from your house"); 
+    Print(numb);  
+    MoveCharacterToLocation(targetchr, sign.x,sign.y,sign.z);
+
+endfunction
+
+
+
+function DeleteBan(house,who)
+
+    local numb;
+    local z;
+    local testcheck;
+    local fillname;
+    local retval1 := 0;
+    local oldvalue;
+    for(z := 0; z < 20; z := z + 1)
+    fillname := systemfindobjectbyserial(getobjproperty(house,"Banned"+z));
+	if(fillname)
+	databanlift[z+2] := fillname.name;
+	else
+		z :=20;
+		print("ok");
+		
+	endif
+    endfor
+    
+    retval1 := SendDialogGump(who, layoutbanlift, databanlift);
+
+local bancheck, returncheck;
+if(retval1[0] > 2 and retval1[0] <= 15)
+returncheck := retval1[0]-3;
+bancheck := GetObjProperty(house, "Banned"+returncheck);
+
+if(!bancheck)
+SendSysMessage(who, "There is no ban in that slot");
+return;
+
+else
+oldvalue := retval1[0]-3;	
+EditStackBans(house, who, oldvalue);
+
+endif
+	
+endif
+
+
+
+
+endfunction
+
+
+
+function EditStackBans(house, who, oldvalue)
+local testi := 0;
+local temp;
+
+print(oldvalue);
+
+
+EraseObjProperty(house, "Banned"+oldvalue);
+
+for(testi:=0; testi <= 15; testi := testi + 1)
+
+
+if(GetObjProperty(house, "Banned"+testi))
+if(testi > oldvalue)
+temp := getobjproperty(house, "Banned"+testi);
+EraseObjProperty(house, "Banned"+Cstr(testi));
+SetObjProperty(house, "Banned"+Cstr(testi-1), temp); 
+endif
+endif
+
+
+
+endfor
+
+
+
+endfunction
+
+
+function ListBan(house,who)
+
+ local numb;
+    local z;
+    local testcheck;
+    local fillname;
+    local oldvalue;
+    for(z := 0; z < 20; z := z + 1)
+    fillname := systemfindobjectbyserial(getobjproperty(house,"Banned"+z));
+
+    
+	if(fillname)
+	databanlist[z+2] := fillname.name;
+	else
+		z :=20;
+				
+	endif
+    endfor
+
+local retval := SendDialogGump(who, layoutbanlist, databanlist);
+endfunction
+
+
+function Eject(house,who,sign)
+
+    local targetchr:=target(who);
+
+    if ((!targetchr.multi) and (distance(who,sign)>15)) return; endif
+    if(!targetchr) sendsysmessage(who,"Canceled."); return; endif
+    
+
+    movecharactertolocation(targetchr,sign.x,sign.y,0,MOVECHAR_FORCELOCATION);
+    sendsysmessage(who,targetchr.name+" was ejected!");
+
+endfunction
+
+
+function AddCoowner(house,who)
+
+   local start_test := 0;
+local check := 0;
+
+for(start_test := 0; start_test <= 5; start_test := start_test + 1)
+    if(GetObjProperty(house, "Co-owner"+start_test))
+	check := check + 1;
+    endif
+endfor
+
+if(check > 5)
+SendSysMessage(who, "This house cannot have any more Co-owners");
+return;
+endif
+
+local numb;
+local valueret;
+local z := 0;
+
+for(z := 0; z <= 5; z := z + 1)
+    if(!GetObjProperty(house, "Co-owner"+z))
+    numb := z;
+    z := 5;
+    endif
+
+endfor
+
+
+    sendsysmessage(who,"Select character.");
+    local targetchr:=target(who);
+
+    if(!targetchr) sendsysmessage(who,"Canceled."); return; endif
+    if(!targetchr.acctname) sendsysmessage(who,"That cannot be added to the list."); return; endif
+    if(targetchr.acctname=getobjproperty(house,"owneracct")) sendsysmessage(who,"Canceled."); return; endif
+
+    setobjproperty(house,"Co-owner"+numb,targetchr.serial);
+    sendsysmessage(who,"Co-owner added.");
+
+endfunction
+
+
+function DeleteCoowner(house,who)
+
+    local numb;
+    local z;
+    local testcheck;
+    local fillname;
+    local retval1 := 0;
+    local oldvalue;
+    for(z := 0; z < 6; z := z + 1)
+    fillname := systemfindobjectbyserial(getobjproperty(house,"Co-owner"+z));
+	if(fillname)
+	datacownremove[z+2] := fillname.name;
+	else
+		z :=6;
+		print("ok");
+		
+	endif
+    endfor
+    
+    retval1 := SendDialogGump(who, layoutcownremove, datacownremove);
+local cowncheck, returncheck;
+if(retval1[0] > 2 and retval1[0] <= 20)
+returncheck := retval1[0]-3;
+cowncheck := GetObjProperty(house, "Co-owner"+returncheck);
+
+if(!cowncheck)
+SendSysMessage(who, "There is no co-owner in that slot");
+return;
+
+else
+oldvalue := retval1[0]-3;	
+EditStackCown(house, who, oldvalue);
+
+endif
+	
+endif
+
+
+endfunction
+
+
+function ListCoowner(house,who)
+
+ local numb;
+    local z;
+    local testcheck;
+    local fillname;
+    local oldvalue;
+    for(z := 0; z < 6; z := z + 1)
+    fillname := systemfindobjectbyserial(getobjproperty(house,"Co-owner"+z));
+
+    
+	if(fillname)
+	datacownlist[z+2] := fillname.name;
+	else
+		z :=6;
+				
+	endif
+    endfor
+
+local retval := SendDialogGump(who, layoutcownlist, datacownlist);
+
+endfunction
+
+
+
+
+function EditStackCown(house, who, oldvalue)
+local testi := 0;
+local temp;
+
+
+
+EraseObjProperty(house, "Co-owner"+oldvalue);
+
+for(testi:=0; testi <= 15; testi := testi + 1)
+
+
+if(GetObjProperty(house, "Co-owner"+testi))
+if(testi > oldvalue)
+temp := getobjproperty(house, "Co-owner"+testi);
+EraseObjProperty(house, "Co-owner"+Cstr(testi));
+SetObjProperty(house, "Co-owner"+Cstr(testi-1), temp); 
+
+endif
+endif
+
+
+
+endfor
+
+
+
+endfunction
+
+
+
+function ChangeHouseOwner(who,house)
+
+   local oldownerserial:=getobjproperty(house,"ownerserial");
+   if(oldownerserial=who.serial)
+       return 0;
+   elseif(who.acctname)
+       setobjproperty(house,"ownerserial",who.serial);
+       setobjproperty(house,"owneracct",who.acctname);
+       sendsysmessage(who,"House transfer was successful.");
+       sendsysmessage(who,"It would be wise to change the locks soon.");
+       return 1;
+   endif
+       sendsysmessage(who,"House transfer was NOT successful.");
+       return 0;
+
+endfunction
+
+
+Function DeclarePrivPub(who, house, sign)
+
+if(GetObjProperty(house, "private"))
+	
+	EraseObjProperty(house, "private");
+	local signgraph := GetObjProperty(house, "oldsignprop");
+	if(!signgraph)
+	return;
+	else
+	sign.graphic := signgraph;
+	endif
+else
+
+
+local serialdoor;
+
+foreach item in (house.components)
+
+        if( ((item.objtype >= UOBJECT_DOORS_START) and (item.objtype <= UOBJECT_DOORS_END)) )
+		
+		
+		serialdoor := GetObjproperty(item, "houseserial");
+			if(serialdoor = house.serial)
+
+				if(item.locked)
+					PrintTextAbove(item, "Unlocking");
+					item.locked := 0;
+				endif
+			endif
+	endif
+endforeach
+
+
+	SetObjProperty(house, "private", 1);
+endif
+
+endfunction
+
+
+
+function ChangeSign(who, house, sign, result)
+local signgraph := result[0];
+	
+	
+	if(sign.graphic = 3024 or sign.graphic = 3026)				
+		
+		SetObjProperty(house, "oldsignprop", sign.graphic);
+	
+		sign.graphic := signgraph;
+	
+	else
+		
+		sign.graphic := signgraph;
+	
+	
+	endif
+
+
+
+
+endfunction
+
+function ClearCown(house,who)
+
+    local i;
+
+    if (YesNo(who,"Clear List?"))
+      for(i:=0;i<16;i:=i+1)
+        eraseobjproperty(house,"Co-owner"+i);
+      endfor
+      sendsysmessage(who,"Co-owner list has been cleared.");
+    else
+      sendsysmessage(who,"Canceled!");
+    endif
+
+endfunction

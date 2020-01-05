@@ -1,0 +1,24 @@
+use uo;
+
+program toggle_lbr( who, text )
+
+if ((text="") or (!text))
+SendSysMessage( who, "usage .lbr <on> or <off>.");
+return;
+endif
+
+var account := who.acct;
+
+if (text="on")
+account.setprop("LBR", 1);
+
+SendSysMessage( who, "You enabled Lord Blackthornes Return on your account.");
+
+elseif (text="off")
+account.eraseprop("LBR");
+
+SendSysMessage(who,"You disabled Lord Blackthornes Return on your account.");
+
+endif
+
+endprogram

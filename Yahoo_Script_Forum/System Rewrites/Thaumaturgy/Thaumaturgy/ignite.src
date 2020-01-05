@@ -1,0 +1,35 @@
+
+use os;
+use uo;
+use cfgfile;
+
+include "lightchange";
+include "include/client";
+include "spellinc";
+
+program ignite(who)
+
+    const THISSPELL := 104;
+
+    local cfg := ReadConfigFile("lightsource");
+    local elem := findconfigelem(cfg,"off");
+    local sourcearray := GetConfigStringArray(elem,"source");
+    local radius := (cint(GetSkill(who, SKILLID_THAUMATURGY))/16) + 3;
+
+    CleanUp(who);
+
+    if (DoCast(who, THISSPELL))
+    	return;
+    endif
+
+    foreach item in ListItemsNearLocation(who.x, who.y, who.z, radius);
+        if (cstr(item.graphic) in sourcearray)
+              switch_light(who, item);
+
+        elseif ((item.graphic = 0x0de1) or (item.graphic = 0x0de2))
+              SetObjProperty(item, "#ignite", "1");
+              start_script( ":camping:camping", {"EXT", who, item} );
+        endif
+    endforeach
+
+endprogram

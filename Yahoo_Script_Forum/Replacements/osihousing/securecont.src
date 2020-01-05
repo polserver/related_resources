@@ -1,0 +1,47 @@
+
+use os;
+use uo;
+
+program use_securecont( character , item )
+
+    Local house := SystemFindObjectBySerial( GetObjProperty( item , "houseserial" ));
+    Local secure, chestserial := item.serial;
+    Local cown;
+
+    if ((GetObjProperty( house , "ownerserial" ) = character.serial) or (GetObjProperty( house , "owneracct" ) = character.acctname))
+       secure := 1;
+    else
+       Local i;
+          for(i := 0; i <= 20; i := i + 1)
+            if(GetObjProperty( house , "Friend" + i ) = character.serial)
+               secure := 1;
+               break;
+            endif
+          endfor
+          for(i := 0; i <= 5; i := i + 1)
+            if(GetObjProperty( house , "Co-owner" + i ) = character.serial)
+               cown := 1;
+               break;
+            endif
+          endfor
+    endif
+
+    if (character.cmdlevel>=3)
+      secure := 1;
+    endif
+
+    if ((!secure) and (!GetObjProperty( house , "ownerserial" )))
+    	item.usescript := "";
+    	return;
+    endif
+
+    if (!secure)
+       SendSysmessage( character , "You can't use this." );
+       return;
+    endif
+
+SendViewContainer( character, item );
+
+    SendSysmessage( character , "You open the secure container." );
+
+endprogram

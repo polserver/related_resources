@@ -1,0 +1,8 @@
+use uo;
+use uo;
+var s := struct;
+s.+name;
+s.+id;
+s.name := "dan";
+s.id := 1;
+print(pack(s));

@@ -1,0 +1,47 @@
+use uo;
+use os;
+use util;
+use cfgfile;
+include "include/eventid";
+include "drinkpotion";
+include "explosion";
+
+Const DETONATION_TIME := 3;
+
+program use_explosion( character, potion )
+	local timer := DETONATION_TIME;
+	local str := get_potion_strength( potion );
+	local params := { character, potion, timer , str }; //passing 4 to function
+			  
+	local i := 0;
+		
+	if (!checkusepurple( character,potion ))
+		PrintTextAbovePrivate( character, "I can not use this right now", character );	
+		return;
+	elseif (GonnaBlow( potion))
+		PrintTextAbovePrivate( character, "That potion is gonna blow!", character );
+		
+		// thought about using... but not just yet....
+		//ToggleBlowFlag( potion );
+		//PrintTextAbovePrivate( character, "Deactivated!", character );
+		
+		return;
+	else
+		SetBlowFlag( potion, 1);
+		PrintTextAbovePrivate( character, "Activated!", character );
+			
+		start_script("explosion_timer", params);
+		
+		local tgt := TargetCoordinates( character );
+		local possible := can_throw_there( character, tgt, potion );
+		
+		if ( !possible )
+			PrintTextAbovePrivate( character, "That's not possible!", character );
+			
+		else
+			throw_explosive( character, potion, tgt );
+		endif
+		
+	endif
+	
+endprogram

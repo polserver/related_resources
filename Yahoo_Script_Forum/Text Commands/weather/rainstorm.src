@@ -1,0 +1,25 @@
+use uo;
+use os;
+use util;
+
+program rain( who , params )
+    params := SplitWords( params );
+    
+
+    var rand := RandomInt( 30 );
+    var res := 
+      SetRegionWeatherLevel( params[1],       // region name
+                                1,            // weather type = rain
+                               10,            // severity
+                                0,            // aux
+                                6 );          // lightoverride
+
+    broadcast( "A rainstorm hits " + params[1] );
+    
+    if (!res)
+        SendSysMessage( who, "Error: " + res.errortext );
+    endif
+
+start_script(":daynight:daynight");
+
+endprogram

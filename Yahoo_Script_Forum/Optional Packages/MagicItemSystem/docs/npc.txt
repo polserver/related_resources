@@ -1,0 +1,67 @@
+So you want enchanted NPCs.
+Maybe you want dragons that recieve more damage from Dragon Slayers crossbows. 
+Maybe you want orcs that do more damage to humans wearing certain armour.
+
+If you want your NPCs to recieve a set of enchantments when they are created, heres a nice way to do it.
+
+Goto your scripts\ai directory.
+Go into the folder called "setup"
+
+Make an include file something like "checkEnch.inc", and add the following into it:
+
+
+  include "../pkg/std/combat/sithmagicitems/sench";
+  foreach enchantment in GetConfigStringArray(FindConfigElem(ReadConfigFile("::npcdesc"),Self().npctemplate),"enchantment");
+      addEnch( Self(), enchantment );
+  endforeach
+
+
+Now, in every AI script whos NPCs you want to be able to set enchantments on... or just all AI scripts... add the following line up the top:
+
+
+  include "setup/checkEnch";
+
+
+Now in your npcdesc.cfg, you can add as many "enchantment" lines on an NPC as you want, eg:
+
+
+NpcTemplate dragon1
+{
+    Name                <random>
+    script              firebreather
+    
+    ObjType             0xc
+    Color               1201
+    TrueColor           1201
+    Gender              0
+    STR                 200
+    INT                 120
+    DEX                 200
+    HITS                200
+    MANA                130
+    STAM                50
+    MagicResistance     150
+    EvaluatingIntelligence 80
+    Tactics             130
+    Wrestling           190
+    AttackSpeed         39
+    AttackDamage        5d6+7
+    AttackAttribute     Wrestling
+    AttackHitSound      0x16D
+    AttackMissSound     0x239
+    DeathSound          0x16F
+    AR                  35
+    
+    lootgroup           41
+    tameskill           100
+    food                meat
+    
+    alignment           evil
+    provoke             114
+    Magicitemchance     3
+    dstart              10
+    colorrange          1201 1247
+    
+    AttackHitScript     :combat:mainhitscript
+    enchantment		Dragon
+}

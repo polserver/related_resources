@@ -1,0 +1,13 @@
+use uo;
+
+program ctrl_reg()
+
+	var zLink := {};
+	zLink.+sName := "Random Tips (package)";
+	zLink.+sVer := "1.0";
+	zLink.+bCtrl := 1;
+	zLink.+sScript := "textcmd/player/tip";
+
+	return zLink;
+
+endprogram

@@ -1,0 +1,28 @@
+use cfgfile;
+use util;
+use uo;
+use os;
+include "include/attributes";
+include "include/client";
+
+program blessdeed(who, deed)
+var cfg  := ReadConfigFile( ":*:itemdesc" );
+  SendSysMessage( who, "Select a target." );
+  var noobme := Target(who);
+  var alreadynoob := GetObjProperty(noobme, "newbie");
+  var element  := FindConfigElem(cfg, noobme.objtype);
+  var nicetry  := GetConfigInt(element, "MaxItems");
+  if (noobme.isA(POLCLASS_MOBILE))
+	SendSysMessage(who, "You're not a priest, you can't bless people!");
+	return;
+  elseif (noobme.newbie)
+	SendSysMessage(who, "That is already blessed.");
+	return;
+  elseif (nicetry)
+	SendSysMessage(who, "Nice try, cheater.");
+	return;
+  else
+  noobme.newbie := 1;
+  DestroyItem(deed);
+endif
+endprogram

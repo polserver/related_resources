@@ -1,0 +1,73 @@
+global speech;
+global ammotype;
+global ammoamount;
+global theammo;
+
+global master;
+global spells := {};
+global me := self();
+
+
+
+global cast_pct;
+global num_casts;
+global count_casts ;
+global saywords := 1;
+
+
+global graphics;
+global num_changes;
+global will_cast;
+global will_breathe;
+global flee_point;
+
+drop_anchor();
+
+if( me.name["<random>"] )
+   SetName ( me , RandomName( me ) );
+endif
+
+var npccfg := readconfigfile("npcdesc");
+var speechelem := npccfg[me.npctemplate];
+speech := getconfigstring(speechelem, "speech") ;
+spells := GetConfigStringArray( speechelem, "spell" );
+cast_pct := speechelem.cast_pct;
+num_casts  := speechelem.num_casts;
+count_casts  := speechelem.count_casts;
+var equipname := speechelem.equip;
+saywords := speechelem.saywords;
+if (!cast_pct)
+        cast_pct := 10;
+endif
+flee_point := speechelem.flee_point;
+if (!flee_point)
+        flee_point := 10;
+endif
+
+if (equipname)
+        equipfromtemplate(me, equipname);
+endif
+
+
+ammotype := npccfg[me.npctemplate].ammotype;
+global mybow := npccfg[me.npctemplate].missileweapon;
+if (ammotype)
+        if (me.backpack)
+                destroyitem(me.backpack);
+        endif
+        
+        equipfromtemplate(me, mybow);
+        ammoamount := npccfg[me.npctemplate].ammoamount;
+
+        theammo := createiteminbackpack(me, ammotype, ammoamount);
+
+endif
+equipfromtemplate(me, npccfg[me.npctemplate].equip);
+
+if (lower(speechelem["alignment"])="evil")
+        foreach critter in ListMobilesInLineOfSight( me, 10)
+                if (!critter.npctemplate or critter.script = "tamed")
+                        fight(critter);
+                endif
+        endforeach
+endif

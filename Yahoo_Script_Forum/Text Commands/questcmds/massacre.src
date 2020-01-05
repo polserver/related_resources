@@ -1,0 +1,14 @@
+use uo;
+
+program massacre(who, range)
+	if( !Cint(range) )
+		range := SendTextEntryGump( who, "What range to massacre?" );
+	endif
+	range := Cint( range );
+	foreach critter in ListMobilesNearLocation(who.x, who.y, who.z, range)
+		if (critter.isA(POLCLASS_NPC))
+			SetObjProperty(critter, "guardkill", 1);
+			ApplyRawDamage(critter, 10000);
+		endif
+	endforeach
+endprogram

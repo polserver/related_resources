@@ -1,0 +1,161 @@
+use uo;
+use basic;
+use cfgfile;
+use util;
+
+include "include/client";
+include "include/objtype";
+
+Global config_file;
+
+
+program do_poisoning( character )
+ 
+    local ispotion := 0;
+    local the_item;
+    local the_poison;
+    local skill;
+    local points;
+    local elem;
+    local strength;
+  
+    config_file := ReadConfigFile( "poisoning");
+
+    SendSysMessage( character, "Select a poison potion." );
+
+    the_poison := target(character, "");
+
+    if (!the_poison)
+        SendSysmessage(character, "Targetting cancelled.");
+        return;
+    endif 
+    
+    if (! Accessible(character, the_poison))
+        SendSysmessage (character, "You can't reach that!");
+        return;
+    endif
+    
+    if (the_poison.graphic != UOBJ_POISON_POTION)
+        SendSysmessage (character, "You must select a poison potion!");
+        return;
+    endif
+    
+    SendSysmessage (character, "Select an object to which to apply this poison");
+    
+    the_item := target(character, TGTOPT_CHECK_LOS);
+
+    if (!the_item)
+        SendSysmessage (character, "Targetting cancelled.");
+        return;
+    endif
+
+    if (! Accessible(character, the_item))
+        SendSysmessage (character, "You can't reach that!");
+        return;
+    endif
+   
+    //local alchcfg := readconfigfile(":alchemy:itemdesc");
+    local alchcfg := readconfigfile("::itemdesc");
+   
+    local acfgfile := ReadConfigFile( "poisoning_items");
+    local theitem := FindConfigElem( acfgfile, cint(the_item.objtype) );   
+    //if (!theitem)
+    //	SendSysmessage (character, "You can't poison that!");
+    //	print("element not found");
+    //	return;
+    //endif
+    
+    if (!theitem)
+        acfgfile := readconfigfile(":combat:itemdesc");
+        theitem := acfgfile[the_item.objtype];
+	if (theitem)
+        	if ( ( theitem.skillid != "Archery" ) or ( theitem.skillid != "Swords" ) or ( theitem.skillid != "Mace" ) or ( theitem.skillid != "Fencing" ))
+        		SendSysmessage (character, "You can't poison that!");
+        		return;
+        	endif
+	
+//	still playing with this ;)
+//    	elseif ( theitem.graphic = 0x0f0c )
+//    		the_item := theitem;
+//    		ispotion := 1;
+    		
+    	
+    	endif
+        
+    endif    
+   
+ 
+   
+    strength:= cint(alchcfg[the_poison.objtype].strength);
+
+    if (strength = 0)
+        strength := 1;
+    endif
+   
+    elem := FindConfigElem( config_file, strength );
+
+    skill := Cint(GetElemProperty( elem , "skill"));
+    points := Cint(GetElemProperty( elem , "points"));
+	
+    //print("pos lvl : " + strength + " | pstr : " + strength*2 + " | p : " + character.name); // debug
+	
+    if (CheckSkill( character, SKILLID_POISONING, skill, points ))
+        SetObjProperty(the_item, "poison_level", cstr(strength));
+        SetObjProperty(the_item, "pstr", strength*2);
+        Setobjproperty(the_item, "p", character.name);
+
+//        if (!ispotion)
+//        	print("getting the potion read");
+//        	SetObjProperty(the_item, "script", "alchemy:greenpotion");
+//        endif
+        	
+        var hits := GetObjProperty( the_item, "OnHit");
+        local pbefore := cint( GetObjProperty( the_item, "pbefore" ));
+        if ( !pbefore )
+        	if(hits)
+        		hits.append("poisonhit");
+        		SetObjProperty(the_item, "OnHit", hits);
+        	else
+        		SetObjProperty(the_item, "OnHit", {"poisonhit"});
+        	endif
+        endif
+        Setobjproperty(the_item, "pbefore", 1);
+        
+        SendSysmessage(character, "You succeed in poisoning the item.");
+	
+	// extra added check for a partial success ;)
+    elseif (( skill - 10 >= 40 ) && ( CheckSkill( character, SKILLID_POISONING, (skill - 10), points - 20 ) ))
+        strength := strength - 2; //deduct 'cause of the fumble.
+        if ( strength <= 0 )
+        	strength := 0.5;
+        endif
+        
+        SetObjProperty(the_item, "poison_level", cstr(strength));
+        SetObjProperty(the_item, "pstr", strength*2);
+        Setobjproperty(the_item, "p", character.name);
+ //       if (!ispotion)
+ //       	print("getting the potion read");
+ //       	SetObjProperty(the_item, "script", "alchemy:greenpotion");
+ //       endif
+        	
+        var hits := GetObjProperty( the_item, "OnHit");
+        local pbefore := cint( GetObjProperty( the_item, "pbefore" ));
+        if ( !pbefore )
+                if(hits)
+        		hits.append("poisonhit");
+	        	SetObjProperty(the_item, "OnHit", hits);
+        	else
+        		SetObjProperty(the_item, "OnHit", {"poisonhit"});
+        	endif
+        endif
+        Setobjproperty(the_item, "pbefore", 1);
+        SendSysmessage(character, "You only succeed in poisoning the item partially.");
+       
+    else
+        SendSysmessage (character, "You fail to poison the item."); 
+    endif
+    
+    SubtractAmount(the_poison,1);
+    CreateIteminBackpack(character, UOBJ_EMPTY_BOTTLE, 1);   
+
+endprogram

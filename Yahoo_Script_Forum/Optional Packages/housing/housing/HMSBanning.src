@@ -1,0 +1,34 @@
+// POL - HOUSE MENU SYSTEM v1.0
+// Created by: ???
+// Modified by: Vaticus
+// Supported POL versions: v.092/.093/.094
+
+// FILE LAST UPDATED: Monday, May 13, 2002
+// Pol House Menu System modified by Vaticus
+
+use os;
+use uo;
+
+program Ban_Tile(who, tile)
+  var hserial := GetObjProperty(tile, "house_serial");
+  var house := SystemFindObjectBySerial( CInt(hserial) );
+  var sign := SystemFindObjectBySerial(GetObjProperty(house,"signserial"));
+  if(!sign)
+    var signarray := {0x0bd1, 0x0bd2, 0x0bcf, 0x0bd0};
+    foreach thing in (house.components)
+      if(thing.objtype in signarray)
+        sign := thing;
+        SetObjProperty(house, "signserial", sign.serial);
+        break;
+      endif
+    endforeach
+  endif
+  var banlist := GetObjProperty(house, "banlist");
+  if(!banlist)
+    return;
+  endif
+  if(who.serial in banlist)
+    MoveCharacterToLocation(who, sign.x, sign.y, GetMapInfo(sign.x, sign.y).z, MOVECHAR_FORCELOCATION);
+    SendSysMessage(who, "You cannot enter!", font := 3, color := 0);
+  endif
+endprogram

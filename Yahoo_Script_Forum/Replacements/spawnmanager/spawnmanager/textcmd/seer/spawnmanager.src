@@ -1,0 +1,59 @@
+use datafile;
+use os;
+use uo;
+use util;
+
+include "../../specialeventid";
+include "general";
+include "groupmanaging";
+include "regionmanaging";
+include "../../inc/datatypes";
+include "permissions";
+
+var me;
+var data, layout;
+
+program buildgump(who)
+   
+   me := who;
+   
+   var res, keepgoing := 1;
+
+   groupfile := OpenFile(GROUPS_DATAFILE);
+   regionfile := OpenFile(REGION_DATAFILE);
+   
+   repeat
+   
+      data := {"Select what to manage:",
+         "Groups",
+         "Regions"
+      };
+
+      layout := {
+         "page 0",
+         "nodispose",
+         "noclose",
+         "resizepic 0 0 5120 280 135",
+         "text 20 15 600 0",
+         "text 45 45 600 1",
+         "text 45 75 600 2",
+         "button 20 45 210 211 1 0 1",
+         "button 20 75 210 211 1 0 2",
+         "button 20 105 242 241 1 0 0"
+      };
+      
+      res := SendDialogGump(me, layout, data);
+
+      LoadGroupsArray();
+   
+      case(res[0])
+      1: BuildGroupGump(GetElemFromArray("group", groups, OT_SELECT_AND_ADD));
+      2: LoadRegionsArray();
+         BuildRegionGump(GetElemFromArray("region", regions, OT_SELECT_AND_ADD));
+      default:
+         keepgoing := 0;
+      endcase
+   
+   until(!keepgoing or !me.ip);
+	
+endprogram

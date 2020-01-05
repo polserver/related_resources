@@ -1,0 +1,17 @@
+include "include/modules";
+include "include/math";
+
+program co_co_nut(who)
+	var i, j;
+	//for( j := 1; j <= 10; j := j + 1 )
+		for( i := 1; i <= 10; i := i + 1 )
+			if ( Mod( i, 2 ) )
+				PlaySoundEffect(who, 0x24c);
+				sleepms(675);
+			else
+				PlaySoundEffect(who, 0x24d);
+				sleepms(650);
+			endif
+		endfor
+	//endfor
+endprogram

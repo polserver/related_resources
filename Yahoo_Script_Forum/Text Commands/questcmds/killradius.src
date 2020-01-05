@@ -1,0 +1,14 @@
+use uo;
+use util;
+
+program dungeonwipe(who, range)
+	var critters := ListMobilesNearLocation(who.x, who.y, who.z, CInt(range));
+	foreach critter in critters
+   		if (critter.script == "meek") 
+			SetObjProperty( critter, "guardkill", 1 );  
+        		print("Killing " + critter.name);
+        		ApplyRawDamage(critter, 1000);
+   		endif
+	endforeach
+	SendSysMessage(who, "Done!");
+endprogram

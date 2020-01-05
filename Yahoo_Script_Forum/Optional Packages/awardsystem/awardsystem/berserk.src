@@ -1,0 +1,214 @@
+use uo;
+use os;
+use math;
+use cfgfile;
+
+include "/include/client";
+include "/include/math";
+include "include/advcheckskill";
+
+program berserk( param)
+  var who;
+  var clean := 0;
+  if( len( param))
+    who := param[1];
+    clean := param[2];
+  else
+    who := param;
+  endif
+  
+  if( clean)
+    return 1;
+  endif
+  
+  SendSysMessage( who, "Select target to attack?" );
+  var fightskill;
+  var dam;
+  var waponmaxdam;
+  var str := who.strength;
+  var skillid;
+  var itemskill;
+  
+  var targ := Target( who );
+  if( !targ.maxhp)
+    SendSysMessage( who, "This isnt a creature");
+    return;
+  endif
+  if( targ == who)
+    return;
+  endif
+  var itemcfg := readconfigfile(":*:itemdesc");
+  
+  var one := GetEquipmentByLayer(who, LAYER_HAND1);
+  var two := GetEquipmentByLayer(who, LAYER_HAND2);
+
+  if( one)
+    itemskill := itemcfg[one.objtype].skillid;
+    waponmaxdam := itemcfg[one.objtype].maxdam;
+  elseif( two)
+    itemskill := itemcfg[two.objtype].skillid;
+    waponmaxdam := itemcfg[two.objtype].maxdam;
+  endif
+  if( !waponmaxdam)
+    waponmaxdam := 5;
+  endif
+  
+  if( itemskill)
+    case( lower( itemskill))
+      "mace":
+        skillid := SKILLID_MACEFIGHTING;
+        break;
+        
+      "swords":
+        skillid := SKILLID_SWORDSMANSHIP;
+        break;
+        
+      "fencing":
+        skillid := SKILLID_FENCING;
+        break;
+        
+      default:
+        SendSysMessage( who, "You have to equip another weapon!");
+        SendSysMessage( who, "You are a bit confused!");
+        ConfusionLoop( who, 20);
+        return;
+    endcase
+  else
+    SendSysMessage( who, "You have to equip a weapon!");
+    SendSysMessage( who, "You are a bit confused!");
+    ConfusionLoop( who, 20);
+    return;
+  endif
+  
+  fightskill := GetAttribute( who, skillid);
+  dam := CInt( (fightskill + str + waponmaxdam)/4);
+  if( !AdvCheckSkill(who, skillid, -1, 100))
+    dam := CInt( dam/2);
+  endif
+  
+  if( targ)
+    var targx := targ.x;
+    var targy := targ.y;
+    var targz := targ.z;
+    var x := who.x;
+    var y := who.y;
+    var diffx := 0.0;
+    var diffy := 0.0;
+    var i := 1;
+    var j := -1;
+    PlaySoundEffect(who, SFX_24E);
+
+    diffx := CDbl( targx - x);
+    diffy := CDbl( targy - y);
+    if( diffx ==  0.0)
+      diffx := 0.01;
+    endif
+    if( diffy ==  0.0)
+      diffy := 0.01;
+    endif
+    var comp := Abs( CDbl( diffx/diffy));
+    
+    //SendSysMessage( who, "diffx: "+CStr(diffx)+" diffy: "+CStr(diffy)+" comp: "+CStr(comp));
+    if( diffx < 0.0 && diffy < 0.0 && comp >= 0.5 && comp <= 2.0)
+      //SendSysMessage( who, "Direction NW!");
+      who.facing := 7;
+    elseif( (diffx < 0.0 && diffy < 0.0 && comp > 2.0) || (diffx < 0.0 && diffy > 0.0 && comp > 2.0))
+      //SendSysMessage( who, "Direction W!");
+      who.facing := 6;
+    elseif( diffx < 0.0 && diffy > 0.0 && comp >= 0.5 && comp <= 2.0)
+      //SendSysMessage( who, "Direction SW!");
+      who.facing := 5;
+    elseif( (diffx < 0.0 && diffy > 0.0 && comp < 0.5) || (diffx > 0.0 && diffy > 0.0 && comp < 0.5))
+      //SendSysMessage( who, "Direction S!");
+      who.facing := 4;
+    elseif( diffx > 0.0 && diffy > 0.0 && comp >= 0.5 && comp <= 2.0)
+      //SendSysMessage( who, "Direction SE!");
+      who.facing := 3;
+    elseif( (diffx > 0.0 && diffy < 0.0 && comp > 2.0) || (diffx > 0.0 && diffy > 0.0 && comp > 2.0))
+      //SendSysMessage( who, "Direction E!");
+      who.facing := 2;
+    elseif( diffx > 0.0 && diffy < 0.0 && comp >= 0.5 && comp <= 2.0)
+      //SendSysMessage( who, "Direction NE!");
+      who.facing := 1;
+    elseif( (diffx > 0.0 && diffy < 0.0 && comp < 0.5) || (diffx < 0.0 && diffy < 0.0 && comp < 0.5))
+      //SendSysMessage( who, "Direction N!");
+      who.facing := 0;
+    endif
+
+    while( x != targx || y != targy)
+      i := i + 1;
+      j := j + 1;
+      sleepms(50);
+      if( !Mod( i, 2))
+        if( one || two)
+          PerformAction( who, ANIM_RUN_ARMED);
+        else
+          PerformAction( who, ANIM_RUN_UNARMED);
+        endif
+      endif
+      if( x != targx)
+        diffx := targx - x;
+        if( diffx > 2)
+          x := x + 2;
+        elseif( diffx < -2)
+          x := x - 2;
+        else
+          x := x + diffx;
+        endif
+      endif
+      if( y != targy)
+        diffy := targy - y;
+        if( diffy > 2)
+          y := y + 2;
+        elseif( diffy < -2)
+          y := y - 2;
+        else
+          y := y + diffy;
+        endif
+      endif
+      //if( !MoveCharacterToLocation( who, x, y, GetMapInfo( x, y).z))
+      if( !MoveCharacterToLocation( who, x, y, targz))
+        PlaySoundEffect(who, SFX_239);
+        SendSysMessage( who, "You crash into an obstacle and that hurts you!");
+        SendSysMessage( who, "You are confused!");
+        ApplyDamage( who, 10);
+        ConfusionLoop( who, 30);
+        return;
+      endif
+      sleepms(50);
+      if( !Mod( j, 2) && j != 0)
+        PerformAction( who, ANIM_STAND);
+      endif
+    endwhile
+    if( targ.x+2 > targx && targ.x-2 < targx && targ.y+2 > targy && targ.y-2 < targy)
+      if( two)
+        PerformAction( who, ANIM_ATTACK_2HAND_WIDE);
+      else
+        PerformAction( who, ANIM_ATTACK_1HAND_WIDE);
+      endif
+      PlaySoundEffect(who, SFX_136);
+      ApplyDamage( targ, dam);
+      SendSysMessage( who, targ.npctemplate + " suffers a damage amount of " + CStr( dam));
+    else
+      PlaySoundEffect(who, SFX_239);
+      SendSysMessage( who, "You have missed your opponent!");
+      SendSysMessage( who, "You are a bit confused!");
+      ConfusionLoop( who, 20);
+    endif
+  endif
+endprogram
+
+function ConfusionLoop( who, count)
+	var cx := who.x;
+	var cy := who.y;
+	var cz := who.z;
+  var i := 0;
+
+  while( i < count)
+    if( who.x != cx or who.y != cy or who.z != cz)
+      MoveCharacterToLocation( who, cx, cy, cz);
+    endif
+    sleepms( 100);
+    i := i + 1;
+  endwhile
+endfunction

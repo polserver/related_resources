@@ -1,0 +1,26 @@
+// 
+// NPCWalkPath AI
+//
+// Designed by Cassandra White with large amounts of assistance by Myrathi and Syzygy
+// (My gratitude and respect to you both)
+
+use uo;
+use basicio;
+
+program txtcmd_erasepath ( who, pathname )
+
+var prop := GetGlobalProperty( pathname );
+
+	if ( !prop )
+		// GPRop does not exist
+		Print ( "Path: " + pathname + " does not exist - Returning!" );
+		SendSysMessage( who, "Path: " + pathname + " does not exist - Returning!" );
+		Return;
+	else
+		// GProp does exist
+		Print ( "Path: " + pathname + " exists - Removing!" );
+		SendSysMessage( who, "Path: " + pathname + " exists - Removing!" );
+		EraseGlobalProperty( pathname );
+	endif
+
+endprogram

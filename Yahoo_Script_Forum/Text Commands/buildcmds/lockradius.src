@@ -1,0 +1,16 @@
+include "include/modules";
+
+var radius;
+
+program lockradius( who, text )
+	if( text )
+		radius := CInt( text );
+	else
+		radius := SendTextEntryGump( who, "What radius would you like to lock?" );
+		radius := CInt( radius );
+	endif
+	foreach thingie in ListItemsNearLocation( who.x, who.y, who.z, radius );
+		thingie.movable := 0;
+	endforeach
+	SendSysMessage(who, "Locked down everything in a radius of " + radius);
+endprogram

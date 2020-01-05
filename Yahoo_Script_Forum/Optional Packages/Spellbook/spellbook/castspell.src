@@ -1,0 +1,66 @@
+
+use uo;
+use os;
+use cfgfile;
+
+include "include/client";
+include "include/spellinc";
+
+
+program castspell(parms)
+
+   var who := parms[1];
+   var magicid := parms[2];
+
+	var casterops := GetObjProperty(who, "casterops");
+
+	var spellcfg := ReadConfigFile("::spells");
+	var elem := FindConfigElem(spellcfg, magicid);
+	var circle := GetConfigInt(elem,"Circle");
+
+	var circfg := ReadConfigFile("::circles");
+	var cirelem := FindConfigElem(circfg,circle);
+	var delay := GetConfigInt(cirelem, "Delay");
+	var manacost := GetConfigInt(cirelem, "Mana");
+	var regs := GetConfigStringArray(elem, "Reagent");
+
+	SetObjProperty(who, "#casthp", who.hp);
+
+	if (!casterops["NOMANA"])	
+		if (manacost > who.mana)
+			SendSysMessage(who, "Insufficient Mana.");
+			CleanUp(who);
+			return;
+		endif
+	endif
+	if (!casterops["NOREGS"] and (regs[1]))
+		if(!HasReagents(who,regs))
+			SendSysMessage(who, "Insufficient Reagents.");
+			CleanUp(who);
+			return;
+		endif
+	endif
+
+	if (!casterops["NOSPEAK"])
+		SpeakPowerWords(who,magicid);
+	endif
+
+	PerformAction(who,ANIM_CAST_DIR);
+	who.frozen := 1;
+	sleepms( delay );
+	who.frozen := 0;
+
+	if (BrokeCon(who))
+		PlayObjectCenteredEffect(who, FX_SPELL_FAIL, 7, 7);
+		PlaySoundEffect(who, SFX_5B);
+		SendSysMessage(who, "You lost your concentration.");
+		CleanUp(who);
+		return;
+	endif
+
+	set_critical(1);
+	Detach();
+
+	StartSpellEffect(who,magicid);
+
+endprogram

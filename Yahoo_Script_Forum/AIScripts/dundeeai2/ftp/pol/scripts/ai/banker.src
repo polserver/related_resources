@@ -1,0 +1,47 @@
+Use npc;
+Use os;
+Use uo;
+
+include "util/bank";
+include "include/randname";
+include "include/eventid";
+
+Global bank;
+Global me := Self();
+
+if( me.name["<random>"] )
+   SetName ( me , RandomName( me ) );
+   EquipFromTemplate( me , "banker" );
+endif
+
+program banker();
+
+	EnableEvents( EVID_SPEECH, 4 );
+
+	while (1)
+    		Local ev;
+    		ev := os::wait_for_event( 120 );
+    		if (ev)
+         		if ( ev.text["bank"] )
+				OpenBank(ev.source);
+			endif
+		endif
+	endwhile
+
+endprogram
+
+function OpenBank(you)
+
+	TurnToward(you);
+	Local bankbox := FindBankBox( you );
+	if (GetObjProperty(you,"toadmode"))
+		say("*ribbit*");
+	else
+		if (bankbox)
+			SendOpenSpecialContainer( you, bankbox );
+		else
+			say("You don't seem to have a bank box, "+ you.name);
+		endif
+	endif
+
+endfunction

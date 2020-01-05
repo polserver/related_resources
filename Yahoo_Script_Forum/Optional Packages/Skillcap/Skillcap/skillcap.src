@@ -1,0 +1,197 @@
+//
+// Skillcap applier
+//
+// This will set all skills back linearly if the total is over 700
+//
+// Created by Svovl cnk@mail1.stofanet.dk 10. Jan. 2000
+//  ver. 1.2
+//
+// updated by Zulu  zuluhotel@hotmail.com Jan 12, 2000
+
+use os;
+use uo;
+
+include "include/client";
+
+const SKILLCAP := 700;
+
+program skillcapper( who )
+
+   local Alchemy;
+   local Anatomy;
+   local AnimalLore;
+   local ItemId;
+   local ArmsLore;
+   local Parry;
+   local Begging;
+   local Blacksmithy;
+   local Bowcraft;
+   local Peacemaking;
+   local Carpentry;
+   local Cartography;
+   local Cooking;
+   local Enticement;
+   local Healing;
+   local Fishing;
+   local Herding;
+   local Hiding;
+   local Provocation;
+   local Inscription;
+   local Lockpicking;
+   local Magery;
+   local MagicResistance;
+   local Tactics;
+   local Snooping;
+   local Musicianship;
+   local Poisoning;
+   local Archery;
+   local SpiritSpeak;
+   local Stealing;
+   local Tailoring;
+   local AnimalTaming;
+   local TasteIdentification;
+   local Tracking;
+   local Veterinary;
+   local Swordsmanship;
+   local Macefighting;
+   local Fencing;
+   local Wrestling;
+   local Lumberjacking;
+   local Mining;
+   local Meditation;
+   local Stealth;
+   local RemoveTrap;
+   local Camping;
+   local DetectingHidden;
+   local EvaluatingIntelligence;
+   local total;
+
+   while (1)
+      foreach chr in EnumerateOnlineCharacters()
+
+      If (chr.cmdlevel=0)
+         set_critical(1);
+
+	Alchemy := ( GetSkill( chr, SKILLID_ALCHEMY ) );
+	Anatomy := ( GetSkill( chr, SKILLID_ANATOMY ) );
+	AnimalLore := ( GetSkill( chr, SKILLID_ANIMALLORE ) );
+	ItemId := ( GetSkill( chr, SKILLID_ITEMID ) );
+	ArmsLore := ( GetSkill( chr, SKILLID_ARMSLORE ) );
+	Parry := ( GetSkill( chr, SKILLID_BATTLE_DEFENSE ) );
+	Begging := ( GetSkill( chr, SKILLID_BEGGING ) );
+	Blacksmithy := ( GetSkill( chr, SKILLID_BLACKSMITHY ) );
+	Bowcraft := ( GetSkill( chr, SKILLID_BOWCRAFT ) );
+	Peacemaking := ( GetSkill( chr, SKILLID_PEACEMAKING ) );
+	Camping := ( GetSkill( chr, SKILLID_CAMPING ) );
+	Carpentry := ( GetSkill( chr, SKILLID_CARPENTRY ) );
+	Cartography := ( GetSkill( chr, SKILLID_CARTOGRAPHY ) );
+	Cooking := ( GetSkill( chr, SKILLID_COOKING ) );
+	DetectingHidden := ( GetSkill( chr, SKILLID_DETECTINGHIDDEN ) );
+	Enticement := ( GetSkill( chr, SKILLID_ENTICEMENT ) );
+	EvaluatingIntelligence := ( GetSkill( chr, SKILLID_EVALINT ) );
+	Healing := ( GetSkill( chr, SKILLID_HEALING ) );
+	Fishing := ( GetSkill( chr, SKILLID_FISHING ) );
+	Herding := ( GetSkill( chr, SKILLID_HERDING ) );
+	Hiding := ( GetSkill( chr, SKILLID_HIDING ) );
+	Provocation := ( GetSkill( chr, SKILLID_PROVOCATION ) );
+	Inscription := ( GetSkill( chr, SKILLID_INSCRIPTION ) );
+	Lockpicking := ( GetSkill( chr, SKILLID_LOCKPICKING ) );
+	Magery := ( GetSkill( chr, SKILLID_MAGERY ) );
+	MagicResistance := ( GetSkill( chr, SKILLID_MAGICRESISTANCE ) );
+	Tactics := ( GetSkill( chr, SKILLID_TACTICS ) );
+	Snooping := ( GetSkill( chr, SKILLID_SNOOPING ) );
+	Musicianship := ( GetSkill( chr, SKILLID_MUSICIANSHIP ) );
+	Poisoning := ( GetSkill( chr, SKILLID_POISONING ) );
+	Archery := ( GetSkill( chr, SKILLID_ARCHERY ) );
+	SpiritSpeak := ( GetSkill( chr, SKILLID_SPIRITSPEAK ) );
+	Stealing := ( GetSkill( chr, SKILLID_STEALING ) );
+	Tailoring := ( GetSkill( chr, SKILLID_TAILORING ) );
+	AnimalTaming := ( GetSkill( chr, SKILLID_TAMING ) );
+	TasteIdentification := ( GetSkill( chr, SKILLID_TASTEID ) );
+	Tracking := ( GetSkill( chr, SKILLID_TRACKING ) );
+	Veterinary := ( GetSkill( chr, SKILLID_VETERINARY ) );
+	Swordsmanship := ( GetSkill( chr, SKILLID_SWORDSMANSHIP ) );
+	Macefighting := ( GetSkill( chr, SKILLID_MACEFIGHTING ) );
+	Fencing := ( GetSkill( chr, SKILLID_FENCING ) );
+	Wrestling := ( GetSkill( chr, SKILLID_WRESTLING ) );
+	Lumberjacking := ( GetSkill( chr, SKILLID_LUMBERJACKING ) );
+	Mining := ( GetSkill( chr, SKILLID_MINING ) );
+	Meditation := ( GetSkill( chr, SKILLID_MEDITATION ) );
+	Stealth := ( GetSkill( chr, SKILLID_STEALTH ) );
+	RemoveTrap := ( GetSkill( chr, SKILLID_REMOVETRAP ) );
+
+	total := Alchemy + Anatomy + Healing + AnimalLore + ItemId + Camping + Carpentry + Poisoning + DetectingHidden + EvaluatingIntelligence + ArmsLore + Parry + Begging + Blacksmithy + Bowcraft + Peacemaking + Cartography + Cooking + Enticement + Fishing + Herding + Hiding + Provocation + Inscription + Lockpicking + Magery + MagicResistance + Tactics + Snooping + Musicianship + Archery + SpiritSpeak + Stealing + Tailoring + AnimalTaming + TasteIdentification + Tracking + Veterinary + Swordsmanship + Macefighting + Wrestling + Fencing + Lumberjacking + Mining + Meditation + Stealth + RemoveTrap;
+
+
+
+
+
+            if (total > SKILLCAP)
+                SetSkill( chr, SKILLID_ALCHEMY, ( Alchemy * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_ANATOMY, ( Anatomy * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_ANIMALLORE, ( AnimalLore * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_ITEMID, ( ItemId * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_ARMSLORE, ( ArmsLore * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_BATTLE_DEFENSE, ( Parry * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_BEGGING, ( Begging * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_BLACKSMITHY, ( Blacksmithy * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_BOWCRAFT, ( Bowcraft * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_PEACEMAKING, ( Peacemaking * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_CARPENTRY, ( Carpentry * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_CARTOGRAPHY, ( Cartography * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_COOKING, ( Cooking * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_ENTICEMENT, ( Enticement * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_HEALING, ( Healing * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_FISHING, ( Fishing * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_HERDING, ( Herding * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_HIDING, ( Hiding * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_PROVOCATION, ( Provocation * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_INSCRIPTION, ( Inscription * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_LOCKPICKING, ( Lockpicking * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_MAGERY, ( Magery * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_MAGICRESISTANCE, ( MagicResistance * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_TACTICS, ( Tactics * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_SNOOPING, ( Snooping * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_MUSICIANSHIP, ( Musicianship * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_POISONING, ( Poisoning * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_ARCHERY, ( Archery * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_SPIRITSPEAK, ( SpiritSpeak * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_STEALING, ( Stealing * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_TAILORING, ( Tailoring * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_TAMING, ( AnimalTaming * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_TASTEID, ( TasteIdentification * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_TRACKING, ( Tracking * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_VETERINARY, ( Veterinary * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_SWORDSMANSHIP, ( Swordsmanship * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_MACEFIGHTING, ( Macefighting * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_FENCING, ( Fencing * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_WRESTLING, ( Wrestling * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_LUMBERJACKING, ( Lumberjacking * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_MINING, ( Mining * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_MEDITATION, ( Meditation * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_STEALTH, ( Stealth * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_REMOVETRAP, ( RemoveTrap * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_CAMPING, ( Camping * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_DETECTINGHIDDEN, ( DetectingHidden * SKILLCAP / total ));
+                SetSkill( chr, SKILLID_EVALINT, ( EvaluatingIntelligence * SKILLCAP / total ));
+            endif
+            set_critical(0);
+	    endif
+
+        endforeach
+
+        sleep( 20 );
+//        sleep( 3 * 60 );
+    endwhile
+
+endprogram
+
+function SetSkill( who, skill, amount)
+
+    local basevalue := CInt( CDbl(amount) * 10 );
+    local rawvalue := BaseSkillToRawSkill( basevalue );
+
+    if (skill != error && rawvalue != error)
+        SetRawSkill( who, skill, rawvalue );
+    endif
+endfunction

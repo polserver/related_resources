@@ -1,0 +1,82 @@
+use cfgfile;
+use uo;
+use os;
+use util;
+include "include/client";
+include "include/objtype";
+include "include/dist";
+include "include/res";
+include "include/respenalty";
+Global config;
+Global elem;
+const GFX_UNSHORN_SHEEP := 0xcf;
+const GFX_SHORN_SHEEP := 0xdf;
+const UOBJ_BARREL := 0x154d;
+const UOBJ_TUB := 0x0e7b;
+const UOBJ_TROUGHA := 0x0b41;
+const UOBJ_TROUGHB := 0x0b42;
+const UOBJ_TROUGHC := 0x0b43;
+const UOBJ_TROUGHD := 0x0b44;
+
+program use_bloody( user, bloody )
+
+    	//SendSysmessage( user, " Where you would like to wash this used bandage, " + user.name + "?" );
+
+    	SendSysmessage( user, " Onde voce gostaria de lavar esta bandagem usada, " + user.name + "?" );
+
+Local use_on := TargetCoordinates( user );
+
+    if (! use_on)
+        return;
+    endif
+
+    if (use_on.item.objtype = UOBJ_BARREL)
+        	Carvetree( user, use_on.item );
+		SubtractAmount(Bloody, 1);
+
+	elseif (use_on.item.objtype = UOBJ_TUB)
+        	Carvetree( user, use_on.item );
+		SubtractAmount(Bloody, 1);
+        	
+	elseif(use_on.item.objtype = UOBJ_TROUGHA)
+        	Carvetree(user, use_on.item);
+		SubtractAmount(Bloody, 1); 
+        	
+	elseif(use_on.item.objtype = UOBJ_TROUGHB)
+        	Carvetree(user, use_on.item);
+		SubtractAmount(Bloody, 1); 
+        	
+	elseif(use_on.item.objtype = UOBJ_TROUGHC)
+        	Carvetree(user, use_on.item);
+		SubtractAmount(Bloody, 1); 
+        	
+	elseif(use_on.item.objtype = UOBJ_TROUGHD)
+        	Carvetree(user, use_on.item); 
+		SubtractAmount(Bloody, 1);
+        	
+    	else
+
+        	SendSysmessage( user, "Voce destruiu uma bandagem usada utilizando ela como pano de limpeza." );
+
+        	//SendSysmessage( user, "You destroyed the bloody bandage using it as cloth any." );
+
+		SubtractAmount(Bloody, 1);
+
+    endif
+
+
+
+endprogram
+
+
+function CarveTree(user, use_on)
+
+ 	Local bandages := 0x0e21;
+
+		CreateItemInBackpack(user, bandages, 1);
+
+		SendSysmessage(user, "Voce lavou a bandagem e a colocou em sua mochila.");
+
+		//SendSysmessage(user, "You washed the bandage and it placed it in its backpack.");
+
+endfunction

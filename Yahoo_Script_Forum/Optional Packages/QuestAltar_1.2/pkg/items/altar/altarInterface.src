@@ -1,0 +1,111 @@
+// Quest Altar 1.2
+// Interface script
+// (c) 2003-2004 Keelhaul
+
+use uo;
+use os;
+use util;
+
+include "include/client";
+include "include/objtype";
+include "include/yesNo";
+
+var layout := array(
+  "page 0                         ",
+  "resizepic    0  0 5100 400 200 ",
+  "text    120  20  900    0      ",
+  "page 1                            ",
+  "button   25  80 2117 2118 1  0  1 ",
+  "button   25 100 2117 2118 1  0  2 ",
+  "button   25 120 2117 2118 1  0  3 ",
+  "text     45  58  500    1         ",
+  "text     45  78  500    2         ",
+  "text     45  98  500    3         ",
+  "text     45 118  500    4         "
+);
+
+var data := array(
+  "Quest Altar  (c) Keelhaul", //0
+  "Shall this altar",          //1
+  "Destroy an obstacle",       //2
+  "Unlock a door/container",   //3
+  "Kill an NPC"                //4
+);
+
+program setupAltar(who, altar)
+  var mode := 0;
+  var current := 0;
+  var targets := array;
+  var items := array;
+
+  if(who.cmdlevel > 1)
+    if(!yesNo(who, "Reconfigure altar?")) return; endif
+    SendSysMessage(who, "Resetting altar configuration...");
+    EraseObjProperty(altar, "mode");
+    EraseObjProperty(altar, "targets");
+    EraseObjProperty(altar, "items");
+
+    // Mode selection
+    var mode := SendDialogGump(who, layout, data);
+    mode := mode[0];
+    case(mode)
+      1:       SendSysMessage(who, "Select obstacle items to be destroyed by the altar (ESC to continue).");
+      2:       SendSysMessage(who, "Select doors or containers to be unlocked by the altar (ESC to continue).");
+      3:       SendSysMessage(who, "Select NPCs to be killed by the altar (ESC to continue).");
+      default: SendSysMessage(who, "No mode selected, aborting.");
+               return;
+    endcase
+
+    // Target selection
+    current := Target(who);
+    while(current)
+      if(current.isa(POLCLASS_MOBILE) && (mode == 1 || mode == 2))
+        SendSysMessage(who, "Target must be an item or container, skipping.");
+      elseif(!current.isa(POLCLASS_MOBILE) && mode == 3)
+        SendSysMessage(who, "Target must be an mobile, skipping.");
+      else
+        current := current.serial;
+        if(current in targets)
+          SendSysMessage(who, "Target already on the list, skipping.");
+        else
+          targets.append(current);
+          SendSysMessage(who, "Target " + targets.size() + " assigned (" + current + ").");
+        endif
+      endif
+      current := Target(who);
+    endwhile
+    if(!targets[1])
+      SendSysMessage(who, "No targets assigned, aborting.");
+      return;
+    endif
+
+    // Item selection
+    SendSysMessage(who, "Select at least one item to be placed on the altar (ESC to continue).");
+    current := Target(who);
+    while(current)
+      if(!current.isa(POLCLASS_MOBILE))
+        current := current.objtype;
+        if(current in items)
+          SendSysMessage(who, "Objtype already on the list, skipping.");
+        else
+          items.append(current);
+          SendSysMessage(who, "Item " + items.size() + " assigned (" + current + ").");
+        endif
+      endif
+      current := Target(who);
+    endwhile
+
+    // Empty array check & finalization
+    if(!items[1])
+      SendSysMessage(who, "No items assigned, aborting.");
+    else
+      SetObjProperty(altar, "items", items);
+      SetObjProperty(altar, "targets", targets);
+      SetObjProperty(altar, "mode", mode);
+      SendSysMessage(who, "Setup complete, altar will be active in a few moments...");
+    endif
+
+  elseif(GetObjProperty(altar, "mode"))
+    SendSysMessage(who, "Place here what is asked of thee.");
+  endif
+endprogram

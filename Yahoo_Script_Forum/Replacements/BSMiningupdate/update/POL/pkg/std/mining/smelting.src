@@ -1,0 +1,78 @@
+////////////////
+// smelting.src
+//
+// Turns normal or colored ore into its respective ingot.
+// Some ores are harder to work with than others.
+//
+// Author: Racalac, 5/8/99
+//
+// Modifications: 
+//     19990525 Syz moved UOBJ_XX definitions to include/objtype.inc
+//
+////////////////
+
+use uo;
+
+include "include/client";
+include "include/objtype";
+
+
+program smelt_that_ore ( character , ore )
+
+    case( ore.objtype )
+        UOBJ_IRON_ORE:          SmeltOre( character , ore , UOBJ_IRON_INGOT , 30 , 10 );
+        UOBJ_BRONZE_ORE:        SmeltOre( character , ore , UOBJ_BRONZE_INGOT , 60 , 20 );
+        UOBJ_COPPER_ORE:        SmeltOre( character , ore , UOBJ_COPPER_INGOT , 63 , 30 );
+        UOBJ_DULLCOPPER_ORE:    SmeltOre( character , ore , UOBJ_DULLCOPPER_INGOT , 65 , 35 );
+        UOBJ_PYRITE_ORE:        SmeltOre( character , ore , UOBJ_PYRITE_INGOT , 70 , 40 );
+        UOBJ_MALACHITE_ORE:     SmeltOre( character , ore , UOBJ_MALACHITE_INGOT , 73 , 43 );
+        UOBJ_RUSTY_ORE:         SmeltOre( character , ore , UOBJ_RUSTY_INGOT , 76 , 49 );
+        UOBJ_ROSE_ORE:          SmeltOre( character , ore , UOBJ_ROSE_INGOT , 77 , 50 );
+        UOBJ_OLDCOPPER_ORE:     SmeltOre( character , ore , UOBJ_OLDCOPPER_INGOT , 78 , 51 );
+        UOBJ_SHADOW_ORE:        SmeltOre( character , ore , UOBJ_SHADOW_INGOT , 79 , 52 );
+        UOBJ_SILVER_ORE:        SmeltOre( character , ore , UOBJ_SILVER_INGOT , 80 , 53 );
+        UOBJ_GOLDM_ORE:         SmeltOre( character , ore , UOBJ_GOLDM_INGOT , 85 , 58 );
+        UOBJ_ONYX_ORE:          SmeltOre( character , ore , UOBJ_ONYX_INGOT , 90 , 63 );
+        UOBJ_AGAPITE_ORE:       SmeltOre( character , ore , UOBJ_AGAPITE_INGOT , 95 , 68 );
+        UOBJ_VALORITE_ORE:      SmeltOre( character , ore , UOBJ_VALORITE_INGOT , 96 , 69 );
+        UOBJ_VERITE_ORE:        SmeltOre( character , ore , UOBJ_VERITE_INGOT , 97 , 70 );
+        UOBJ_MYTHERIL_ORE:      SmeltOre( character , ore , UOBJ_MYTHERIL_INGOT , 98 , 75 );
+        UOBJ_BLOODROCK_ORE:     SmeltOre( character , ore , UOBJ_BLOODROCK_INGOT , 99 , 76 );
+        UOBJ_AZURITE_ORE:       SmeltOre( character , ore , UOBJ_AZURITE_INGOT , 99 , 76 );
+        UOBJ_ROYAL_ORE:         SmeltOre( character , ore , UOBJ_ROYAL_INGOT , 99 , 76 );
+
+        default: SendSysmessage( character , "You can't smelt that." );
+    endcase
+endprogram
+
+
+function SmeltOre( character , ore , ingot , difficulty , points )
+
+	ReserveItem(ore);
+
+    if ( !Accessible( character, ore ) )
+        SendSysmessage( character, "You can't reach that." );
+        return;
+    endif
+
+    Local Near_Items := ListItemsNearLocation(character.x, character.y, character.z,2);
+    foreach forge in Near_Items
+    	if ( ((forge.objtype >= UOBJ_FORGE_START) and (forge.objtype <= UOBJ_FORGE_END)) or (forge.objtype = UOBJ_SMALL_FORGE) )
+
+        	if ( CheckSkill( character, SKILLID_MINING, difficulty, points ) )
+    
+            		local ingots := CreateItemInBackpack( character, ingot, GetAmount( ore ) );
+            		DestroyItem( ore );
+            		SendSysmessage( character, "You create some ingots and place them in your pack." );
+			return;
+		else
+        		SubtractAmount( ore, 1 );
+        		SendSysmessage( character, "You destroy some ore." );
+			return;
+		endif
+    	endif
+    endforeach
+    SendSysmessage( character, "You must be near a forge to smelt ore!" );
+    
+endfunction
+

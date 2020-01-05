@@ -1,0 +1,201 @@
+/////////////////
+// stonemining.src
+//
+// By using a stonepick on cave tile this script allows
+// the harvesting of ore.  You get more stone per dig the higher your
+// skill is. 
+//
+// Author Angreal 2/10/00
+/////////////////
+
+
+use uo;
+use cfgfile;
+use os;
+use util;
+
+include "include/client";
+include "include/objtype";
+include "include/utility";
+include "include/dist";
+
+Const UACTION_PICK := 0x0B;
+
+program use_picktool( character , tool )
+
+    local theroll;
+    local numhacks := 0;
+   
+    SendSysmessage( character , "Select a place to mine." );
+
+    Local use_on := Targetcoordinates( character);
+          if (!use_on)
+             return;
+          endif
+
+    local distt := coordist( character.x, character.y, use_on.x, use_on.y );
+
+          if( distt > 4 )
+             SendSysmessage(character,"That is too far away");
+             return;
+          endif
+
+    local info := GetMapInfo( use_on.x , use_on.y );
+    local tdiff;
+
+    local sx := character.x;
+    local sy := character.y;
+    local sz := character.z;
+
+    repeat
+
+          if (  (is_swamp (info.landtile)) )  //testing for clay
+             SendSysmessage (character, "You can't use that on this!");
+                break;
+          elseif ( (is_sand (info.landtile)) )  //testing for sand
+             SendSysmessage (character, "You can't use that on this!");
+                break;
+          else
+	     if (mineforstone(character,use_on,info))
+                SendSysMessage (character, "You stop mining");
+		break;
+	     endif
+          endif
+
+    SendSysMessage (character, "You start mining");
+
+    local i;
+    local num_chops := randomint(1) + 1;
+    for(i := 1; i <= num_chops; i := i + 1)
+    	performaction(character, UACTION_PICK);
+	PlaySoundEffect(character, SFX_PICK);
+	sleep(1);
+    endfor
+
+    sleep(1);
+
+    numhacks := numhacks +1;
+
+    if ( ( (RandomInt(100)+25 ) < numhacks ) and (CheckSkill(character, SKILLID_MINING, 90,10 )) )
+	do_something(character, tool);
+	break;
+    endif
+
+    until (character.x != sx or character.y = !sy or character.z != sz);
+
+endprogram
+
+function getstuff (character, theroll, location , info)
+
+    local skill := Getskill( character , SKILLID_MINING );
+
+ 
+		local amount := skill/33;
+		local diffi := GetHarvestDifficulty( "stone" , location.x , location.y , info.landtile );
+
+		if( CheckSkill( character, SKILLID_MINING, diffi , 70 ) )
+                        local num := HarvestResource( "stone" , location.x , location.y , 1 , amount );
+                        CreateItemInBackpack(character, UOBJ_STONE_BLOCK, num );
+                        SendSysmessage(character, "You put " + num + " stone blocks in your backpack");
+			performaction(character, UACTION_PICK);
+			PlaySoundEffect(character, SFX_HAMMER); 
+		elseif( !diffi )
+                        SendSysmessage(character, "There is no stone here to mine.");
+			return 1;
+		else
+                        SendSysmessage(character, "You fail to find any stone.");
+		endif
+
+	return 0;   
+   
+endfunction
+
+
+function is_swamp (theobjtype)
+    if (((theobjtype >= 0x240) and (theobjtype <= 0x250)) or ((theobjtype >= 0x3d65) and (theobjtype <= 0x3ef0)))
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+
+function SubtractResourceAmount( use_on, theamount)
+    return;
+endfunction
+
+
+function CheckResourceAmount( location)
+    return randomint(3);
+endfunction
+
+
+function is_minable( theobj , othertype )
+
+    if( ((theobj >= 0xe2) and (theobj <= 0xe7)) or ((theobj >= 0xf3) and (theobj <= 0xf7)) or ((theobj >=
+0x104) and (theobj <= 0x107)) or ((theobj >= 0x110) and (theobj <= 0x113)) or ((theobj >= 0x122) and (theobj <=
+0x125)) or ((theobj >= 0x1d3) and (theobj <= 0x1da)) or ((theobj >= 0x21f) and (theobj <= 0x230)) or
+((theobj >= 0x232) and (theobj <= 0x23B)) or ((theobj >= 0x6cd) and (theobj <=0x6d1)) or ((theobj >= 0x6da) and
+(theobj <= 0x6dd)) or ((theobj >= 0x6eb) and (theobj <= 0x6fe)) or ((theobj >= 0x70d) and (theobj <= 0x714)) or
+((theobj >= 0x71d) and (theobj <= 0x720)) or ((theobj >= 0x72b) and (theobj <= 0x732)) or ((theobj >= 0x73b) and
+(theobj <= 0x73e)) or ((theobj >= 0x749) and (theobj <= 0x750)) or ((theobj >= 0x759) and (theobj <= 0x75c)) )
+        return 1;
+    elseif( (othertype >= 0x053b) and (othertype <= 0x0553) and (othertype != 0x0550 ) )
+        return 1;
+    elseif( (theobj = 0xDF) or (theobj = 0x75) or (theobj = 0xDE) )
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+function is_sand(theobj)
+
+if ((theobj >= 0x0016  ) and (theobj <=  0x004b  ) or  (theobj >= 0x011e  ) and (theobj <= 0x012d   ) or
+         (theobj >=  0x0192 ) and (theobj <= 0x01ab   ) or  (theobj >= 0x01b9  ) and (theobj <= 0x01d1   ) or
+         (theobj >= 0x0282  ) and (theobj <=  0x0291  ) or  (theobj >= 0x03b7  ) and (theobj <=  0x03ca  ) or
+         (theobj >= 0x064b  ) and (theobj <= 0x0672   ) )
+
+        return 1;
+else
+        return 0;
+endif
+
+endfunction
+
+function mineforstone(character,use_on,info)
+    
+    if ( CheckSkill( character, SKILLID_MINING, -1 , 30 ) )
+        local theroll := randomint(100) + 1;
+        return GetStuff(character,theroll, use_on , info); 
+    else
+        SendSysmessage(character, "You fail to find anything usable");
+        return;
+    endif
+
+endfunction
+
+function do_something(character, tool )
+
+	local tnum := RandomInt(5);
+	local it;
+	case (tnum)
+
+        0: it := createnpcfromtemplate("earthelemental", character.x -1 , character.y, character.z);
+		if (!it.errortext)
+                	SendSysmessage(character, "You attract the attention of an earth elemental");
+           	endif
+        1: it := createnpcfromtemplate("slime", character.x -1, character.y, character.z);
+		if (!it.errortext)
+			SendSysmessage(character, "A slime oozes over to see what you're doing");  
+		endif
+        2: it := CreateIteminContainer(character.backpack,0x6003,1);
+		SendSysMessage(character,"You discover a tattered old map!");
+        3:  it := CreateIteminContainer(character.backpack,0x0F25,1);
+		sendsysmessage(character, "You find a chunk of fossilized sap!");
+        4:  	sendsysmessage(character, "Oh no your tool breaks!");
+		DestroyItem (tool);
+
+	endcase
+
+endfunction

@@ -1,0 +1,91 @@
+include "include/modules";
+include "include/coreconstants";
+include "include/client";
+include "include/attributes";
+
+program tame( character )
+    var conf := ReadConfigFile("::npcdesc");
+    var elem;
+    var timer := 0;
+    var points := 0;
+
+    SendSysMessage( character, "You begin recruiting troops" );
+    var thecreature  := ListMobilesInLineOfSight(character,15);
+    if (!thecreature)
+        SendSysMessage(character, "There are no troops nearby.");
+        return;
+    endif
+   
+    elem := FindConfigElem(conf, thecreature.npctemplate);
+    if (!elem)
+        SendSysMessage(character, "Some creatures do not listen!");
+        return;
+    endif
+    var difficulty := CInt(GetConfigInt(elem, "recruitskill"));
+    points := (difficulty*2);
+
+    if (!difficulty)
+        SendSysMessage(character, "They are not interested in joining an army!");
+        return;
+    endif
+
+    if (thecreature.script == "legion")
+        SendSysMessage(character, "That creature is commanded by another.");
+        return;
+    endif
+
+    if ( GetIntelligence(character)  < difficulty )
+        SendSysMessage(character, " None of these troops are impressed!");
+        return;
+    endif
+   
+     var thename := get_name(thecreature.name);
+   
+    PrintTextAbove(character, "You " + thename + "s should join my legion" );
+    sleep(3);
+    PrintTextAbove(character, "Under my leadership we can conquer anything! ");
+    sleep(3);
+       
+   
+    if (GetIntelligence(character)  > (RandomInt(points)))
+        SendSysMessage(character, "You have recruited a soldier" );
+        SetObjProperty(thecreature, "master", character.serial);
+        SetObjProperty(thecreature,"script",thecreature.script);
+        thecreature.script := "legion";
+        RestartScript(thecreature);
+    else
+        SendSysMessage(character, "You failed to recruit a creature.");
+        var chance := RandomInt( 100 ) + 1;
+        if( GetIntelligence(character) <= chance )
+           SendSysMessage( character, "And have made the soldier unresponsive to recruiting." );
+           SetObjProperty( thecreature, "tametimer", (ReadGameClock() + 300) );
+        endif
+    endif
+endprogram
+
+
+function get_name(thename)
+
+    if (find(thename, "an ",1) == 1)
+        var i;
+        var tempname;
+
+        tempname := thename[4,len(thename)];
+        return tempname;
+    elseif (find(thename, "a ",1) == 1)
+        var i;
+        var tempname;
+
+        tempname := thename[3,len(thename)];
+        return tempname;
+    else
+        return thename;
+    endif
+
+endfunction       
+
+
+
+
+
+

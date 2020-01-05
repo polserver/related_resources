@@ -1,0 +1,176 @@
+use uo;
+use os;
+use util;
+
+include "include/client";
+
+var layout := {
+    "page 0",
+    "resizepic 30 30 3000 280 200",
+    "button 50 70 2104 2103 1 0 1001",
+    "button 50 90 2104 2103 1 0 1002",
+    "button 50 110 2104 2103 1 0 1003",
+    "button 50 130 2104 2103 1 0 1004",
+    "button 50 150 2104 2103 1 0 1005",
+    "button 50 170 2104 2103 1 0 1006",
+    "text 50 42 35 0",
+    "text 70 65 35 1",
+    "text 70 85 35 2",
+    "text 70 105 35 3",
+    "text 70 125 35 4",
+    "text 70 145 35 5",
+    "text 70 165 35 6",
+    "button 141 195 2119 2120 1 0 1"
+};
+
+var data := 
+{
+    "           Select spell:",
+    "Darkness  ....................  0 charges",
+    "Raise Dead  ..........................  1",
+    "Kill  ..........................................  2",
+    "Summon Daemon  ..............  5",
+    "Summon Spirits  ..............  7",
+    "Retributive Strike  .......  all"
+};
+
+var Options := "NOREGS NODELAY NOMANA NOSKILL";
+
+program use_ebonstaff(who, staff)
+    
+	local charges := cint( GetObjProperty(staff, "charges") );
+	if (charges = 0)
+		SendSysMessage(who, "Nothing happens.");
+		return;
+	endif
+
+	var res := SendDialogGump( who, layout, data );             
+
+	if ( (res[0]=0) or (res[0]=1) )
+		SendSysMessage(who, "Cancelled.");
+		return;
+	endif
+    
+	local Selection := res[0];
+
+	if (Selection = 1001)
+		SetObjProperty(who, "NecroOpts", Options);
+		Set_Critical(1);
+		Detach();
+		StartSpellEFfect(who, 78);
+		return;
+
+	endif
+	if (Selection = 1002)
+		charges := charges - 1;
+		SetObjProperty(staff, "charges", CStr(charges) );
+		SetObjProperty(who, "NecroOpts", Options);
+		Set_Critical(1);
+		Detach();
+		StartSpellEFfect(who, 71);
+		return;
+	endif
+
+	if (Selection = 1003)
+		if (charges < 2)
+			SendSysMessage(who, "Insufficient charges.");
+			return;
+		endif
+
+		charges := charges - 2;
+		SetObjProperty(staff, "charges", CStr(charges) );
+		SetObjProperty(who, "NecroOpts", Options);
+		Set_Critical(1);
+		Detach();
+		StartSpellEFfect(who, 70);
+		return;
+	endif
+	if (Selection = 1004)
+		if (charges < 5)
+			SendSysMessage(who, "Insufficient charges.");
+			return;
+		endif
+
+		charges := charges - 5;
+		SetObjProperty(staff, "charges", CStr(charges) );
+		Set_Critical(1);
+		Detach();
+		SpeakPowerWords(who, 61);
+		StartSpellEFfect(who, 61);
+		return;
+	
+	endif
+	if (Selection = 1005)
+		if (charges < 7)
+			SendSysMessage(who, "Insufficient charges.");
+			return;
+		endif
+
+		charges := charges - 7;
+		SetObjProperty(staff, "charges", CStr(charges) );
+		SetObjProperty(who, "NecroOpts", Options);
+		Set_Critical(1);
+		Detach();
+		StartSpellEFfect(who, 74);
+		return;
+	endif
+	if (Selection = 1006)
+		local mobile, damagedie, damaged, i;
+		
+		damagedie := "20d10";
+		foreach mobile in ListMobilesNearLocation(who.x, who.y, who.z, charges)
+			if ( (mobile.dead = 0) and (mobile.serial != who.serial) )
+				damaged := RandomDiceRoll(damagedie);
+				ApplyRawDamage(mobile, damaged);
+				PlaySoundEffect(mobile, SFX_SPELL_EXPLOSION);
+				PlayObjectCenteredEffect(mobile, FX_EXPLODE_3, 7, 0x10);
+			endif
+		endforeach	
+		Print("1");	
+
+		charges := Cint(charges/2);
+		damagedie := Cstr(charges) + "d4";
+
+		foreach mobile in ListMobilesNearLocation(who.x, who.y, who.z, charges)
+			if ( (mobile.dead = 0) and (mobile.serial != who.serial) )
+				damaged := RandomDiceRoll(damagedie);
+				ApplyRawDamage(mobile, damaged);
+				PlaySoundEffect(mobile, SFX_SPELL_EXPLOSION);
+				PlayObjectCenteredEffect(mobile, FX_EXPLODE_3, 7, 0x10);
+			endif
+		endforeach		
+		Print("2");
+
+		charges := Cint(charges/2);
+		damagedie := Cstr(charges) + "d8";
+
+		foreach mobile in ListMobilesNearLocation(who.x, who.y, who.z, charges)
+			if ( (mobile.dead = 0) and (mobile.serial != who.serial) )
+				damaged := RandomDiceRoll(damagedie);
+				ApplyRawDamage(mobile, damaged);
+				PlaySoundEffect(mobile, SFX_SPELL_EXPLOSION);
+				PlayObjectCenteredEffect(mobile, FX_EXPLODE_3, 7, 0x10);
+			endif
+		endforeach		
+
+		foreach mobile in ListMobilesNearLocation(who.x, who.y, who.z, 2)
+			if ( (mobile.dead = 0) and (mobile.serial != who.serial) )
+				ApplyRawDamage(mobile, mobile.hp + 3);
+				PlaySoundEffect(mobile, SFX_SPELL_EXPLOSION);
+				PlayObjectCenteredEffect(mobile, FX_EXPLODE_3, 7, 0x10);
+			endif
+		endforeach		
+
+		destroyitem(staff);
+
+		foreach i in ListEquippedItems(who)
+			DestroyItem(i);
+		endforeach
+
+		who.setstr(10);
+		who.setdex(10);
+		ApplyRawDamage(who, who.hp + 3);
+
+		return;
+	endif
+endprogram

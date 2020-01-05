@@ -1,0 +1,15 @@
+use uo;
+use os;
+include "include/convert";
+program mildtoxin(parms)
+	syslog("Hey, I'm in medium toxin!");
+	local who := parms[1];
+	syslog("Who is " + who.name);
+	while(1)
+		sendsysmessage(who, "You're taking poison damage!");
+		lowerstam(who, 2);
+		applyrawdamage(who,3);
+		sleep(1);
+	endwhile
+endprogram
+		

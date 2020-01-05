@@ -1,0 +1,85 @@
+include "include/modules";
+include "include/gumps";
+include "include/math";
+include "include/output";
+
+var npc_cfg := ReadConfigFile( "npcdesc" );
+var cfg_keys := GetConfigStringKeys( npc_cfg );
+var i, j, k, num_sets;
+
+program textcmd_createnpc( who, template )
+	if( !template )
+		template := DoGump( who );
+		if( !template )
+			return;
+		endif
+	endif
+	var props := {};
+	props.+facing := who.facing;
+	var loc := TargetCoordinates(who);
+	var result := CreateNpcFromTemplate( template, loc.x, loc.y, loc.z, props );
+	if( !result )
+		SendSysMessage( who, "NPC Creation Failed: " + result.errortext );
+	endif
+endprogram
+
+function DoGump( who )
+	for( i := len(cfg_keys); i >= 1; i := i - 1 )
+		if( CInt( cfg_keys[i] ) )
+			cfg_keys.erase(i);
+		endif
+	endfor
+	num_sets := len(cfg_keys);
+	GFSetRef( 20, 20 );
+	GFPage( 0 );
+	GFNoDispose();
+	GFResizePic( 0, 0, BKGND_GOLDTRIM, 550, 405 );
+	GFTextMid( 0, 10, 550, 4, "Choose a template to use" );
+	fill_in_pages();
+	var res := GFSendGump( who );
+	if( res[0] == 0 )
+		return 0;
+	endif
+	if( !npc_cfg[cfg_keys[res[0]-1024]] )
+		SendSysMessage(who, "Invalid template!");
+		return;
+	endif
+	return cfg_keys[res[0]-1024];
+endfunction
+
+function fill_in_pages()
+	var x_start := 25, y_start := 10;
+	var num_pages := CInt( CInt(num_sets/60) + 1 );
+	for( i := 1; i <= num_pages; i := i + 1 )
+		GFPage( i );
+		for( j := 1; j <= num_pages; j := j + 1 )
+			if( Mod( j, 2 ) )
+				GFTextLine( -40 + (CInt(j/2)+1) * 76, 350, 4, "Page " + j );
+				if( i != j )
+					GFButtonPage( -56 + (CInt(j/2)+1) * 76, 354, 0x3, 0x4, j );
+				endif
+			else
+				GFTextLine( -40 + CInt(j/2) * 76, 370, 4, "Page " + j );
+				if( i != j )
+					GFButtonPage( -56 + CInt(j/2) * 76, 374, 0x3, 0x4, j );
+				endif
+			endif
+		endfor
+		var num_cols := CInt( CInt( (num_sets-(i-1)*60)/20 ) + 1 );
+		if( num_cols > 3 )
+			num_cols := 3;
+		endif
+		for( j := 1; j <= num_cols; j := j + 1 )
+			var last_set := CInt( num_sets - (i-1)*60 - (j-1)*20 );
+			if( last_set > 20 )
+				last_set := 20;
+			endif
+			for( k := 1; k <= last_set; k := k + 1 )
+				var new_x := x_start + (j-1)*180;
+				var new_y := y_start + (k*16);
+				GFTextLine( new_x, new_y, 8, cfg_keys[k+(j-1)*20+(i-1)*60] );
+				GFButtonID( new_x - 16, new_y + 4, 0x4B9, 0x4BA, 1 );
+			endfor
+		endfor
+	endfor
+endfunction

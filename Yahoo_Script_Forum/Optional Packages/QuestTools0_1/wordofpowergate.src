@@ -1,0 +1,51 @@
+// wordofpowergate control script
+//
+// This script controls the operation for "words of power" gates.  The
+// gates remain in place until a player speaks the appropriate words
+// of power.  They will then "disappear" for 10 seconds, and then
+// reappear.  In case of a crash, the gate will store it's old pic in
+// memory, so when the server restarts the gate will return to normal.
+
+Use os;
+Use uo;
+
+include "include/eventid";
+
+program wordofpowergate(me)
+
+	local Old := GetObjProperty(me, "Old");
+	if (Old)
+		me.graphic := Old;
+		EraseObjProperty(me, "Old");
+	endif
+
+	local wordofpower := GetObjProperty(me, "WordOfPower");
+
+	RegisterForSpeechEvents(me, 5);
+	EnableEvents(EVID_SPEECH,5);
+	local ev;
+
+	while (1)
+        	ev := os::wait_for_event( 5 );
+
+	        if (ev)
+	        	case (ev.type)
+				EVID_SPEECH:
+					wordofpower := GetObjProperty(me, "WordOfPower");
+                			if (ev.text[wordofpower]);
+						DisableEvents(EVID_SPEECH);
+						PlaySoundEffect(me, 0x002a);
+						local oldgraphic := me.graphic;
+						SetObjProperty(me, "Old", me.graphic);
+						me.graphic := 0x0001;
+                				sleep (10);
+						me.graphic := oldgraphic;
+						EraseObjProperty(me, "Old");
+						PlaySoundEffect(me, 0x002a);
+						EnableEvents(EVID_SPEECH,5);
+					endif
+			endcase
+		endif
+	endwhile
+
+endprogram

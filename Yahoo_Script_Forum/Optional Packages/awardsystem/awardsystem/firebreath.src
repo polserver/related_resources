@@ -1,0 +1,46 @@
+use uo;
+use os;
+
+include "/include/client";
+include "include/advcheckskill";
+
+program firebreath( param)
+  var who;
+  var clean := 0;
+  if( len( param))
+    who := param[1];
+    clean := param[2];
+  else
+    who := param;
+  endif
+  
+  if( clean)
+    return 1;
+  endif
+  
+  if( who.dead)
+    return 0;
+  endif
+  
+  SendSysMessage( who, "Select target to attack?" );
+  
+  var targ := Target( who );
+  if( !targ.maxhp)
+    SendSysMessage( who, "This isnt a creature");
+    return;
+  endif
+  if( targ == who)
+    return;
+  endif
+
+  var tacticskill := GetAttribute( who, SKILLID_TACTICS);
+  var str := who.strength;
+  var dam := CInt( (tacticskill + str)/4);
+  
+  if( !AdvCheckSkill(who, SKILLID_TACTICS, -1, 100))
+    dam := CInt( dam/2);
+  endif
+  
+  PlayMovingEffect( who, targ, FX_FIREBALL, 10, 1, 1);
+  ApplyDamage( targ, dam);
+endprogram

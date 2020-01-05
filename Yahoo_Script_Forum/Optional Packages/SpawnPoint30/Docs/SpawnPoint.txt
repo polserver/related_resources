@@ -1,0 +1,64 @@
+SpawnPoint v0.3
+===============
+Written by: GM Mercy, mkow@sympatico.ca
+
+Spawn point allows you to create specific spawns.  It is very much like SpawnNet,
+except that it is more efficient by using events instead of polling.
+
+HISTORY
+=======
+0.3	- Changed default frequency from 1 min to 5 min, seems bug free... :)
+0.2 - Added VerifyPointSpawns() that checks for invalid serials and removes them so that
+	things can keep spawning in case of problems.  This happens every 5 minutes by default.
+	- Fixed a problem with the HrStart and HrEnd comparisons.
+	- Npcs are despawned if they exist outside the HrStart and HrEnd.
+	- Added new event on point config change, SpawnPointManager is more efficient now.
+0.1 - Initial release.
+
+INSTALLATION
+============
+Drop into pkg/std.
+
+Go through the scripts in the ScriptIncludes directory and cut and paste or copy the whole script to your own
+include dir.
+
+**WARNING**
+Remember that just copying may break some of your existing scripts, since some of these files
+have been customized by me.  You have been warned!!
+
+In death.src add:
+------<cut>----------
+include "../pkg/std/SpawnPoint/SpawnPoint";
+SpawnPointDeath(corpse);
+------<cut>----------
+
+In your AI scripts you must set a CProp called AiSerial on the mobile.  This is requied
+so that the corpse contains the serial of the critter that died (CProps are copied to the
+corpse on death).  If you don't do this, the package will still work, but it will not be
+as efficient because it will have to validate all serials every 5 minutes, unless you change
+the interval const in SpawnPoint.inc.  I suggest adding the AiSerial CProp.
+
+EXPIRY
+======
+You can set the amount of time in minutes until the SpawnPoint destroys itself.  This
+is very useful for temporary spawn points.  It frees you from having to destroy spawn
+points manually when you know you will not need them after a period of time.  You can also
+set the amount of spawns before point expires.  Disabled runes do not destroy themselves
+after time is up, they will have to be re-enabled.
+
+HRSTART & HREND
+===============
+The hours between which the NPC will spawn.  Remember that time is listed in 24 hr format,
+1 being 1am and 24 being 12am.  If you specify both of the parameters as 0, then no time checking
+will be done (this is the default).  NPCs are killed automatically if they exist during a time
+period when the point does not spawn.  Allows you to have certain NPCs only exist at certain times.
+
+EVENTS
+======
+Add these events to your eventid.inc.  Assign non-conflicting event IDs to them.
+//	EVID_SPAWNPOINT_CREATED
+// 	EVID_SPAWNPOINT_DESTROYED
+//	EVID_SPAWN_DEATH			Used from the death.src script.
+
+
+

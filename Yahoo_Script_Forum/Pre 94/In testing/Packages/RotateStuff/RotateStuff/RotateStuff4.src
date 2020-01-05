@@ -1,0 +1,14 @@
+use uo;
+
+program RotateStuff4( who, Item )
+	if( Item.movable = 0)
+		sendsysmessage( who, "That item is locked down" );
+		return;
+	endif
+	Item.graphic := Item.graphic - Item.facing;
+	Item.facing := Item.facing + 1;
+	if( Item.facing >= 4 )
+		Item.facing := 0;
+	endif
+	Item.graphic := Item.graphic + Item.facing;
+endprogram

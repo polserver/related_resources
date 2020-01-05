@@ -1,0 +1,36 @@
+// USE: .make ITEM(in hex or dec) #(number)
+// By Stardog castilhos@pro.via-rs.com.br
+// UIN:30259361
+use os;
+use uo;
+
+program makefloor( who, text )
+local params := SplitWords( text );	
+local objtype := params[1];    	
+local n := CInt( params[2] ); //amount
+	
+if (CInt(objtype))
+            objtype := CInt(objtype);
+        endif
+
+        if (!n)
+            n := 1;
+        endif
+
+    local xdiff := 0, ydiff := 0;
+    if (who.facing = 2)
+        xdiff := 1;
+    elseif (who.facing = 4)
+        ydiff := 1;
+    elseif (who.facing = 6)
+        xdiff := -1;
+    elseif (who.facing = 0)
+        ydiff := -1;
+    endif
+
+    local i;
+    for( i := 1; i <= n; i := i + 1 )
+        CreateItemAtLocation( who.x + i*xdiff, who.y + i*ydiff, who.z, objtype, 1 );
+   endfor
+SendSysMessage( who, "Ok. It's done!" );
+endprogram

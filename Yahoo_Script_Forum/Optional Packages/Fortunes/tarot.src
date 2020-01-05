@@ -1,0 +1,123 @@
+/////////////////////////////////////////////////////////
+//						       //
+// Fortune telling script which picks a random fortune //
+//      used in conjunction with a crystal ball.       //
+//						       //
+// 		GM Basara - April 22 2001	       //
+//						       //
+/////////////////////////////////////////////////////////
+
+use uo;
+use util;
+use os;
+
+program tarot(who, item)
+	if (GetObjProperty(item, "inuse") = 1)
+		SendSysMessage(who, "The spirits can only tell one future at a time!.");
+		return;
+	endif
+SendSysMessage (who, "Whom do you wish to read the future of?");
+local tgt := Target(who);
+
+	if(!tgt)
+		SendSysMessage(who, "Cancelled");
+		return;
+	elseif (tgt == who)
+	SendSysMessage(who, "You can't tell your own future!");
+		return;
+	elseif (distance(tgt, item) > 2)
+		SendSysMessage(who, tgt.name + " is too far away for the ritual to work");
+		return;
+	elseif (distance(who, item) > 2)
+		SendSysMessage(who, "You are not near enough to perform the ritual");
+		return;
+	elseif (tgt.graphic == 400 || tgt.graphic == 401)
+	else
+	SendSysMessage(who, "You cannot tell the future of that");
+	return;
+	detach();
+endif
+
+	SetObjProperty(item, "inuse", 1);
+	PrintTextAbove(who, "*" + who.name + " shuffles the cards*");
+	if (item.graphic = 0x12ac);
+	var i;
+	for (i:=1; i<=4; i:=i+1)
+	(item.graphic := 0x12aa);
+	Sleep(1);
+	(item.graphic := 0x12ac);
+	Sleep(1);
+	endfor
+
+elseif (item.graphic = 0x12ab);
+	var i;
+	for (i:=1; i<=4; i:=i+1)
+	(item.graphic := 0x12a9);
+	Sleep(1);
+	(item.graphic := 0x12ab);
+	Sleep(1);
+	endfor
+endif
+    Sleep(2);
+    PrintTextAbove(who, "*" + who.name + " deals the cards and begins reading " + tgt.name + "'s future*" );
+    	if( item.graphic = 0x12ac )
+		item.graphic := 0x12a6;
+    	endif
+    	if( item.graphic = 0x12ab )
+		item.graphic := 0x12a5;
+   	endif
+	Sleep(6);
+	if( item.graphic = 0x12a6 )
+		item.graphic := 0x12a7;
+    	endif
+    	if( item.graphic = 0x12a5 )
+		item.graphic := 0x12a8;
+    	endif
+   	Sleep(6);
+	readcards( who );
+	Sleep(16);
+	PrintTextAbove(item, "*" + who.name + " gathers the cards back up.");
+	if( item.graphic = 0x12a7 )
+		item.graphic := 0x12a6;
+	endif
+	if( item.graphic = 0x12a8 )
+		item.graphic := 0x12a5;
+	endif
+	Sleep(3);
+	if( item.graphic = 0x12a6 )
+		item.graphic := 0x12aa;
+	endif
+	if( item.graphic = 0x12a5 )
+		item.graphic := 0x12a9;
+	endif
+	Sleep(3);
+	if( item.graphic = 0x12aa )
+		item.graphic := 0x12ac;
+	endif
+	if( item.graphic = 0x12a9 )
+		item.graphic := 0x12ab;
+	endif
+	    
+    EraseObjProperty(item, "inuse");
+
+endprogram
+
+function readcards( who )
+     local randy    := RandomInt(12);
+     
+     case( randy )
+          0: PrintTextAbove( who, "The future is unclear at this time, ask again later...", 3, 38);
+          1: PrintTextAbove( who, "The future does not bode well for you, I cannot say more.", 3, 38);
+          2: PrintTextAbove( who, "Beware of those closest to you, for they will betray you!", 3, 38);
+          3: PrintTextAbove( who, "I suggest you keep your friends close and your enemies closer.", 3, 38);
+          4: PrintTextAbove( who, "The future's bright, the future's, um, *coughs* orange?.", 3, 38);
+          5: PrintTextAbove( who, "What goes around, comes around.  You will get what you deserve soon enough!", 3, 38);
+          6: PrintTextAbove( who, "You will find happiness with a new love.", 3, 38);
+          7: PrintTextAbove( who, "Do not be quick to refuse a favor.", 3, 38);
+          8: PrintTextAbove( who, "Think before you speak, you never know who might be listening.", 3, 38);  
+          9: PrintTextAbove( who, "Leave the GM's alone for they are mightily sick of all your whingeing.", 3, 38);
+          10: PrintTextAbove( who, "Beware, your love has eyes for another.", 3, 38);
+          11: PrintTextAbove( who, "Mighty dragons shall fall before the wrath of your blade.", 3, 38);
+endcase
+endfunction
+

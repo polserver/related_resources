@@ -1,0 +1,1468 @@
+//////////////////////////////////////////////////////////////////////
+//
+//   SpawnNet Script v0.95b (2000/10/22)
+//
+//     based on SpawnNet v0.95b
+//       Author: Louds
+//       eMail : louds.geo@yahoo.com
+//
+//     Author: Shinigami
+//     eMail : Shinigami@gmx.net
+//
+//   Modifications:
+//     2000/10/19 Shinigami: ReWrite
+//     2001/11/21 Shinigami: GetSpawnZ - Spawnen nun auch auf Etagen
+//     2001/12/02 Shinigami: Bugfixing bzgl. Fehlererkennung
+//     2002/01/01 Shinigami: Objekt-Erzeugung neugeschrieben
+//
+//////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+//
+//  Version 0.9.5b  Test
+//  Creator: Louds
+//  Contact: louds.geo@yahoo.com
+//  Spawnnet.src: Core script of the system, control all runes and create all
+//                NPCs or items.
+//  what's new:
+//  0.6: Blaize's new gump (that's way better than the old one)
+//       Spawns can be anchored to the rune (Blaize)
+//       Note field on the runes (Blaize)
+//       Optimized a lot the spawn core (Louds)
+//       Lots of commands (Louds and Blaize)
+//  0.7: New template structure (anchor out, flags in)
+//       Basic support to item spawn
+//       Basic support to container spawn
+//       Quest spawn only added skel, not working
+//       Huge code sintax clean up
+//       New rune gump features
+//       Huge code checking added to rune script
+//       Few bug fixes, hope the overspawn bug is gone
+//       Conversion cmd and a few other
+//       Few features are not working fine as I wanted, coming ver 0.8
+//  0.8: Bug fixing and code tweaking.
+//  0.9: New code structure, some bug fixes
+//  0.9.1: huge code speed-up(75%)
+//         support for itemgroup
+//         revamped item spawn
+//         support for item in container spawn
+//         container spawn redesigned
+//         needs a huge work on sspawn
+//         anchoring percentage and other options to be implemented
+//  0.9.2: new desing for item and container spawn new implementation done
+//         start-up changed, now needs some debugging
+//  0.9.3: now npc creation is 100%
+//         some config features implemented
+//         sspawnr.src changed
+//  0.9.4: last test release, can be thought as A candidate release
+//     containers now decay
+//     some problems with container spawn fixed, small speed up
+//     few small fixed and some bug prone code changed
+//     other small random changes
+//     dspawnr now handle all rune tipes
+//  0.9.5: more fixes and a small speed up
+//     container spawn fix
+//
+///////////////////////////////////////////////////////////////////////////////
+
+//////////////
+// Libraries
+//////////////
+
+Use uo;
+Use os;
+Use util;
+Use cfgfile;
+
+/////////////
+// Includes
+/////////////
+
+Include "spawnnet";
+Include "include/starteqp";
+
+//////////////
+// Constants
+//////////////
+
+Const MsgLanguage:=0; // 1=German, 0=English
+
+Const SPAWNNET_PRIORITY:=30;
+Const MAXSPAWNPERCYCLE_DEFAULT:=5;
+Const CHAOS_EFFECT_CHANGE_DEFAULT:=5;
+Const CONTAINER_TRAP_CHANGE_DEFAULT:=10;
+Const MAX_CREATE_TRYES_DEFAULT:=4;
+Const START_OPT_DEFAULT:=0;
+Const SECS_PER_CYCLE_DEFAULT:=60;
+Const CYCLE_TIME_DIVIDER_DEFAULT:=1;
+
+Const TYPE_NPC:=1;
+Const TYPE_ITEM:=2;
+Const TYPE_CONTAINER:=3;
+
+/////////////////////
+// Global Variables
+/////////////////////
+//
+// cfg    - Reference to "groups.cfg"
+// icfg   - Reference to "igroups.cfg"
+// ccfg   - Reference to "cgroups.cfg"
+// config - Reference to Config-Elem in "config.cfg"
+//
+// maxspawnpercycle      - Configvalue
+// chaos_effect_chance   - Configvalue
+// container_trap_chance - Configvalue
+// max_create_tryes      - Configvalue
+// start_opt             - Configvalue
+// secs_per_cycle        - Configvalue
+// cycle_time_divider    - Configvalue
+//
+// forbidden_items - Verbotene Items
+//
+// spawnnet   -
+// queue      - Array, welches den Zeitplan enthaelt. jedes element ist ein array mit alle abzuarbeitenden Runen
+// serial     - Array, welches fuer jede Rune die Serial der Rune enthaelt -> SetRune
+// x          - Array, welches fuer jede Rune die X-Koordinate der Rune enthaelt (ist ein Indikator fuer Existenz der Rune) -> SetRune
+// y          - Array, welches fuer jede Rune die Y-Koordinate der Rune enthaelt -> SetRune
+// z          - Array, welches fuer jede Rune die Z-Koordinate der Rune enthaelt -> SetRune
+// templateb  - Array, welches fuer jede Rune CProp "Template" enthaelt ('ne Zahl / wenn die Rune Typ=1 ist, dann enthaelt es alle "Spawn" gemaess dem Template in der groups.cfg) -> SetRune
+// mintime    - Array, welches fuer jede Rune CProp "MinTime" enthaelt           -> SetRune
+// maxtime    - Array, welches fuer jede Rune CProp "MaxTime" enthaelt           -> SetRune
+// range      - Array, welches fuer jede Rune CProp "Range" enthaelt             -> SetRune
+// maxamount  - Array, welches fuer jede Rune CProp "MaxAmount" enthaelt (max. Anzahl NPCs) -> SetRune
+// aux        - Array, welches fuer jede Rune CProp "Aux" enthaelt, jedoch fuer
+//              ContainerSpawnRunen die Seriennummer des Containers -> SetRune
+// type       - Array, welches fuer jede Rune das 1. Nibble der CProp "Flags" enthaelt (Runentyp) -> SetRune
+// flags      - Array, welches fuer jede Rune das 2. Nibble der CProp "Flags" enthaelt (???) -> SetRune
+// amountnum  - Array, welches fuer jede Rune das 3. Nibble der CProp "Flags" enthaelt (??? min. 1) -> SetRune
+// amount     - Array, welches fuer jede Rune die Anzahl der gefundenen NPCs enthaelt
+
+// Groups.cfg einlesen, ggf. cachen
+
+Global cfg:=ReadConfigFile("groups");
+If (!cfg)
+  If (MsgLanguage)
+    SysLog("SpawnNet: Kann die Datei 'groups.cfg' nicht oeffnen!");
+  Else
+    SysLog("SpawnNet: Can't open file 'groups.cfg'!");
+  EndIf
+
+  Return;
+EndIf
+//Cache(cfg);
+//UnloadConfigFile("groups");
+
+// iGroups.cfg einlesen, ggf. cachen
+
+Global icfg:=ReadConfigFile("igroups");
+If (!icfg)
+  If (MsgLanguage)
+    SysLog("SpawnNet: Kann die Datei 'igroups.cfg' nicht oeffnen!");
+  Else
+    SysLog("SpawnNet: Can't open file 'igroups.cfg'!");
+  EndIf
+
+  Return;
+EndIf
+//Cache(icfg);
+//UnloadConfigFile("igroups");
+
+// cGroups.cfg einlesen, ggf. cachen
+
+Global ccfg:=ReadConfigFile("cgroups");
+If (!ccfg)
+  If (MsgLanguage)
+    SysLog("SpawnNet: Kann die Datei 'cgroups.cfg' nicht oeffnen!");
+  Else
+    SysLog("SpawnNet: Can't open file 'cgroups.cfg'!");
+  EndIf
+
+  Return;
+EndIf
+//Cache(ccfg);
+//UnloadConfigFile("cgroups");
+
+// Konfigurationsdaten aus der Config.cfg einlesen
+
+Global config:=ReadConfigFile("config");
+If (config)
+  config:=FindConfigElem(config, 1);
+  If (!config)
+    If (MsgLanguage)
+      SysLog("SpawnNet: Kann 'config' nicht in 'config.cfg' finden!");
+    Else
+      SysLog("SpawnNet: Can't find key 'config' in file 'config.cfg'!");
+    EndIf
+
+    Return;
+  EndIf
+Else
+  If (MsgLanguage)
+    SysLog("SpawnNet: Kann die Datei 'config.cfg' nicht oeffnen!");
+  Else
+    SysLog("SpawnNet: Can't open file 'config.cfg'!");
+  EndIf
+
+  Return;
+EndIf
+
+Global maxspawnpercycle:=GetIntValue(config.maxspawnpercycle, MAXSPAWNPERCYCLE_DEFAULT);
+Global chaos_effect_change:=GetIntValue(config.chaoseffectchance, CHAOS_EFFECT_CHANGE_DEFAULT);
+Global container_trap_change:=GetIntValue(config.trapchance, CONTAINER_TRAP_CHANGE_DEFAULT);
+Global max_create_tryes:=GetIntValue(config.maxtryes, MAX_CREATE_TRYES_DEFAULT);
+Global start_opt:=GetIntValue(config.faststart, START_OPT_DEFAULT);
+Global secs_per_cycle:=GetIntValue(config.secs_per_cycle, SECS_PER_CYCLE_DEFAULT);
+Global cycle_time_divider:=CInt(config.cycle_time_divider);
+If ((!cycle_time_divider) Or (cycle_time_divider<1))
+  cycle_time_divider:=CYCLE_TIME_DIVIDER_DEFAULT;
+EndIf
+
+UnloadConfigFile("config");
+
+// Verbotene Items definieren
+
+Global forbidden_items:={0xa300, 0xa350, 0xa340};
+
+// Hauptvariablen deklarieren
+
+Global queue:={ };
+Global templateb:={ };
+Global x:={ };
+Global y:={ };
+Global z:={ };
+Global mintime:={ };
+Global maxtime:={ };
+Global range:={ };
+Global maxamount:={ };
+Global amount:={ };
+Global type:={ };
+Global flags:={ };
+Global amountnum:={ };
+Global serial:={ };
+Global aux:={ };
+
+////////////////
+// Mainprogram
+////////////////
+
+Program SpawnNet()
+  If (MsgLanguage)
+    BroadCast("SpawnNet wird aktiviert...");
+    SysLog("SpawnNet wird aktiviert...");
+  Else
+    BroadCast("Activating SpawnNet...");
+    SysLog("Activating SpawnNet...");
+  EndIf
+
+  // Start up sequence
+  //  find all runes on the world, their spawn childs and if it's item container
+  //  spawn look-up for it's container (phase out if missing). this function
+  //  will be hugely optimized on the near future, using a runeserial look-up,
+  //  leaving just the npc look-up the auto-heal start-up will still remain,
+  //  but will be triggered by a cfg entry. the runes shrink will be cfg
+  //  triggered too, since it's damn heavy, specialy due container/item spawn
+
+  // Suche nach den Runen
+  /////////////////////////
+
+/*obj                - aktuelles Item/NPC in der Welt
+  spawnnet           - CProp des Item/NPC, welches die SpawnRunenNummer enthaelt
+  amount             - Array, welches fuer jede Rune die Anzahl der gefundenen
+                       gespawnten NPCs enthaelt
+  x                  - Array, welches fuer jede Rune die X-Koordinate der Rune enthaelt
+                       (wird in SetRune gesetzt)
+  y                  - Array, welches fuer jede Rune die Y-Koordinate der Rune enthaelt
+                       (wird in SetRune gesetzt)
+  z                  - Array, welches fuer jede Rune die Z-Koordinate der Rune enthaelt
+                       (wird in SetRune gesetzt)
+  inside_item        - Items im Inneren eines Containers
+  aux                - Array, welches fuer jede Rune innerhalb eines Containers die
+                       Seriennummer der selbigen enthaelt
+  contspawnnet       - Nummer der SpawnRune, die sich in'nem Container befindet
+  contspawnrunefound - Wurde die Rune innerhalb des Containers gefunden?
+  cntserial          - Seriennummer des Containers fuer das ContainerSpawning
+                       (in dem befindet sich auch die SpawnRune)
+  emptycontainer     - Array, das alle SpawnContainer auflistet, in denen die Rune fehlt*/
+
+  Local emptycontainer:={ };
+  Local spawnnet;
+  ForEach obj in ListObjectsInBox(0, 0, -128, 6143, 4095, 128)
+    spawnnet:=CInt(GetObjProperty(obj, "spawnnet"));
+    If (spawnnet)                 // Wird es vom SpawnNet verwaltet ?
+      If (obj.isa(POLCLASS_ITEM)) // Ist es ein Item?
+        If (obj.objtype=0xa300)   // Ist es eine SpawnRune?
+          If (x[spawnnet]) // Gibt es die Rune mit der Nummer schon ?
+            If (MsgLanguage)
+              SysLog("SpawnNet: Folgende Runen haben die gleiche Nummer: ("+
+                obj.x+", "+obj.y+", "+obj.z+") und ("+x[spawnnet]+", "+y[spawnnet]+", "+z[spawnnet]+") !");
+            Else
+              SysLog("SpawnNet: Rune ("+obj.x+", "+obj.y+", "+obj.z+") and Rune ("+
+                x[spawnnet]+", "+y[spawnnet]+", "+z[spawnnet]+") use the same Number!");
+            EndIf
+          Else
+            SetRune(spawnnet, obj);
+          EndIf
+        Else // gespawnter Container, oder ein Container mit SpawnRune
+          If (obj.isa(POLCLASS_CONTAINER)) // Ist es ein Container?
+            Local contspawnrunefound:=0;
+            Local contspawnnet;
+
+            ForEach inside_item in EnumerateItemsInContainer(obj)
+              If (inside_item.objtype=0xa300) // Root Runen Container
+                contspawnnet:=CInt(GetObjProperty(inside_item, "spawnnet"));
+                If (contspawnnet) // Aktive Rune
+                  If (spawnnet=contspawnnet) // Ist eine ContainerSpawnRune
+                    SetRune(contspawnnet, inside_item);
+                    contspawnrunefound:=1;
+
+                    Local cntserial:=CInt(GetObjProperty(inside_item, "aux"));
+                    If (cntserial<>obj.serial)
+                      If (MsgLanguage)
+                        SysLog("SpawnNet: Die Rune befindet sich im falschen "+
+                          "Container ("+obj.x+", "+obj.y+", "+obj.z+"), gefixt !");
+                      Else
+                        SysLog("SpawnNet: Rune is in the wrong Container ("+
+                          obj.x+", "+obj.y+", "+obj.z+"), fixed !");
+                      EndIf
+
+                      Local runeobj:=SystemFindObjectBySerial(serial[contspawnnet]);
+                      If (runeobj)
+                        aux[contspawnnet]:=obj.serial;
+                        SetObjProperty(runeobj, "aux", obj.serial);
+                      Else
+                        If (MsgLanguage)
+                          SysLog("SpawnNet: Die Rune ("+x[contspawnnet]+", "+y[contspawnnet]+", "+z[contspawnnet]+") hat sich verfluechtigt!");
+                        Else
+                          SysLog("SpawnNet: Rune ("+x[contspawnnet]+", "+y[contspawnnet]+", "+z[contspawnnet]+") is gone away!");
+                        EndIf
+                      EndIf
+                    EndIf
+                  Else
+                    If (MsgLanguage)
+                      SysLog("SpawnNet: Die Rune befindet sich faelschlicherweise in einem "+
+                        "Container ("+obj.x+", "+obj.y+", "+obj.z+") !");
+                    Else
+                      SysLog("SpawnNet: Rune shouldn't be in a Container ("+obj.x+", "+obj.y+", "+obj.z+") !");
+                    EndIf
+                  EndIf
+                EndIf
+              EndIf
+            EndForEach
+
+            If (!contspawnrunefound) // Im SpawnContainer fehlt die SpawnRune...
+              emptycontainer.append({obj, spawnnet});
+            EndIf
+          EndIf
+        EndIf
+      Else // Ist ein gespawnter NPC
+        If (amount[spawnnet])
+          amount[spawnnet]:=amount[spawnnet]+1;
+        Else
+          amount[spawnnet]:=1;
+        EndIf
+      EndIf
+    EndIf
+
+    SleepMS(5);
+  EndForEach
+
+  // Behandlung der Container ohne Rune
+  ///////////////////////////////////////
+
+  ForEach cnt in emptycontainer
+    If (x[cnt[2]]) // Gibt es die Rune mit der Nummer schon ?
+      If (type[cnt[2]]=3)
+        If (aux[cnt[2]]) // Ist der Container schon eingetragen?
+          If (aux[cnt[2]]<>cnt[1].serial)
+            If (MsgLanguage)
+              SysLog("SpawnNet: Die ContainerSpawnRune ("+x[cnt[2]]+", "+y[cnt[2]]+", "+z[cnt[2]]+
+                ") hat mehrere Container ("+cnt[1].x+", "+cnt[1].y+", "+cnt[1].z+") gespawnt!");
+            Else
+              SysLog("SpawnNet: ContainerSpawnRune ("+x[cnt[2]]+", "+y[cnt[2]]+", "+z[cnt[2]]+
+                ") has spawned more then 1 Container ("+cnt[1].x+", "+cnt[1].y+", "+cnt[1].z+") !");
+            EndIf
+          EndIf
+        Else
+          Local runeobj:=SystemFindObjectBySerial(serial[cnt[2]]);
+          If (runeobj)
+            aux[cnt[2]]:=cnt[1].serial;
+            SetObjProperty(runeobj, "aux", cnt[1].serial);
+          Else
+            If (MsgLanguage)
+              SysLog("SpawnNet: Die ContainerSpawnRune ("+x[cnt[2]]+", "+y[cnt[2]]+", "+z[cnt[2]]+") hat sich verfluechtigt!");
+            Else
+              SysLog("SpawnNet: ContainerSpawnRune ("+x[cnt[2]]+", "+y[cnt[2]]+", "+z[cnt[2]]+") is gone away!");
+            EndIf
+          EndIf
+        EndIf
+      ElseIf (type[cnt[2]]=2)
+        If (flags[cnt[2]][2]) // Ist Bit 1 gesetzt? -> InContainerSpawn
+          If (MsgLanguage)
+            SysLog("SpawnNet: Die InContainerSpawnRune ("+x[cnt[2]]+", "+y[cnt[2]]+", "+z[cnt[2]]+
+              ") befindet sich ausserhalb ihres Containers ("+cnt[1].x+", "+cnt[1].y+", "+cnt[1].z+") !");
+          Else
+            SysLog("SpawnNet: InContainerSpawnRune ("+x[cnt[2]]+", "+y[cnt[2]]+", "+z[cnt[2]]+
+              ") should be inside the Container ("+cnt[1].x+", "+cnt[1].y+", "+cnt[1].z+") !");
+          EndIf
+        EndIf
+      Else
+        If (MsgLanguage)
+          SysLog("SpawnNet: Die SpawnRune zum Container ("+x[cnt[2]]+", "+y[cnt[2]]+", "+z[cnt[2]]+") hat den falschen Typ!");
+        Else
+          SysLog("SpawnNet: SpawnRune for Container ("+x[cnt[2]]+", "+y[cnt[2]]+", "+z[cnt[2]]+") has wrong Type!");
+        EndIf
+      EndIf
+    Else
+      If (MsgLanguage)
+        SysLog("SpawnNet: Es gibt keine Rune zum Container ("+cnt[1].x+", "+cnt[1].y+", "+cnt[1].z+") !");
+      Else
+        SysLog("SpawnNet: Where's the Rune for Container ("+cnt[1].x+", "+cnt[1].y+", "+cnt[1].z+") ?");
+      EndIf
+    EndIf
+  EndForEach
+  emptycontainer:={ };
+
+  // Global Properties initialisieren
+  /////////////////////////////////////
+
+  SetGlobalProperty("deletedpool", { });
+  SetGlobalProperty("deathpool", { });
+  SetGlobalProperty("refreshpool", { });
+  SetGlobalProperty("runeserial", { });
+
+  // Fuellt den Zeitpuffer mit allen Runen
+  //////////////////////////////////////////
+
+  StartQueue(); // Fuellt den Zeitpuffer mit allen Runen
+
+  If (MsgLanguage)
+    BroadCast("SpawnNet wurde initialisiert.");
+    SysLog("SpawnNet wurde initialisiert.");
+  Else
+    BroadCast("SpawnNet activated.");
+    SysLog("SpawnNet activated.");
+  EndIf
+
+  ///////////////////
+  // Hauptschleife //
+  ///////////////////
+
+  Set_Priority(SPAWNNET_PRIORITY);
+
+  Local pool;
+  While (1)
+    // DeletePool check
+    //  this part of the code takes care of all deleded runes,
+    //  phasing'em down by setting its runes.x to 0
+
+    // DeletePool abarbeiten
+    //////////////////////////
+
+    Set_Critical(1);
+    pool:=GetGlobalProperty("deletedpool");
+    SetGlobalProperty("deletedpool", { });
+    Set_Critical(0);
+
+    ForEach rune in pool
+      x[CInt(rune)]:=0;
+    EndForEach
+
+    // CreatePool check
+    //  here we take care of created runes, adding to the system
+
+    // CreatePool abarbeiten
+    //////////////////////////
+
+    Set_Critical(1);
+    pool:=GetGlobalProperty("createpool");
+    SetGlobalProperty("createpool", { });
+    Set_Critical(0);
+
+    Local rune;
+    Local runeobj;
+    ForEach rune_serial in pool
+      runeobj:=SystemFindObjectBySerial(rune_serial);
+      If (!runeobj)
+        Continue;
+      EndIf
+
+      If (GetObjProperty(runeobj, "spawnnet"))
+        Continue;
+      EndIf
+
+      rune:=y.size()+1;
+      amount[rune]:=0;
+      SetRune(rune, runeobj);
+      SetObjProperty(runeobj, "spawnnet", rune);
+
+      Case (type[rune])
+        TYPE_NPC:       DoNPCSpawn(rune);
+        TYPE_ITEM:      DoItemSpawn(rune);
+        TYPE_CONTAINER: DoContainerSpawn(rune);
+
+        default: If (MsgLanguage)
+                   SysLog("SpawnNet: Die Rune ("+runeobj.x+", "+runeobj.y+", "+runeobj.z+") besitzt "+
+                     "einen ungueltigen Typ ("+type[rune]+") !");
+                 Else
+                   SysLog("SpawnNet: Rune ("+runeobj.x+", "+runeobj.y+", "+runeobj.z+
+                     ") has unused Type ("+type[rune]+") !");
+                 EndIf
+      EndCase
+    EndForEach
+
+    // DeathPool check
+    //  all death npcs appear here, just subtract 1 from it's rune amount
+
+    // DeathPool abarbeiten
+    /////////////////////////
+
+    Set_Critical(1);
+    pool:=GetGlobalProperty("deathpool");
+    SetGlobalProperty("deathpool", { });
+    Set_Critical(0);
+
+    ForEach dead in pool
+      amount[dead]:=amount[dead]-1;
+    EndForEach
+
+    // RefreshPool check
+    //  every time you hit save on a online rune, this routine takes care of
+    //  updating the info on the system. sure we could just store a itemref,
+    //  but this would result on problems open deletion and a major slow down
+    //  due heavy use of GetObjProperty() to retrieve data
+
+    // RefreshPool abarbeiten
+    ///////////////////////////
+
+    Set_Critical(1);
+    pool:=GetGlobalProperty("refreshpool");
+    SetGlobalProperty("refreshpool", { });
+    Set_Critical(0);
+
+    Local spawnnet;
+    ForEach rune_serial in pool
+      runeobj:=SystemFindObjectBySerial(rune_serial);
+      If (!runeobj)
+        Continue;
+      EndIf
+
+      spawnnet:=GetObjProperty(runeobj, "spawnnet");
+      If (spawnnet)
+        SetRune(spawnnet, runeobj);
+      EndIf
+    EndForEach
+
+    // Timer Look-Up
+    //  this will speed things a lot since there's no need to do a rune loop
+    //  every time cicle this should also solve some item spawn problem, now
+    //  they should be hugely faster, thou allowing use of item groups.
+    //  container spawn should allow use of makeloot ofter.
+
+    // Spawnen gemaess Queue
+    //////////////////////////
+
+    pool:=queue[1]; // Liste der Runen aus der Queue holen und selbige bereinigen
+    queue.erase(1);
+
+    ForEach rune in pool
+      Case (type[rune])
+        TYPE_NPC:       DoNPCSpawn(rune);
+        TYPE_ITEM:      DoItemSpawn(rune);
+        TYPE_CONTAINER: DoContainerSpawn(rune);
+      EndCase
+    EndForEach
+
+    // Misc Functions
+    //  handles all server functions.
+    //  command table:
+    //   rune resync -> reload all runes, using runeserial
+    //   rune look-up -> reload all runes, search on the world
+    //   rune shrink, this compact the database
+    //   refresh all rune childs
+    //   reload the cfgs, will only work when caching is used
+    //   reload config file
+    //   reload groups files
+
+    // Sonstige Aufgaben abarbeiten
+    /////////////////////////////////
+
+    SetGlobalProperty("runeserial", serial);
+    pool:={ };
+
+    Sleep(SECS_PER_CYCLE/CYCLE_TIME_DIVIDER);
+  EndWhile
+EndProgram
+
+////////////////////////////////////////
+// DoNPCSpawn - NPC-Spawn durchfuehren
+////////////////////////////////////////
+//
+// this function spawns npcs and keep their queue time updated
+// there's nothing much to change, not until I find use to the
+
+Function DoNPCSpawn(rune)
+  If (!x[rune])
+    If (MsgLanguage)
+      SysLog("SpawnNet: Die NPCSpawnRune ("+rune+") wurde geloescht/deaktiviert!");
+    Else
+      SysLog("SpawnNet: Deleting/Deactivating NPCSpawnRune ("+rune+") !");
+    EndIf
+
+    Return;
+  EndIf
+
+  // Naechsten Spawn anstossen
+  //////////////////////////////
+
+  Local spawntime:=mintime[rune]+RandomInt(maxtime[rune]-mintime[rune]);
+  Local spawnrunes:=queue[spawntime];
+  If (!spawnrunes)
+    spawnrunes:={ };
+  EndIf
+  spawnrunes.append(rune);
+  queue[spawntime]:=spawnrunes;
+
+  If (!amount[rune])
+    amount[rune]:=0;
+  EndIf
+
+  If (amount[rune]>=maxamount[rune]) // Sind schon genuch Viechers da
+    Return;
+  EndIf
+
+  // Spawning durchfuehren
+  //////////////////////////
+
+  Local spawnamount:=1;
+  If (flags[rune][1]) // Ist Bit 0 gesetzt? -> Grouping
+    spawnamount:=amountnum[rune];
+    If (spawnamount>(maxamount[rune]-amount[rune]))
+      spawnamount:=maxamount[rune]-amount[rune];
+    EndIf
+
+    If (spawnamount>MAXSPAWNPERCYCLE)
+      spawnamount:=MAXSPAWNPERCYCLE;
+    EndIf
+  EndIf
+
+  amount[rune]:=amount[rune]+spawnamount;
+
+  Local template:=templateb[rune];
+  Local creature;
+  Local spawnx;
+  Local spawny;
+  Local spawnz;
+  Local spawn;
+  While (spawnamount)
+    Local times:=0;      // Wieviele Versuche hab ich schon gebraucht?
+    Local debugging:={}; // Alle probierten Locations fuers Debugging speichern
+
+    // Spawn-Location suchen
+    While ((times<>-1) And (times<=MAX_CREATE_TRYES))
+      spawnx:=x[rune]+RandomInt(range[rune]*2)-range[rune];
+      spawny:=y[rune]+RandomInt(range[rune]*2)-range[rune];
+      spawnz:=GetSpawnZ(spawnx, spawny, rune);
+
+      If (spawnz=error)
+        debugging.append({spawnx, spawny});
+        times:=times+1;
+      Else
+        times:=-1;
+      EndIf
+    EndWhile
+
+    // Keine passende Spawn-Location gefunden
+    If (times>MAX_CREATE_TRYES)
+      amount[rune]:=amount[rune]-spawnamount;
+
+      If (MsgLanguage)
+        SysLog("SpawnNet: Die NPCSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") konnte keinen geeigneten Platz finden ("+debugging+") !");
+      Else
+        SysLog("SpawnNet: NPCSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") was unable to find a SpawnPlace ("+debugging+") !");
+      EndIf
+
+      Return;
+    EndIf
+
+    times:=0;      // Wieviele Versuche hab ich schon gebraucht?
+    debugging:={}; // Alle probierten Locations fuers Debugging speichern
+
+    // NPC erzeugen
+    While ((times<>-1) And (times<=MAX_CREATE_TRYES))
+      If (template.size())
+        spawn:=template[RandomInt(template.size())+1];
+      Else
+        spawn:=template;
+      EndIf
+
+      creature:=CreateNpcFromTemplate(spawn, 5273+RandomInt(17), 1181+RandomInt(9), 0, 2);
+      If (creature)
+        times:=-1;
+      Else
+        debugging.append(spawn);
+        times:=times+1;
+      EndIf
+    EndWhile
+
+    // NPC konnte nicht erzeugt werden
+    If (times>MAX_CREATE_TRYES)
+      amount[rune]:=amount[rune]-spawnamount;
+
+      If (MsgLanguage)
+        SysLog("SpawnNet: Die NPCSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") konnte keinen NPC spawnen ("+debugging+") !");
+      Else
+        SysLog("SpawnNet: NPCSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") was unable to spawn NPC ("+debugging+") !");
+      EndIf
+
+      Return;
+    EndIf
+
+    // NPC an seine Ziellocation verschieben
+    MoveCharacterToLocation(creature, spawnx, spawny, spawnz, MOVECHAR_FORCELOCATION);
+
+    // NPC auf Wunsch verankern
+    If (flags[rune][2]=1) // Ist Bit 1 gesetzt? -> Anker
+      SetObjProperty(creature, "anchorX", x[rune]);
+      SetObjProperty(creature, "anchorY", y[rune]);
+      SetObjProperty(creature, "dstart", range[rune]);
+      SetObjProperty(creature, "psub", 100/range);
+
+      RestartScript(creature);
+    EndIf
+
+    // NPC markieren
+    SetObjProperty(creature, "spawnnet", rune);
+
+    spawnamount:=spawnamount-1;
+  EndWhile
+EndFunction
+
+//////////////////////////////////////////
+// DoItemSpawn - Item-Spawn durchfuehren
+//////////////////////////////////////////
+//
+// this function is itended to only spawn items, in containers or not
+// this would bring otimization due the desagregation of container spawn
+
+Function DoItemSpawn(rune)
+  If (!x[rune])
+    If (MsgLanguage)
+      SysLog("SpawnNet: Die ItemSpawnRune ("+rune+") wurde geloescht/deaktiviert!");
+    Else
+      SysLog("SpawnNet: Deleting/Deactivating ItemSpawnRune ("+rune+") !");
+    EndIf
+
+    Return;
+  EndIf
+
+  Local contobj;
+  If (flags[rune][2]) // Ist Bit 1 gesetzt? -> InContainerSpawn
+    contobj:=SystemFindObjectBySerial(aux[rune]); // Container, in dem sich die Rune befindet
+    If (contobj)
+      ContainerCount(contobj, rune);
+    Else
+      Local runeobj:=SystemFindObjectBySerial(serial[rune]);
+      If ((runeobj) And (runeobj.container))
+        contobj:=runeobj.container; // Rune befindet sich doch im Container
+        aux[rune]:=contobj.serial;
+        SetObjProperty(runeobj, "aux", contobj.serial);
+        ContainerCount(contobj, rune);
+      Else // irgendwas lief falsch
+        DestroyItem(runeobj);
+        If (MsgLanguage)
+          SysLog("SpawnNet: ItemSpawnRune befand sich nicht in einem Container und wurde geloescht!");
+        Else
+          SysLog("SpawnNet: Deleting ItemSpawnRune - wasn't inside a Container!");
+        EndIf
+        x[rune]:=0;
+
+        Return;
+      EndIf
+    EndIf
+  Else
+    ItemCount(rune);
+  EndIf
+
+  // Naechsten Spawn anstossen
+  //////////////////////////////
+
+  Local spawntime:=mintime[rune]+RandomInt(maxtime[rune]-mintime[rune]);
+  Local spawnrunes:=queue[spawntime];
+  If (!spawnrunes)
+    spawnrunes:={ };
+  EndIf
+  spawnrunes.append(rune);
+  queue[spawntime]:=spawnrunes;
+
+  If (!amount[rune])
+    amount[rune]:=0;
+  EndIf
+
+  If (amount[rune]>=maxamount[rune]) // Sind schon genuch Items da
+    Return;
+  EndIf
+
+  // Spawning durchfuehren
+  //////////////////////////
+
+  Local spawnamount:=1;
+  If (flags[rune][1]) // Ist Bit 0 gesetzt? -> Grouping
+    spawnamount:=amountnum[rune];
+    If (spawnamount>(maxamount[rune]-amount[rune]))
+      spawnamount:=maxamount[rune]-amount[rune];
+    EndIf
+
+    If (spawnamount>MAXSPAWNPERCYCLE)
+      spawnamount:=MAXSPAWNPERCYCLE;
+    EndIf
+  EndIf
+
+  Local stackamount:=1;
+  If (!flags[rune][2]) // Ist Bit 1 gesetzt? -> InContainerSpawn
+    stackamount:=aux[rune]; // StackMenge
+  EndIf
+
+  amount[rune]:=amount[rune]+spawnamount;
+
+  Local template:=templateb[rune];
+  Local spawnx;
+  Local spawny;
+  Local spawnz;
+  Local spawn;
+  Local item;
+  While (spawnamount)
+    Local times:=0;      // Wieviele Versuche hab ich schon gebraucht?
+    Local debugging:={}; // Alle probierten Locations fuers Debugging speichern
+
+    If (flags[rune][2]) // Ist Bit 1 gesetzt? -> InContainerSpawn
+      // Item erzeugen
+      While ((times<>-1) And (times<=MAX_CREATE_TRYES))
+        If (template.size())
+          spawn:=template[RandomInt(template.size())+1];
+        Else
+          spawn:=template;
+        EndIf
+
+        item:=CreateItemInContainer(contobj, spawn, stackamount);
+        If (item)
+          times:=-1;
+        Else
+          // Hmm, als ganzer Stack ging nicht, mal einzeln versuchen
+          item:=CreateItemInContainer(contobj, spawn, 1);
+          If (item)
+            // Funzt, also alles einzeln...
+            Local i;
+            For (i:=2; i<=stackamount; i:=i+1)
+              Local stackitem:=CreateItemInContainer(contobj, spawn, 1);
+              If (stackitem)
+                // Item markieren
+                SetObjProperty(stackitem, "spawnnet", rune);
+              EndIf
+            EndFor
+
+            times:=-1;
+          Else
+            debugging.append(spawn);
+            times:=times+1;
+          EndIf
+        EndIf
+      EndWhile
+
+      // Item konnte nicht erzeugt werden
+      If (times>MAX_CREATE_TRYES)
+        amount[rune]:=amount[rune]-spawnamount;
+
+        If (MsgLanguage)
+          SysLog("SpawnNet: Die ItemInContainerSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") konnte kein Item spawnen ("+debugging+") !");
+        Else
+          SysLog("SpawnNet: ItemInContainerSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") was unable to spawn Item ("+debugging+") !");
+        EndIf
+
+        Return;
+      EndIf
+    Else
+      // Spawn-Location suchen
+      While ((times<>-1) And (times<=MAX_CREATE_TRYES))
+        spawnx:=x[rune]+RandomInt(range[rune]*2)-range[rune];
+        spawny:=y[rune]+RandomInt(range[rune]*2)-range[rune];
+        spawnz:=GetSpawnZ(spawnx, spawny, rune);
+
+        If (spawnz=error)
+          debugging.append({spawnx, spawny});
+          times:=times+1;
+        Else
+          times:=-1;
+        EndIf
+      EndWhile
+
+      // Keine passende Spawn-Location gefunden
+      If (times>MAX_CREATE_TRYES)
+        amount[rune]:=amount[rune]-spawnamount;
+
+        If (MsgLanguage)
+          SysLog("SpawnNet: Die ItemSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") konnte keinen geeigneten Platz finden ("+debugging+") !");
+        Else
+          SysLog("SpawnNet: ItemSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") was unable to find a SpawnPlace ("+debugging+") !");
+        EndIf
+
+        Return;
+      EndIf
+
+      // Alte Items loeschen, wenn erwuenscht
+      If (!flags[rune][4]) // Ist Bit 3 gesetzt? -> Alte Items erhalten
+        ForEach olditem in ListItemsAtLocation(spawnx, spawny, spawnz)
+          If ((olditem.objtype<>0xa300) And (GetObjProperty(olditem, "spawnnet")=rune))
+            DestroyItem(olditem);
+          EndIf
+        EndForEach
+      EndIf
+
+      times:=0;      // Wieviele Versuche hab ich schon gebraucht?
+      debugging:={}; // Alle probierten Locations fuers Debugging speichern
+
+      // Item erzeugen
+      While ((times<>-1) And (times<=MAX_CREATE_TRYES))
+        If (template.size())
+          spawn:=template[RandomInt(template.size())+1];
+        Else
+          spawn:=template;
+        EndIf
+
+        item:=CreateItemAtLocation(spawnx, spawny, spawnz, spawn, stackamount);
+        If (item)
+          times:=-1;
+        Else
+          // Hmm, als ganzer Stack ging nicht, mal einzeln versuchen
+          item:=CreateItemAtLocation(spawnx, spawny, spawnz, spawn, 1);
+          If (item)
+            // Funzt, also alles einzeln...
+            Local i;
+            For (i:=2; i<=stackamount; i:=i+1)
+              Local stackitem:=CreateItemAtLocation(spawnx, spawny, spawnz, spawn, 1);
+              If (stackitem)
+                // Item markieren
+                SetObjProperty(stackitem, "spawnnet", rune);
+              EndIf
+            EndFor
+
+            times:=-1;
+          Else
+            debugging.append(spawn);
+            times:=times+1;
+          EndIf
+        EndIf
+      EndWhile
+
+      // Item konnte nicht erzeugt werden
+      If (times>MAX_CREATE_TRYES)
+        amount[rune]:=amount[rune]-spawnamount;
+
+        If (MsgLanguage)
+          SysLog("SpawnNet: Die ItemSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") konnte kein Item spawnen ("+debugging+") !");
+        Else
+          SysLog("SpawnNet: ItemSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") was unable to spawn Item ("+debugging+") !");
+        EndIf
+
+        Return;
+      EndIf
+    EndIf
+
+    // Item markieren
+    SetObjProperty(item, "spawnnet", rune);
+
+    spawnamount:=spawnamount-1;
+  EndWhile
+EndFunction
+
+////////////////////////////////////////////////////
+// DoContainerSpawn - Container-Spawn durchfuehren
+////////////////////////////////////////////////////
+//
+// first we do check if is there any present container, if not spawn a new
+// one them we check its inside and makeloot if the conditions are ok
+
+Function DoContainerSpawn(rune)
+  If (!x[rune])
+    If (MsgLanguage)
+      SysLog("SpawnNet: Die ContainerSpawnRune ("+rune+") wurde geloescht/deaktiviert!");
+    Else
+      SysLog("SpawnNet: Deleting/Deactivating ContainerSpawnRune ("+rune+") !");
+    EndIf
+
+    Return;
+  EndIf
+
+  // Naechsten Spawn anstossen
+  //////////////////////////////
+
+  Local spawntime:=mintime[rune]+RandomInt(maxtime[rune]-mintime[rune]);
+  Local spawnrunes:=queue[spawntime];
+  If (!spawnrunes)
+    spawnrunes:={ };
+  EndIf
+  spawnrunes.append(rune);
+  queue[spawntime]:=spawnrunes;
+
+  // Container spawnen, falls fehlend
+  /////////////////////////////////////
+
+  Local contobj:=SystemFindObjectBySerial(aux[rune]); // Container, der von der Rune erzeugt wurde
+  If (!contobj)
+    Local spawn:=templateb[rune];
+    Local spawnamount:=1;
+    Local spawnx;
+    Local spawny;
+    Local spawnz;
+    While (spawnamount)
+      Local times:=0;      // Wieviele Versuche hab ich schon gebraucht?
+      Local debugging:={}; // Alle probierten Locations fuers Debugging speichern
+
+      // Spawn-Location suchen
+      While ((times<>-1) And (times<=MAX_CREATE_TRYES))
+        If (flags[rune][1]) // Ist Bit 0 gesetzt? -> Moving Spawn
+          spawnx:=x[rune]+RandomInt(range[rune]*2)-range[rune];
+          spawny:=y[rune]+RandomInt(range[rune]*2)-range[rune];
+        Else
+          spawnx:=x[rune];
+          spawny:=y[rune];
+        EndIf
+        spawnz:=GetSpawnZ(spawnx, spawny, rune);
+
+        If (spawnz=error)
+          debugging.append({spawnx, spawny});
+          times:=times+1;
+        Else
+          times:=-1;
+        EndIf
+      EndWhile
+
+      // Keine passende Spawn-Location gefunden
+      If (times>MAX_CREATE_TRYES)
+        If (MsgLanguage)
+          SysLog("SpawnNet: Die ContainerSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") konnte keinen geeigneten Platz finden ("+debugging+") !");
+        Else
+          SysLog("SpawnNet: ContainerSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") was unable to find a SpawnPlace ("+debugging+") !");
+        EndIf
+
+        Return;
+      EndIf
+
+      times:=0; // Wieviele Versuche hab ich schon gebraucht?
+
+      // Container erzeugen
+      While ((times<>-1) And (times<=MAX_CREATE_TRYES))
+        contobj:=CreateItemAtLocation(spawnx, spawny, spawnz, spawn, 1);
+        If (contobj)
+          times:=-1;
+        Else
+          times:=times+1;
+        EndIf
+      EndWhile
+
+      // Container konnte nicht erzeugt werden
+      If (times>MAX_CREATE_TRYES)
+        If (MsgLanguage)
+          SysLog("SpawnNet: Die ContainerSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") konnte keinen Container ("+spawn+") spawnen!");
+        Else
+          SysLog("SpawnNet: ContainerSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") was unable to spawn Container ("+spawn+") !");
+        EndIf
+
+        Return;
+      EndIf
+
+      // Container zerfaellt nach gewisser Zeit
+      contobj.decayat:=ReadGameClock()+(mintime[rune]+RandomInt(maxtime[rune]-mintime[rune]))*60;
+
+      // Container in der Rune eintragen
+      Local runeobj:=SystemFindObjectBySerial(serial[rune]);
+      If (runeobj)
+        aux[rune]:=contobj.serial;
+        SetObjProperty(runeobj, "aux", contobj.serial);
+      Else
+        If (MsgLanguage)
+          SysLog("SpawnNet: Die Rune ("+x[rune]+", "+y[rune]+", "+z[rune]+") hat sich verfluechtigt!");
+        Else
+          SysLog("SpawnNet: Rune ("+x[rune]+", "+y[rune]+", "+z[rune]+") is gone away!");
+        EndIf
+      EndIf
+
+      // Container markieren
+      SetObjProperty(contobj, "spawnnet", rune);
+
+      spawnamount:=spawnamount-1;
+    EndWhile
+  EndIf
+
+  // Container fuellen
+  //////////////////////
+  //
+  // time to do inside check on the container
+  // should we just count spawned items by this rune?
+
+  If (flags[rune][3]) // Ist Bit 2 gesetzt? -> Container leeren
+    ForEach olditem in EnumerateItemsInContainer(contobj)
+      If (!(olditem.objtype in forbidden_items))
+        If (flags[rune][4]) // Ist Bit 3 gesetzt? -> Alte Items erhalten
+          If (GetObjProperty(olditem, "spawnnet")<>rune)
+            DestroyItem(olditem);
+          EndIf
+        Else
+          DestroyItem(olditem);
+        EndIf
+      EndIf
+    EndForEach
+  EndIf
+
+  If (flags[rune][2]) // Ist Bit 1 gesetzt? -> Use CGroups
+    Local spawnamount:=maxamount[rune]-amount[rune];
+    If (spawnamount>MAXSPAWNPERCYCLE)
+      spawnamount:=MAXSPAWNPERCYCLE;
+    EndIf
+
+    amount[rune]:=amount[rune]+spawnamount;
+
+    Local template:=templateb[rune];
+    Local spawn;
+    Local item;
+    While (spawnamount)
+      Local times:=0;      // Wieviele Versuche hab ich schon gebraucht?
+      Local debugging:={}; // Alle probierten Locations fuers Debugging speichern
+
+      // Item erzeugen
+      While ((times<>-1) And (times<=MAX_CREATE_TRYES))
+        If (template.size())
+          spawn:=template[RandomInt(template.size())+1];
+        Else
+          spawn:=template;
+        EndIf
+
+        item:=CreateItemInContainer(contobj, spawn, 1);
+        If (item)
+          times:=-1;
+        Else
+          debugging.append(spawn);
+          times:=times+1;
+        EndIf
+      EndWhile
+
+      // Item konnte nicht erzeugt werden
+      If (times>MAX_CREATE_TRYES)
+        amount[rune]:=amount[rune]-spawnamount;
+
+        If (MsgLanguage)
+          SysLog("SpawnNet: Die ContainerSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") konnte kein Item spawnen ("+debugging+") !");
+        Else
+          SysLog("SpawnNet: ContainerSpawnRune ("+x[rune]+", "+y[rune]+", "+z[rune]+") was unable to spawn Item ("+debugging+") !");
+        EndIf
+
+        Return;
+      EndIf
+
+      // Item markieren
+      SetObjProperty(item, "spawnnet", rune);
+
+      spawnamount:=spawnamount-1;
+    EndWhile
+  Else
+    MakeLoot(contobj, amountnum[rune]);
+  EndIf
+
+  If (RandomInt(100)<CONTAINER_TRAP_CHANGE)
+    SetObjProperty(contobj, "trap_strength", RandomInt(5)+1);
+    SetObjProperty(contobj, "trap_type", CStr(RandomInt(3)+1));
+    contobj.usescript:=":traps:traps";
+  EndIf
+EndFunction
+
+//////////////////////////////////////
+// ItemCount - Zaehlt die SpawnItems
+//////////////////////////////////////
+
+Function ItemCount(rune)
+  Local template:=templateb[rune];
+  Local count:=0;
+
+  ForEach item in ListItemsNearLocation(x[rune], y[rune], z[rune], range[rune]+1)
+    If ((GetObjProperty(item, "spawnnet")=rune) And (!(item.objtype in forbidden_items)) And
+       ((item.objtype=template) Or (item.objtype in template)))
+      count:=count+1;
+    EndIf
+  EndForEach
+
+  amount[rune]:=count;
+EndFunction
+
+////////////////////////////////////////////////////////
+// ContainerCount - Zaehlt die SpawnItems im Container
+////////////////////////////////////////////////////////
+
+Function ContainerCount(contobj, rune)
+  Local count:=0;
+
+  ForEach item in EnumerateItemsInContainer(contobj)
+    If (((item.container).serial=contobj.serial) And (GetObjProperty(item,
+       "spawnnet")=rune) And (!(item.objtype in forbidden_items)))
+      count:=count+1;
+    EndIf
+  EndForEach
+
+  amount[rune]:=count;
+EndFunction
+
+//////////////////////////////////
+// SetRune - Definiert eine Rune
+//////////////////////////////////
+
+Function SetRune(rune, obj)
+  serial[rune]:=obj.serial;
+  x[rune]:=obj.x;
+  y[rune]:=obj.y;
+  z[rune]:=obj.z;
+
+  // Runeneigenschaften der Rune ermitteln
+  //////////////////////////////////////////
+
+  templateb[rune]:=GetObjProperty(obj, "template");
+  mintime[rune]:=CInt(GetObjProperty(obj, "mintime"))*CYCLE_TIME_DIVIDER;
+  maxtime[rune]:=CInt(GetObjProperty(obj, "maxtime"))*CYCLE_TIME_DIVIDER;
+  range[rune]:=CInt(GetObjProperty(obj, "range"));
+  maxamount[rune]:=CInt(GetObjProperty(obj, "maxamount"));
+  aux[rune]:=CInt(GetObjProperty(obj, "aux"));
+
+  // Flags der Rune ermitteln
+  /////////////////////////////
+
+  Local runeflags:=CInt(GetObjProperty(obj, "flags"));
+  If (runeflags<0x1000)
+    runeflags:=0x1000;
+    SetObjProperty(obj, "flags", runeflags);
+  EndIf
+  runeflags:=CStr(Hex(runeflags));
+
+  type[rune]:=CInt("0x"+runeflags[3, 1]);
+  flags[rune]:=GetFlags(CInt("0x"+runeflags[4, 1])); // Wandelt 4 Bits in ein Array um
+
+  Local runeamountnum:=CInt("0x"+runeflags[5, 2]);
+  If (runeamountnum<1)
+    runeamountnum:=1;
+  EndIf
+  amountnum[rune]:=runeamountnum;
+
+  // Runen gemaess Typ konfigurieren
+  ////////////////////////////////////
+
+  Case (type[rune])
+    TYPE_NPC: // NPCGroupSpawnRunen -> templateb[rune] mit den spawnbaren Elementen fuettern
+      If (CInt(templateb[rune]))
+        Local spawngroup:=cfg[templateb[rune]];
+        If (spawngroup)
+          templateb[rune]:=GetConfigStringArray(spawngroup, "spawn");
+          If (!templateb[rune])
+            If (MsgLanguage)
+              SysLog("SpawnNet: Leeres Group-Template ("+spawngroup+") !");
+            Else
+              SysLog("SpawnNet: Empty Group-Template ("+spawngroup+") !");
+            EndIf
+            x[rune]:=0;
+
+            Return;
+          EndIf
+        Else
+          If (MsgLanguage)
+            SysLog("SpawnNet: Group-Template ("+templateb[rune]+") existiert nicht!");
+          Else
+            SysLog("SpawnNet: Group-Template ("+templateb[rune]+") doesn't exist!");
+          EndIf
+          x[rune]:=0;
+
+          Return;
+        EndIf
+      EndIf
+
+    TYPE_ITEM: // Item[Group][Container]SpawnRunen -> templateb[rune] mit den spawnbaren Elementen fuettern und Container gegenchecken
+      If (CInt(templateb[rune]))
+        Local spawngroup:=icfg[templateb[rune]];
+        If (spawngroup)
+          Local itemtemplates:=GetConfigStringArray(spawngroup, "item");
+          If (!itemtemplates)
+            If (MsgLanguage)
+              SysLog("SpawnNet: Leeres iGroup-Template ("+spawngroup+") !");
+            Else
+              SysLog("SpawnNet: Empty iGroup-Template ("+spawngroup+") !");
+            EndIf
+            x[rune]:=0;
+
+            Return;
+          EndIf
+
+          ForEach itemtemplate in itemtemplates // Alle Itemnamen in Zahlen umwandeln
+            If (CInt(itemtemplate))
+              itemtemplate:=CInt(itemtemplate);
+            Else
+              itemtemplate:=GetObjtypeByName(itemtemplate);
+            EndIf
+          EndForEach
+
+          templateb[rune]:=itemtemplates;
+        Else
+          If (MsgLanguage)
+            SysLog("SpawnNet: iGroup-Template ("+templateb[rune]+") existiert nicht!");
+          Else
+            SysLog("SpawnNet: iGroup-Template ("+templateb[rune]+") doesn't exist!");
+          EndIf
+          x[rune]:=0;
+
+          Return;
+        EndIf
+      Else
+        templateb[rune]:=GetObjtypeByName(templateb[rune]);
+      EndIf
+
+      If (flags[rune][2]) // Ist Bit 1 gesetzt? -> InContainerSpawn
+        Local cnt:=obj.container; // Den Root-Container suchen
+        While ((cnt.container).serial)
+          cnt:=cnt.container;
+        EndWhile
+
+        If (!cnt)
+          If (MsgLanguage)
+            SysLog("SpawnNet: Die Rune ("+obj.x+", "+obj.y+", "+obj.z+") befindet sich in keinem Container!");
+          Else
+            SysLog("SpawnNet: Rune ("+obj.x+", "+obj.y+", "+obj.z+") isn't inside a Container!");
+          EndIf
+          x[rune]:=0;
+
+          Return;
+        EndIf
+
+        If (aux[rune]<>cnt.serial)
+          If (MsgLanguage)
+            SysLog("SpawnNet: Die Rune ("+obj.x+", "+obj.y+", "+obj.z+") befindet sich in einem anderen Container! Gefixt.");
+          Else
+            SysLog("SpawnNet: Rune ("+obj.x+", "+obj.y+", "+obj.z+") is inside another Container! Fixed.");
+          EndIf
+
+          Local runeobj:=SystemFindObjectBySerial(serial[rune]);
+          If (runeobj)
+            aux[rune]:=cnt.serial;
+            SetObjProperty(runeobj, "aux", cnt.serial);
+          Else
+            If (MsgLanguage)
+              SysLog("SpawnNet: Die Rune ("+x[rune]+", "+y[rune]+", "+z[rune]+") hat sich verfluechtigt!");
+            Else
+              SysLog("SpawnNet: Rune ("+x[rune]+", "+y[rune]+", "+z[rune]+") is gone away!");
+            EndIf
+          EndIf
+        EndIf
+      EndIf
+
+    TYPE_CONTAINER:
+      If (CInt(templateb[rune]))
+        templateb[rune]:=CInt(templateb[rune]);
+      Else
+        templateb[rune]:=GetObjtypeByName(templateb[rune]);
+      EndIf
+
+    default: If (MsgLanguage)
+               SysLog("SpawnNet: Die Rune ("+obj.x+", "+obj.y+", "+obj.z+") besitzt einen ungueltigen Typ ("+type[rune]+") !");
+             Else
+               SysLog("SpawnNet: Rune ("+obj.x+", "+obj.y+", "+obj.z+") has unused Type ("+type[rune]+") !");
+             EndIf
+             x[rune]:=0;
+
+             Return;
+  EndCase
+
+  Return (1);
+EndFunction
+
+///////////////////////////////////////////////////////
+// StartQueue - Fuellt den Zeitpuffer mit allen Runen
+///////////////////////////////////////////////////////
+
+Function StartQueue();
+  Local spawnrunes; // Alle zu spawnenden Runen zu einem Zeitpunkt
+  Local spawntime;  // Der Zeitpunkt
+  Local spawnnet;   // Nummer der Rune
+  Local contobj;
+  Local normal;
+
+  For (spawnnet:=1; spawnnet<=Len(y); spawnnet:=spawnnet+1)
+    If (x[spawnnet]<>0)
+      If (!amount[spawnnet])
+        amount[spawnnet]:=0;
+      EndIf
+
+      normal:=1;
+      If (type[spawnnet]=3)
+        If (!SystemFindObjectBySerial(aux[spawnnet]))
+          If (MsgLanguage)
+            SysLog("SpawnNet: Die ContainerSpawnRune ("+x[spawnnet]+", "+y[spawnnet]+", "+z[spawnnet]+") hat ihren Container verloren!");
+          Else
+            SysLog("SpawnNet: ContainerSpawnRune ("+x[spawnnet]+", "+y[spawnnet]+", "+z[spawnnet]+") has lost the Container!");
+          EndIf
+          aux[spawnnet]:=0;
+          normal:=0;
+        EndIf
+      EndIf
+
+      If (normal)
+        spawntime:=mintime[spawnnet];
+      Else
+        spawntime:=1;
+      EndIf
+
+      spawnrunes:=queue[spawntime];
+      If (!spawnrunes)
+        spawnrunes:={ };
+      EndIf
+      spawnrunes.append(spawnnet);
+      queue[spawntime]:=spawnrunes;
+    EndIf
+  EndFor
+EndFunction
+
+////////////////////////////////////////////////////////
+// GetIntValue - Liefer den Wert zurueck, oder Default
+////////////////////////////////////////////////////////
+
+Function GetIntValue(value, defvalue)
+  Local result:=CInt(value);
+  If (!result)
+    result:=defvalue;
+  EndIf
+
+  Return (result);
+EndFunction
+
+//////////////////////////////////////////////
+// GetSpawnZ - Liefert die Hoehe zum Spawnen
+//////////////////////////////////////////////
+
+Function GetSpawnZ(spawnx, spawny, rune)
+  Local result:=GetStandingHeight(spawnx, spawny, z[rune]);
+  If (result=error)
+    Return (error);
+  Else
+    Return (result[1]);
+  EndIf
+EndFunction
+
+//SSpawnr.src
+//
+//Zeile 164      geändert // irrelevant, da nur Kommentar
+//Zeile 431..432 neu
+//Zeile 440      neu
+//Zeile 445      neu
+//Zeile 831..832 geändert
+//Zeile 838      geändert
+//Zeile 844..871 neu
+//Zeile 873      geändert
+//
+//SpawnNet.src
+//
+//Zeile 102        neu
+//Zeile 160..172   neu
+//Zeile 1016..1034 neu
+//
+//Zeile 1219 gehts weiter

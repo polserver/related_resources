@@ -1,0 +1,35 @@
+use uo;
+
+include "../cleric";
+
+program concentration(params)
+	var who := params[1];
+	
+	var maxchant := 0;
+	SendSysMessage(who, "Select who to concentrate on.");
+	
+	var targ := target(who);
+	if (!targ.ip)
+		SendSysMessage(who, "Cancelled.");
+		return;
+	endif
+	var x := who.x, y := who.y;
+	
+	SetObjProperty(who, "#concentrating", targ.serial);
+	while (checkmana(who, 10) && maxchant < 6 && !moved(who, x, y))
+		PerformAction(who, CAST_ANIM);
+		PlaySoundEffect(who, CHANT_SOUND);
+		sleep(4);
+		maxchant := maxchant+1;
+	endwhile
+	EraseObjProperty(who,"#concentrating");
+endprogram
+
+function moved(who, x, y)
+	if (who.x != x || who.y != y)
+		SendSysMessage(who, "You break your concentration.");
+		return 1;
+	else
+		return 0;
+	endif
+endfunction

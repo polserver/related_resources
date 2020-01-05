@@ -1,0 +1,397 @@
+// ********************************************************************************
+// ***
+// ***	Fishing Skill Script
+// ***
+// ***	Tomas (tbaffy@baffyland.com)
+// ***  Portions were implemented by Louds (louds.geo@yahoo.com)
+// ***	and the beginning code base was by DreamWeaver (dreamweaver@ctsingles.com)
+// ***  and is now maintained and updated by Cassandra White (casswhite@home.com)
+// ***       - as of 04/18/00
+// ***
+// ***
+// ********************************************************************************
+
+// ***** Still left to do!  *****
+// Critical failure should be checked against return of skill check when it starts
+// returning negative numbers for the magnitude of a failure
+//
+// Tweak the chest spawns for SOS messages
+//
+
+// ********************************************************************************
+// use statements for required function definitions
+// ********************************************************************************
+use uo;
+use cfgfile;
+use os;
+use util;
+use math;
+
+// ********************************************************************************
+// include files needed
+// ********************************************************************************
+include "include/client";
+include "include/dist";
+// include "include/math";
+include "include/objtype";
+include "include/starteqp";
+include "include/skillpoints";
+include "fishing";
+
+// ********************************************************************************
+// IsInRange function
+// This function checks to see if the location that the fisherman targeted
+// is withing the allowed distance from their body.  The range is set by
+// altering the FISHING_RANGE constant above.  If the target square is
+// determined to be in range, then the target is checked for line of sight.
+// ********************************************************************************
+function IsInRange( character, x, y, z )
+    local xd, yd, zd;
+	local retval := 1;
+    xd := Abs(character.x - x);
+    yd := Abs(character.y - y);
+// this is a debugging message, uncomment it if you need to see what the
+// deltas are for the targeted squares to verify range checking
+//    SendSysmessage(character, "Target delta X:" + xd + ", delta Y:" + yd);
+    if ((xd > FISHING_RANGE) Or (yd > FISHING_RANGE))
+    	retval := 0;
+	endif
+    return retval;
+endfunction
+
+
+// ********************************************************************************
+//	function IsWater
+//	This function checks to see if the targeted square is a water tile
+//  It allows for targeting only flat water tiles so that the splash animation
+//  can be used effectively.
+// ********************************************************************************
+function IsWater(thistile, locinfo)
+	if (thistile.objtype)
+	    if ((thistile.objtype >= 0x1797) and (thistile.objtype <= 0x179C))
+    	    return 1;
+	    elseif ((thistile.objtype >= 0x346E) and (thistile.objtype <= 0x3485))
+        	return 1;
+	    elseif ((thistile.objtype >= 0x3490) and (thistile.objtype <= 0x34AB))
+    	    return 1;
+	    elseif ((thistile.objtype >= 0x34B5) and (thistile.objtype <= 0x34D5))
+    	    return 1;
+		endif
+	else
+    	if ((locinfo.landtile >= 0x00A8) and (locinfo.landtile <= 0x00AB))
+        	return 1;
+    	elseif ((locinfo.landtile >= 0x0136) and (locinfo.landtile <= 0x0137))
+        	return 1;
+    	elseif ((locinfo.landtile >= 0x3FF0) and (locinfo.landtile <= 0x3FF3))
+        	return 1;
+		endif
+	endif
+    return 0;
+endfunction
+
+
+// ********************************************************************************
+//	IsValidTarget function
+//	This function checks to see if the location that the fisherman targeted
+//	is valid by performing rnage, line of sight and terrain type checks.  It
+//	will issue error messages for failures.
+// ********************************************************************************
+function IsValidTarget( character, targetsquare, locinfo )
+	local retval := 1;
+    // Make sure that the targeted location is the correct terrain
+    if (! IsWater(targetsquare, locinfo)) 
+        SendSysmessage(character,"You can't fish there!");
+        retval := 0;
+    // Make sure that the targeted location is within the allowed range
+    elseif (! IsInRange(character, targetsquare.x, targetsquare.y, targetsquare.z))
+        SendSysmessage(character,"That is too far away");
+	    retval := 0;
+    // Make sure that the targeted location is within the line of sight
+    elseif (! CheckLosAt( character, targetsquare.x, targetsquare.y, targetsquare.z ))
+        SendSysmessage(character,"That location is not in your line of sight!");
+		retval := 0;
+	endif
+    return retval;
+endfunction
+
+
+// ********************************************************************************
+// GetTheCatch function
+// This function will determine what kind of object the player caught while 
+// fishing.  It will generate a random number from 1 to the characters skill level.
+// The type of item caught will be determined from that value.  You can set the 
+// threshold values for the ability to get each object type through the use of
+// level constants: SHOELEVEL, MAGICFISHLEVEL, TREASUREMAPLEVEL, and SOSLEVEL 
+// ********************************************************************************
+function GetTheCatch(character)
+	local fishtype;
+	local currentskill := GetSkill( character, SKILLID_FISHING);
+	local thisone := randomint(currentskill) + 1;
+	if (thisone < SHOELEVEL )
+		// not enough for a shoe, you catch a normal fish
+    	fishtype := RandomInt(UOBJ_FISH_END - UOBJ_FISH_START) + UOBJ_FISH_START;
+		SendSysmessage(character, "You catch a nice fish!");
+	elseif (thisone < MAGICFISHLEVEL )
+		// not enough for a small fish, you catch a shoe
+        fishtype := RandomInt(UOBJ_SHOE_END - UOBJ_SHOE_START) + UOBJ_SHOE_START;
+		SendSysmessage(character, "You catch some soggy footwear!");
+	elseif (thisone < TREASUREMAPLEVEL )
+		// not enough for a treasure map. you catch a small fish
+        fishtype := randomint(NUM_MAGIC_FISH) + UOBJ_MAGIC_FISH;
+		SendSysmessage(character, "You catch mess of small fish!");
+	elseif (thisone < SOSLEVEL )
+		// not enough for an SOS bottle, you catch a treasure map
+		fishtype := "level" + (RandomInt(MAXMAPLEVEL) + 1) + "map";
+		SendSysmessage(character, "You find an old tattered map!");
+	else
+		// you got enough for an SOS bottle
+		fishtype := "sosbottle";
+		SendSysmessage(character, "You find a message in a bottle!");
+	endif
+	return fishtype;
+endfunction
+
+
+// ********************************************************************************
+//	function CriticalFailure
+//	This function is used to determine the action that is taken when a critical
+//  failure takes place while using the skill.
+// ********************************************************************************
+function CriticalFailure(character, targetsquare)
+	local tnum := randomint(4);
+	local it;
+	case (tnum)
+    	0: it := createnpcfromtemplate("seaserpent", targetsquare.x, targetsquare.y, targetsquare.z);
+       		if (!it.errortext)
+          		SendSysmessage(character, "Oops, that's not a fish!");  
+       		endif
+    	1: it := createnpcfromtemplate("waterelemental", targetsquare.x , targetsquare.y, targetsquare.z);
+       		if (!it.errortext)
+          		SendSysmessage(character, "You attract the attention of a water elemental!");
+       		endif
+    	2: it := createnpcfromtemplate("alligator", targetsquare.x, targetsquare.y, targetsquare.z);
+       		if (!it.errortext)
+          		SendSysmessage(character, "Oh no, and he looks hungry too!");  
+       		endif
+    	3: it := createnpcfromtemplate("walrus", targetsquare.x, targetsquare.y, targetsquare.z);
+       		if (!it.errortext)
+          		SendSysmessage(character, "A walrus comes by to see what you're doing");  
+       		endif
+	endcase
+endfunction
+
+
+// ********************************************************************************
+//	function IsFishingPoleEquipped
+//	This function checks to see if the fishing pole is equipped.  If it isn't
+//	then it will try to equip it if possible.
+// ********************************************************************************
+function IsFishingPoleEquipped (character , fishingpole)
+if ((!Accessible(character , fishingpole)) or (distance(character , fishingpole) > 1) )
+   	return 0;
+endif
+foreach item in listequippeditems (character)
+	if (fishingpole.serial = item.serial )
+		return 1;
+	endif
+endforeach
+return EquipItem(character , fishingpole);
+endfunction
+
+
+// ********************************************************************************
+//	function GetSOSTreasure
+//	This function will check to see if a successful attempt is made to fish up
+//	an SOS treasure.  If teh attempt is successful, then it will result in either a
+//	miscellaneous SOS treasure, or the treasure chest.  Generation fo the
+//	miscellaneous treasure is controlled by a collection of constants.
+// ********************************************************************************
+function GetSOSTreasure(character, targetsquare, sosmsg)
+local spot;
+if(CheckSkill(character, SKILLID_FISHING, SOS_SKILL_THRESHOLD, SOS_SKILL_POINTS ))
+	// Skill test was successful
+	if (randomint(100) < MISC_SOS_TREASURE_PCT)
+		// you fish up a miscellaneous item
+		local newitem;
+		case (RandomInt(NUM_SOS_MISC))
+    		0: newitem := RandomInt(ENDSHELL - BEGINSHELL) + BEGINSHELL;
+    		1: newitem := RandomInt(ENDART - BEGINART) + BEGINART;
+    		2: newitem := RandomInt(ENDWIRE - BEGINWIRE) + BEGINWIRE;
+    		3: newitem := RandomInt(ENDPILLOW - BEGINPILLOW) + BEGINPILLOW;
+		endcase
+   		CreateItemInBackpack(character, newitem, 1);
+		SendSysMessage(character,"You caught something interesting!");
+	else
+		// get the treasure chest
+		SendSysMessage(character,"You catch a sunken treasure!");
+   		local chest := CreateItemInBackpack(character, UOBJ_TREASURE_CHEST, 1);
+		chest.movable := 1;
+		MakeLoot( chest , randomint(5)+2);
+		// you have the chest, destroy the SOS message
+		destroyitem(sosmsg);
+	endif
+else
+	// Skill check failed
+	SendSysMessage(character, "Something big just slipped off your hook!");
+endif
+return 0;
+endfunction
+
+// ********************************************************************************
+//	function isSOS
+//	This function checks to see if there are any SOS messages in the players
+//	backpack, then it will compare the location of the SOS against the location
+//	of the target square to see if there is an SOS in the area.  If a valid SOS
+//	fishing attempt was made it will return 1, otherwise it returns 0.  This allows
+//	it to be used as a boolean function.
+// ********************************************************************************
+function isSOS (character , targetsquare)
+// get all of the items in the players pack
+Local packitems;
+packitems := EnumerateItemsInContainer( character.backpack );
+Local i, sosX, sosY;
+// look through the items for SOS messages
+for( i := 1; i <= len(packitems); i := i + 1 )
+	if ((packitems[i].objtype = UOBJ_SOS_MESSAGE))
+		// this is an SOS message, check it out
+		// get the location of the SOS
+		sosX := GetObjProperty(packitems[i], "tileX");
+		sosY := GetObjProperty(packitems[i], "tileY");
+		// see if the SOS is close to the fishing target
+	    local xd, yd;
+	    xd := Abs(targetsquare.x - sosX);
+    	yd := Abs(targetsquare.y - sosY);
+		// this is a debugging message, uncomment it if you need to see what the
+		// deltas are for the targeted squares to verify range checking
+		//SendSysmessage(character, "Target deltas X:" + xd + ", delta Y:" + yd + " from SOS");
+	    if ((xd <= FISHING_RANGE) And (yd <= FISHING_RANGE))
+			// we are within range of this SOS
+			GetSOSTreasure(character, targetsquare, packitems[i]);
+			return 1;  // go back to caller and indicate an SOS was fished
+		endif
+	endif
+endfor
+return 0;
+endfunction
+
+
+
+// ********************************************************************************
+//	Main routine
+//	This is the program routine that is called each time a fishing pole is used
+// ********************************************************************************
+program use_fishpole(character , fishingpole)
+ReserveItem(fishingpole);
+
+Local delaytime := 5;  // this delay time will default if we can't read it from cfg file
+
+Local cfile := ReadConfigFile("skills");
+if (cfile)
+    // cfg file opened, look for the fishing skill element
+	Local elem := cfile[SKILLID_FISHING];
+	if (elem)
+		// fishing skill element found, get the delay time
+		delaytime := Cint(elem.Delay);
+	else
+		SendSysmessage(character, "Fishing skill element was not found");
+	endif
+	UnloadConfigFile( "skills");
+else
+	SendSysmessage(character, "fishing.cfg is not accessible");
+endif
+
+// debug message
+// SendSysmessage(character, "Fishing delay is set to " + delaytime + " seconds");
+
+// make sure the fishing pole is equipped in order to fish
+if (! IsFishingPoleEquipped (character , fishingpole) )
+	SendSysmessage(character, "You have to equip that to go fishing!");
+	return;  // nope, the pole was not equipped, return to caller
+endif
+
+// get the tile that was targeted
+Local targetsquare := Targetcoordinates(character);
+if (!targetsquare)
+	// error getting the targeted square, retunr to caller
+	return;
+endif
+
+Local locinfo:= GetMapInfo( targetsquare.x, targetsquare.y );
+
+// debug messages
+// SendSysmessage(character, "The target coordinates are X:" + targetsquare.x + ", Y:" + targetsquare.y + ", Z:" + targetsquare.z);
+// SendSysmessage(character, "The target serial is " + targetsquare.serial);
+// SendSysmessage(character, "The target objtype is " + targetsquare.objtype);
+// SendSysmessage(character, "The target landtile is " + locinfo.landtile);
+// SendSysmessage(character, "The target graphic is " + targetsquare.graphic);
+
+// Make sure that the targeted location is valid
+if (IsValidTarget(character, targetsquare, locinfo)) 
+	// Show fishing animations
+    PerformAction(character, UACTION_FISHING);
+	local newsplash := CreateItemAtLocation(targetsquare.x, targetsquare.y, targetsquare.z,  0x352d, 1);
+	newsplash.movable := 0;
+	PlaySoundEffect(character, SFX_SKILL_FISHING);
+	sleepms(500);
+	DestroyItem(newsplash);
+	newsplash := CreateItemAtLocation(targetsquare.x, targetsquare.y, targetsquare.z,  0x352e, 1);
+	newsplash.movable := 0;
+	sleepms(500);
+	DestroyItem(newsplash);
+	newsplash := CreateItemAtLocation(targetsquare.x, targetsquare.y, targetsquare.z,  0x352f, 1);
+	newsplash.movable := 0;
+	sleepms(500);
+	DestroyItem(newsplash);
+	newsplash := CreateItemAtLocation(targetsquare.x, targetsquare.y, targetsquare.z,  0x3530, 1);
+	newsplash.movable := 0;
+	sleepms(500);
+	DestroyItem(newsplash);
+
+//	PlayStationaryEffect( targetsquare.x, targetsquare.y, targetsquare.z, FX_SPLASH, 0, 0, 0);
+//	PlaySoundEffect(character, SFX_SKILL_FISHING);
+	if ((delaytime - 2) > 0)
+		Sleep(delaytime - 2);
+	endif
+	// Check for an SOS in our backpack and deal with it
+	if (! isSOS(character, targetsquare))
+		// There was not an SOS near the target square, just go fishing
+		local difficulty;
+		if (targetsquare.objtype)
+			difficulty := GetHarvestDifficulty("fish", targetsquare.x, targetsquare.y, targetsquare.objtype);
+		else
+			difficulty := GetHarvestDifficulty("fish", targetsquare.x, targetsquare.y, locinfo.landtile);
+		endif
+		// debug message
+		// SendSysmessage(character, "Harvest difficulty is " + difficulty);
+	   	if (difficulty = error)
+			SendSysmessage(character, "There doesn't seem to be any fish here");
+			return 0;
+		endif
+    	Local SuccessRate := CheckSkill(character, SKILLID_FISHING, difficulty , difficulty * GAIN_MULTIPLIER);
+		// debug message
+		// SendSysmessage(character, "Success rate:" + SuccessRate);
+    	if (SuccessRate > 0)
+			// we have a successful attempt to use the skill
+	   		local fishreturned := HarvestResource( "fish", targetsquare.x, targetsquare.y, 1, 1 );
+			if (! fishreturned)
+				// I'm not sure if this is possible, but I will deal with it anyway
+				SendSysmessage(character, "Oops, you let that one get away!");
+				return 0;
+			endif
+			// debug message
+			// SendSysmessage(character, "You have fished up " + fishreturned + " object(s)");
+			// go get the item that was fished up and put it in backpack
+			Local catchtype := GetTheCatch(character);
+			CreateItemInBackpack(character, catchtype, fishreturned);
+	    else
+    	 	if (randomint(100) < 1)
+				// 1% chance of critical failure, handle it
+				CriticalFailure(character, targetsquare);
+			else
+		        SendSysmessage(character, "They don't seem to be biting today");
+	    	endif
+	    endif
+	endif
+endif
+return 1;
+endprogram

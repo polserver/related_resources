@@ -1,0 +1,344 @@
+
+use uo;
+use os;
+use cfgfile;
+
+program set_flow(house)
+
+    syslog("Setting flow of house " + house.serial);
+    local doordesc := ReadConfigFile("itemdesc");
+
+    var housetype := house.objtype;
+
+    case (housetype)
+       16486:
+       16490:
+       16492:
+       16494:
+       16484:   // box houses
+            foreach doors in ListItemsAtLocation((house.x),(house.y+3),(house.z+7))
+                 if (doordesc[doors.objtype].doortype)
+                      if (!GetObjProperty(doors, "Flow"))
+                           SetObjProperty(doors, "Flow", "N");
+                      endif
+                      SetObjProperty(doors, "Front", 1);
+                 endif
+            endforeach
+            break;
+       16500:     // stone 3 room house
+            foreach doors in ListItemsAtLocation((house.x-3),(house.y-1),(house.z+7))
+                 if (doordesc[doors.objtype].doortype)
+                      if (!GetObjProperty(doors, "Flow"))
+                           SetObjProperty(doors, "Flow", "N");
+                      endif
+                 endif
+            endforeach
+            foreach doors in ListItemsAtLocation((house.x+3),(house.y-1),(house.z+7))
+                if (doordesc[doors.objtype].doortype)
+                     if (!GetObjProperty(doors, "Flow"))
+                          SetObjProperty(doors, "Flow", "N");
+                     endif
+                endif
+            endforeach
+            foreach doors in ListItemsAtLocation((house.x-1),(house.y+6),(house.z+7))
+                if (doordesc[doors.objtype].doortype)
+                     if (!GetObjProperty(doors, "Flow"))
+                          SetObjProperty(doors, "Flow", "N");
+                     endif
+                     SetObjProperty(doors, "Front", 1);
+                endif
+            endforeach
+            foreach doors in ListItemsAtLocation((house.x),(house.y+6),(house.z+7))
+                if (doordesc[doors.objtype].doortype)
+                     if (!GetObjProperty(doors, "Flow"))                   
+                          SetObjProperty(doors, "Flow", "N");
+                     endif
+                     SetObjProperty(doors, "Front", 1);
+                endif
+            endforeach
+            break;
+     16504:
+     16502:    // 2 story
+          foreach doors in ListItemsAtLocation((house.x-3),house.y,house.z+7)
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x-3),(house.y+6),(house.z+7))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x-2),(house.y+6),(house.z+7))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x-3),(house.y),(house.z+27))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+               endif
+          endforeach
+          break;
+     16506:   // Tower
+          foreach doors in ListItemsAtLocation((house.x+3),(house.y-2),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x),(house.y+6),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y+6),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y+4),(house.z+26))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "E");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y+4),(house.z+46))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "E");
+                    endif
+               endif
+          endforeach
+          break;
+     16508:  //  Keep
+          foreach doors in ListItemsAtLocation((house.x),(house.y+10),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y+10),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          break;
+     16510:   //  Castle
+          foreach doors in ListItemsAtLocation((house.x),(house.y+15),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y+15),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x),(house.y+11),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y+11),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x),(house.y+5),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y+5),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+               endif
+          endforeach
+          break;
+     16524:   //  Patio
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y-4),(house.z+7))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "W");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+4),(house.y-1),(house.z+7))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y+4),(house.z+7))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "E");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x-4),(house.y+6),(house.z+7))
+               if (doordesc[doors.objtype].doortype)
+                   if (!GetObjProperty(doors, "Flow"))
+                        SetObjProperty(doors, "Flow", "N");
+                   endif
+                   SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x-3),(house.y+6),(house.z+7))
+               if (doordesc[doors.objtype].doortype)
+                   if (!GetObjProperty(doors, "Flow"))
+                        SetObjProperty(doors, "Flow", "N");
+                   endif
+                   SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          break;
+     16546:   // marble shop
+          foreach doors in ListItemsAtLocation((house.x-2),(house.y),(house.z+24))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          break;
+     16544:   // stone shop
+          foreach doors in ListItemsAtLocation((house.x-2),(house.y),(house.z+27))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          break;
+     16536:   // small tower
+          foreach doors in ListItemsAtLocation((house.x+3),(house.y+3),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          break;
+     16540:    // sandstone patio
+          foreach doors in ListItemsAtLocation((house.x-1),(house.y+3),(house.z+6))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          break;
+     16538:     // log cabin
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y+4),(house.z+8))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y),(house.z+29))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "S");
+                    endif
+               endif
+          endforeach
+          break;
+     16542:     // villa
+          foreach doors in ListItemsAtLocation((house.x+3),(house.y+1),(house.z+5))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+4),(house.y+1),(house.z+5))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x-3),(house.y-1),(house.z+25))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "S");
+                    endif
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x+1),(house.y),(house.z+25))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "E");
+                    endif
+               endif
+          endforeach
+          break;
+     16534:    // marble villa
+          foreach doors in ListItemsAtLocation((house.x-4),(house.y+3),(house.z+4))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          foreach doors in ListItemsAtLocation((house.x-3),(house.y+3),(house.z+4))
+               if (doordesc[doors.objtype].doortype)
+                    if (!GetObjProperty(doors, "Flow"))
+                         SetObjProperty(doors, "Flow", "N");
+                    endif
+                    SetObjProperty(doors, "Front", 1);
+               endif
+          endforeach
+          break;
+     endcase
+                  
+endprogram

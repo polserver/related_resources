@@ -1,0 +1,12 @@
+USE UO;
+use os;
+include "include/newpoisons";
+
+program unpoison(who, amt)
+
+if (!amt)
+	sendsysmessage (who, "Usage: .unpoisonme amount");
+	return;
+endif
+removecurse(who, cint(amt));
+endprogram

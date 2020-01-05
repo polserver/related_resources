@@ -1,0 +1,45 @@
+//
+// .create command - create items
+// Items created with this command will not decay.
+// Two forms:
+//   ".create [objtype] [amount]" - specify object type and amount
+//       amount defaults to 1
+//   ".create" - show the item creation menu, create one of that item
+//
+use uo;
+
+program textcmd_create( who, text )
+    if (text)
+        local params := SplitWords( text );
+        local objtype := CInt( params[1] );
+        local amount := CInt( params[2] );
+
+        if (!objtype)
+            objtype := GetObjtypeByName( params[1] );
+        endif
+
+        if (!amount)
+            amount := 1;
+        endif
+
+        print( "objtype=" + Hex(objtype) + ", amount=" + amount );
+        
+        local i;
+        for( i := 1; i <= amount; i := i + 1 )
+            local item := CreateItemAtLocation( who.x, who.y, who.z, objtype, 1 );
+            item.decayat := 0;  
+            SetObjProperty(item, "gmmade", who.name + " // " + who.acctname );
+        endfor
+    else
+        local selection := SelectMenuItem2( who, "ItemCreation" );
+        if (selection)
+            local created := CreateItemAtLocation( who.x, who.y, who.z, selection.objtype, 1 );
+            created.color := selection.color;
+            created.decayat := 0; 
+            SetObjProperty(created, "gmmade", who.name + " // " + who.acctname );
+        endif
+    endif   
+    
+
+    
+endprogram

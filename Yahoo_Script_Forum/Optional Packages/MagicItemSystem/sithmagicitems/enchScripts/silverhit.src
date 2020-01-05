@@ -1,0 +1,23 @@
+//doubles damage taken by npc with cprop undead != 0
+
+use uo;
+use util;
+use os;
+
+program silverhit(param)
+	var attacker := param[1];
+	var defender := param[2];
+	var weapon := param[3];
+	var armor := param[4];
+	var basedamage := param[5];
+	var rawdamage := param[6];
+	
+	if( GetObjProperty(defender,"undead") )
+		rawdamage := rawdamage*2;
+		PrintTextAbove(defender,defender.name + " shrieks from the silvery burn!");
+	endif
+	
+	return rawdamage;
+endprogram
+
+		

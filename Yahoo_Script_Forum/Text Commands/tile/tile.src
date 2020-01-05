@@ -1,0 +1,100 @@
+//=============================================================================
+//| TILE - Implementation of tile command                                     |
+//|---------------------------------------------------------------------------|
+//| by Z.e.r.o (z.e.r.o@softhome.net)                                         |
+//|---------------------------------------------------------------------------|
+//| This is a revision of the tile command made out from ens                  |
+//| This command is useful to lay down floors and other types of uniform      |
+//| surfaces.                                                                 |
+//|---------------------------------------------------------------------------|
+//| REVISION HISTORY                                                          |
+//| 1.0 - Ignatius started the command                                        |
+//| 1.1 - ens developed it further                                            |
+//| 1.2 - Now, after a year, Z.e.r.o is in charge! Rewritten to use the for   |
+//|       command                                                             |
+//=============================================================================
+
+use uo;
+
+program textcmd_tile(who, input)
+	
+	if (!input)
+		SendSysmessage(who, "No arguments supplied. Usage: .tile [item] ([z]).");
+		return;
+	endif
+	
+	local argArray := SplitWords(input); // split the arguments.
+	local tileItem  := CInt(argArray[1]);
+	local tileZ     := CInt(argArray[2]);
+	local zValid := 1;  // assume z is correct for now.
+	local i, j;
+
+	if (!tileZ)
+		SendSysmessage(who, "No Z supplied. Using target #1 Z instead.");
+		zValid := 0;
+	else 
+		if ((tileZ  < -127) OR (tileZ > 128)) // check the bounds.
+			SendSysmessage(who, "Z is out of bounds. Using target #1 Z instead.");
+			zValid := 0;
+		endif
+	endif
+
+	SendSysmessage(who, "Select coordinate #1");
+
+    local cs1 := TargetCoordinates(who);
+	
+	SendSysmessage(who, "Select coordinate #2");
+
+    local cs2 := TargetCoordinates(who);
+
+	if ((!cs1) OR (!cs2)) // check that we got two valid coordstructs.
+		SendSysmessage(who, "Missing coordinate. Aborting.");
+		return;
+	endif
+	
+	if (!zValid) // if we are to use the coord #1 Z, check it out.
+		if (cs1.z < -127 OR cs1.z > 128)
+			SendSysmessage(who, "Z is out of bounds. Aborting.");
+			return;
+		endif
+	endif
+
+	if (!zValid)
+		tileZ := cs1.z;
+	endif
+	
+	local startX;
+	local startY;
+	local endX;
+	local endY;
+	
+	StartX := min (cs1.x, cs2.x);
+	EndX := max (cs1.x, cs2.x);
+	StartY := min (cs1.y, cs2.y);
+	EndY := max (cs1.y, cs2.y);
+
+	for (i:=StartX; i <= EndX; i:=i+1)
+		for (j:=StartY; j <= EndY; j:=j+1)
+			CreateItemAtLocation(i, j, tileZ, tileItem, 1);
+		endfor
+	endfor
+	SendSysmessage( who, "Command completed." );
+endprogram
+
+function min (v1, v2)
+	if (v1 <= v2)
+		return v1;
+	else 
+		return v2;
+	endif
+endfunction
+
+function max (v1, v2)
+	if (v1 <= v2)
+		return v2;
+	else
+		return v1;
+	endif
+endfunction
+
+

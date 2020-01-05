@@ -1,0 +1,658 @@
+// command .admin	started June 19, 2000
+// last updated June 25, 2000
+
+use uo;
+use os;
+
+Include "include/gumputil";
+include "include/findcity";
+include "include/yesno";
+include "include/math";
+
+global tlayout := {
+"page 0",
+"nodispose",
+"resizepic 50	 0 2600 540 405", // background
+"resizepic 210 360 5100 200 25", // buttons
+"text 175 30 0 0", // title
+"text  95 60 0 1", // account
+"text 203 60 0 2", // name
+"text 335 60 0 3", // ip
+"text 465 60 0 4"	// location
+};
+
+global tdata := {
+"",
+"Account",
+"Name",
+"IP Address",
+"Location",
+"", // 5
+"Midgard's Client Control Menu",
+"GOTO:",
+"SUMMON:",
+"SUMMON CAGE:",
+"LIGHTNING:",
+"JAIL:",
+"FORGIVE:",
+"NOTES:",
+"MESSAGE:",
+"RESURRECT:",
+"KICK:",
+"BAN:",
+"KILL:",
+"REMOVE RACE:",
+"REMOVE GUILD:",
+"Go to the client's location.",
+"Bring that client to you.",
+"Bring that client in a cage.",
+"Send a warning to the client.",
+"Send the client to jail.",
+"Release the client from jail.",
+"Read and update player notes.",
+"Send a message.",
+"Resurrect the client's character.",
+"Kick the client off the server.",
+"Ban the client from the server.",
+"Kill the client's current character.",
+"Remove the client's race.",
+"Remove the client's guild."
+};
+
+global layout2 := {
+"page 0",
+"nodispose",
+"resizepic 50 0 2600 540 405", // background
+"text 200 30 0 6", // title
+"text 120 60 300 7", // go
+"text 120 80 300 8", // summon
+"text 120 100 300 9", // summon cage
+"text 120 120 300 10", // lightning
+"text 120 140 300 11", // jail
+"text 120 160 300 12", // forgive
+"text 120 180 300 13", // notes
+"text 120 200 300 14", // message
+"text 120 220 300 15", // resurrect
+"text 120 240 300 16", // kick 14
+"text 120 260 300 17", // ban 15
+"text 120 280 300 18", // kill 16
+"text 120 300 300 19", // remove race 17
+"text 120 320 300 20", // remove guild 18
+"text 176 60 995 21", // goto 19
+"text 219 80 995 22", // summon 20
+"text 264 100 995 23", // summon cage 21
+"text 230 120 995 24", // lightning 22
+"text 170 140 995 25", // jail 23
+"text 208 160 995 26", // forgive 24
+"text 186 180 995 27", // notes 25
+"text 213 200 995 28", // message 26
+"text 240 220 995 29", // resurrect 27
+"text 175 240 995 30", // kick 28
+"text 162 260 995 31", // ban 29
+"text 173 280 995 32", // kill 30
+"text 260 300 995 33", // remove race 31
+"text 267 320 995 34", // remove guild 32
+"text 140 345 995 5", // player name 33
+"button 95 60 210 211 1 0 1", // go 34
+"button 95 80 210 211 1 0 2", // summon 35
+"button 95 100 210 211 1 0 3", // summon cage 36
+"button 95 120 210 211 1 0 4", // lightning 37
+"button 95 140 210 211 1 0 5", // jail 38
+"button 95 160 210 211 1 0 6", // forgive 39
+"button 95 180 210 211 1 0 7", // Notes 40
+"button 95 200 210 211 1 0 8", // message 41
+"button 95 220 210 211 1 0 9", // resurrect 42
+"button 95 240 210 211 1 0 10", // kick 43
+"button 95 260 210 211 1 0 11", // ban 44
+"button 95 280 210 211 1 0 12", // kill 45
+"button 95 300 210 211 1 0 13", // remove race 46
+"button 95 320 210 211 1 0 14" // remove guild 47
+};
+
+global layout3 := {
+"page 0",
+"nodispose",
+"nomove",
+"resizepic 20 20 2620 517 260", // background
+"text  30 0 910 0 ",
+"text 410 0 910 1 ",
+"button	508 0 4011 4013 1 0 1", //modify notes button
+"textentry 30 30 500 20 910 2 2",
+"textentry 30 50 500 20 910 3 3",
+"textentry 30 70 500 20 910 4 4",
+"textentry 30 90 500 20 910 5 5",
+"textentry 30 110 500 20 910 6 6",
+"textentry 30 130 500 20 910 7 7",
+"textentry 30 150 500 20 910 8 8",
+"textentry 30 170 500 20 910 9 9",
+"textentry 30 190 500 20 910 10 10",
+"textentry 30 210 500 20 910 11 11",
+"textentry 30 230 500 20 910 12 12",
+"textentry 30 250 500 20 910 13 13"
+};
+
+global testdata := {
+	"Account Notes:",
+	"Save Notes:",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	""
+};
+
+global me;
+
+global players;
+
+global data;
+global layout;
+
+const MAX_PLAYER_FOR_GUMP:=130;
+
+global numpage:=1;
+
+program textcmd_testgump( who )
+me:=who;
+
+	players := EnumerateOnlineCharacters();
+
+//	local players := EnumerateOnlineCharacters();
+
+local finish:=0;
+local res;
+
+repeat
+	data:=tdata;
+	layout:=tlayout;
+
+	FillInArrays();
+
+	res := SendDialogGump( who , layout , data );
+
+	if( !res[0] )
+		return;
+	endif
+	
+	if (res[0]=1001)
+		numpage:=numpage-1;
+	elseif (res[0]=1002)
+		numpage:=numpage+1;
+	else
+		finish:=1;
+	endif
+until (finish=1);
+
+	local client := players[res[0]];
+	local playername := Cstr( client.name );
+
+	data[6]	 := "Character: " + playername;
+
+	data.append ("Location: " + findcity(client) + " Territory");
+	layout2.append ("text 148 365 995 " + (len(data)-1) );
+
+	if( who.cmdlevel <= 2 )
+		layout2[14] := ""; // kick
+		layout2[28] := ""; // kick
+		layout2[43] := ""; // kick
+
+		layout2[16] := ""; // kill
+		layout2[30] := ""; // kill
+		layout2[45] := ""; // kill
+
+		layout2[17] := ""; // remove race
+		layout2[31] := ""; // remove race
+		layout2[46] := ""; // remove race
+		
+		layout2[18] := ""; // remove guild
+		layout2[32] := ""; // remove guild
+		layout2[47] := ""; // remove guild
+
+	elseif( who.cmdlevel <=4 )
+		layout2[15] := ""; // ban
+		layout2[29] := ""; // ban
+		layout2[44] := ""; // ban
+	endif
+
+	local whataction := SendDialogGump( who , layout2 , data );
+	local onlinechr, action := whataction[0];
+
+	local acc	:= client.acct;
+	local release := acc.getprop( "Release" );
+
+	if( !action )
+		return;
+
+	elseif( action = 1 ) // GOTO
+		MoveCharactertoLocation( who , client.x , client.y , client.z , MOVECHAR_FORCELOCATION );
+		return;
+
+	elseif( action = 2 ) // SUMMON
+
+		MoveCharactertoLocation( client , who.x , who.y , who.z , MOVECHAR_FORCELOCATION );
+		return;
+
+	elseif( action = 3 ) // SUMMON CAGE
+
+		local tempitem;
+		MoveCharactertoLocation(client, who.x+1, who.y+1, who.z, MOVECHAR_FORCELOCATION);
+		tempitem := CreateItemAtLocation( client.x-1,client.y, client.z, 0x821, 1 );
+		tempitem.decayat := ReadGameClock() + 30;
+		tempitem := CreateItemAtLocation( client.x+1,client.y, client.z, 0x821, 1 );
+		tempitem.decayat := ReadGameClock() + 30;
+
+		tempitem := CreateItemAtLocation( client.x-1,client.y+1, client.z, 0x821, 1 );
+		tempitem.decayat := ReadGameClock() + 30;
+		tempitem := CreateItemAtLocation( client.x+1,client.y+1, client.z, 0x821, 1 );
+		tempitem.decayat := ReadGameClock() + 30;
+
+		tempitem := CreateItemAtLocation( client.x,client.y-1, client.z, 0x823, 1 );
+		tempitem.decayat := ReadGameClock() + 30;
+		tempitem := CreateItemAtLocation( client.x,client.y+1, client.z, 0x823, 1 );
+		tempitem.decayat := ReadGameClock() + 30;
+
+		tempitem := CreateItemAtLocation( client.x+1,client.y-1, client.z, 0x823, 1 );
+		tempitem.decayat := ReadGameClock() + 30;
+		tempitem := CreateItemAtLocation( client.x+1,client.y+1, client.z, 0x823, 1 );
+		tempitem.decayat := ReadGameClock() + 30;
+		client.SetParalyzed(1);
+		return;
+	
+	elseif( action = 4 ) // LIGHTNING
+
+		PlayLightningBoltEffect( client );
+		PlaySoundEffect( client , 0x0207 );
+		SendSysMessage( client , "You are being warned." );
+		SendSysMessage( who , playername + " has been warned." );
+		Sleep(2);
+		PlayLightningBoltEffect( client );
+		PlaySoundEffect( client, 0x0029 );
+		return;
+	
+	elseif( action = 5 ) // JAIL
+		if( release )
+			SendSysMessage( who, playername + " is already jailed.");
+			return;
+		endif
+
+		local val := Cint(SendTextEntryGump( who, "How many days will this account remain jailed? (Max 14)", 40 ));
+		local time;
+		case( val )
+			1:  time := 86400;	break;
+			2:  time := 172800;	break;
+			3:  time := 259200;	break;
+			4:  time := 345600;	break;
+			5:  time := 432000;	break;
+			6:  time := 518400;	break;
+			7:  time := 604800;	break;
+			8:  time := 691200;	break;
+			9:  time := 777600;	break;
+			10: time := 864000;	break;
+			11: time := 950400;	break;
+			12: time := 1036800;	break;
+			13: time := 1123200;	break;
+			14: time := 1209600;	break;
+		endcase
+
+		if( !time )
+			SendSysMessage(who, "Canceled.");
+			return;
+		endif
+
+		acc.setprop( "Release" , (ReadGameClock() + time) );
+		MoveCharacterToLocation( client , 5304 , 1184 , 0 , 0 );
+		SendSysMessage( client , "You have been jailed" );
+		SendSysMessage( who , playername + " has been jailed." );
+//		DisconnectClient(client);
+//		acc.disable();
+
+		return;
+
+	elseif( action = 6 ) // FORGIVE
+
+		if( !release )
+			SendSysMessage( who , playername + " wasn't jailed" );
+			return;
+		endif
+
+		acc.setprop( "Release" , 0 );
+		SendSysMessage( client , "You have been freed.");
+		SendSysMessage( who , playername + " has been freed." );
+		MoveCharacterToLocation( client , 1475 , 1645 , 20 , 0);
+		return;
+	
+	elseif( action = 7 ) // NOTES
+
+		local note := acc.GetProp( "Notes" );
+		SetNotes( note );
+		whataction := SendDialogGump( who , layout3 , testdata );
+
+		if( whataction[0] != 1 )
+			return;
+		endif
+
+		local subnote;
+		local i;
+
+		note :="";
+
+		for( i := 2 ; i <= 12 ; i := i + 1 )
+			subnote := whataction[i];
+			subnote[1, Find(subnote, ": ", 1)+1] := "";
+			if( subnote != "" )
+				note := note + " " + subnote;
+			endif
+		endfor
+
+		acc.setprop( "Notes" , note );
+
+		return;
+
+	elseif( action = 8 ) // MESSAGE
+
+		local themessage := RequestInput( who , who.backpack , "What message would you like to send " + playername + "?" );
+		if( !themessage )
+			SendSysMessage( who , "Canceled." );
+			return;
+		endif
+
+		SendSysMessage( client , "MSG from Staff: " + themessage );
+		SendSysMessage( who , "MSG sent." );
+		return;
+	
+	elseif( action = 9 ) // RESURRECT
+
+		local newcolor;
+		local racepicked := client.title_race;
+
+		if( client.dead )
+			Resurrect( client );
+
+			if( racepicked = "Elf" )
+				newcolor := 770;
+			elseif( racepicked = "Dark-Elf" )
+				newcolor := 33877;
+			elseif( racepicked = "Goblin" )
+				newcolor := 34186;
+			elseif( racepicked = "Barbarian" )
+				newcolor := 33804;
+			elseif( racepicked = "Dwarf" )
+				newcolor := 33888;
+			else
+				newcolor := who.truecolor;
+			endif
+			
+			who.color := newcolor;
+		else
+			SendSysMessage( who, playername + " is not dead!" );
+		endif
+		return;
+
+	elseif( action = 10 ) // KICK
+
+		DisconnectClient( client );
+		return;
+
+	elseif( action = 11 ) // BAN
+
+		acc.ban();
+		return;
+
+	elseif( action = 12 ) // KILL
+
+		if( !client.dead )
+			RevokePrivilege( client, "invul" );
+			SetObjProperty( client , "guardkill" , 1 );
+			ApplyRawDamage( client , client.hp + 3 );
+			SendSysMessage( who , playername + " has been killed!" );
+		else
+			SendSysMessage( who , playername + " was dead already!" );
+		endif
+		return;
+
+	elseif( action = 13 ) // REMOVE RACE
+
+		if( YesNo(who , "Remove Race?") )
+			client.title_race := "";
+			client.color := client.truecolor;
+			SendSysMessage( who , "Race has been removed." );
+			SendSysMessage( client ,"Your race has been removed." );
+			return;
+		endif
+
+	elseif( action = 14 ) // REMOVE GUILD
+		RemoveGuild( who , client );
+	endif
+
+endprogram
+
+
+function RemoveGuild(who,client)
+
+local guild_id:=getobjproperty(client,"guild_id");
+local guild:=FindGuild(guild_id);
+
+SendSysMessage(who,"Remove their guild?",3,34);
+
+local answer:=YesNo(who,"Remove Guild?");
+
+if (!answer)
+SendSysMessage(who,"Guild not removed.",3,34);
+return;
+endif
+
+local gm:=findgm(guild);
+
+if (client.serial=gm[2]) guild.setprop("gm",0); endif
+guild.removemember(client);
+eraseobjproperty(client,"guild_id");
+eraseobjproperty(client,"fealty");
+fixnameguild(client);
+client.title_guild:="";
+eraseobjproperty(client,"abv");
+eraseobjproperty(client,"talkchat");
+eraseobjproperty(client,"hearchat");
+
+SendSysMessage(client,"You are no longer a member of "+guild.getprop("guildname")+".",3,70);
+SendSysMessage(who,"Guild has been removed.",3,70);
+
+local i,all:=guild.members;
+
+if (all.size()=0)
+all:=guild.allyguilds;
+
+if (all.size()<>0)
+for(i:=1;i<=all.size();i:=i+1)
+guild.removeallyguild(all[i]);
+endfor
+endif
+
+all:=guild.enemyguilds;
+
+if (all.size()<>0)
+for(i:=1;i<=all.size();i:=i+1)
+guild.removeenemyguild(all[i]);
+endfor
+endif
+
+DestroyGuild(guild);
+SendSysMessage(who,"You will need to delete the old guildstone.",3,34);
+endif
+
+endfunction
+
+
+function fixnameguild(who)
+local abv:=getobjproperty(who,"abv"),result:=find(who.name," ["+abv+"]",1),name:=who.name;
+
+result:=result-1;
+name:=name[1,result];
+who.name:=name;
+endfunction
+
+
+function findgm(guild)
+
+local returninfo:={"In Vote","0"},i,all:=guild.members,gm:=guild.getprop("gm");
+
+for(i:=1;i<=all.size();i:=i+1)
+if (all[i].serial=gm) returninfo[1]:=all[i].name; returninfo[2]:=all[i].serial; returninfo[3]:=all[i]; endif
+endfor
+
+return returninfo;
+
+endfunction
+
+
+function FillInArrays()	
+
+	local character;
+	local numplayer := players.size();
+	local start	:= 1;
+	local count	:= 0;
+	local done	:= 0;
+	local page	:= 1;
+	local perpage	:= 13;
+	local y 	:= 80;
+	local i;
+	local j;
+
+SendSysMessage(me,"Size= " + players.size());
+
+	local r:=(numpage-1) * MAX_PLAYER_FOR_GUMP;
+
+	start:=1 + r;
+
+	if (start>numplayer)
+		numpage:=numpage-1;
+		r:=(numpage-1) * MAX_PLAYER_FOR_GUMP;
+		start:=1 + r;
+	endif
+	
+	if (numplayer>MAX_PLAYER_FOR_GUMP)
+		numplayer:=start+MAX_PLAYER_FOR_GUMP;
+		if (numplayer>players.size())
+			numplayer := players.size();
+		endif
+	endif
+
+	data[1] := "Admin Control Panel - " + players.size() + " players online.";
+
+	layout.append( "page " + page );
+	if( numplayer > perpage )
+		layout.append( "button 350 361 5540 5541 0 " + (page + 1) );
+	endif
+
+	// Cycle through all the players in the game and add them to the goto list.
+	for( i := start ; i <= numplayer ; i := i + 1 )
+		character := players[i];
+			if( done = perpage )
+				done 	:= 0;
+				page 	:= page + 1;
+				y 	:= 80;
+				layout.append( "page " + page );
+				layout.append( "button 260 361 5537 5538 0 " + (page - 1) );
+				if( numplayer > (count + perpage) )
+					layout.append( "button 350 361 5540 5541 0 " + (page + 1) );
+				endif
+			endif
+
+			if (i=start and numpage>1)
+				layout.append( "button 260 361 5537 5538 1 0 1001");
+			endif
+
+			if (i=numplayer and numplayer = (start+MAX_PLAYER_FOR_GUMP))
+				layout.append( "button 350 361 5540 5541 1 0 1002");
+			endif
+				
+			layout.append( "text 95 " + y + " 0 " + len(data) );
+			layout.append( "button 75 " + (y+3) + " 2117 2118 1 0 " + i );
+			data.append( character.acctname );
+		
+			layout.append( "text 203 " + y + " 0 " + len(data) );
+			FixName( character );
+
+			if( !character.cmdlevel )
+				data.append( data[6] );
+			elseif( character.cmdlevel >= 4 )
+				data.append( "+" + data[6] );
+			else
+				data.append( "*" + data[6] );
+			endif
+		
+			layout.append( "text 335 " + y + " 0 " + len(data) );
+			data.append( character.ip );
+	
+			layout.append( "text 465 " + y + " 0 " + len(data) );
+			data.append( character.x + "," + character.y + "," + character.z );
+			y 	:= y + 20;
+			done 	:= done + 1;
+			count 	:= count + 1;
+	endfor
+
+endfunction
+
+function FixName(player)
+
+	local oldname :=player.name;
+	local split := SplitWords( oldname ), i, newname :="";
+
+	for (i := 1; i <= 2; i := i + 1)
+	
+	if (split[i])
+		newname := newname + split[i] + " ";
+		endif
+
+	endfor
+
+	if (GetObjProperty(player,"guardtype")=2)
+		data[6] := "CVG " + split[1];
+	elseif (GetObjProperty(player,"guardtype")=1)
+		data[6] := "OVG " + split[1];
+	else
+	data[6] := newname;
+	endif
+
+endfunction
+
+Function SetNotes(note) // Added by Shinigami
+
+	Local split:=SplitWords(note);
+	Local width:=0;
+	Local lines:=0;
+	Local index:=1;
+	While ((index<=Len(split)) And (lines<=12))
+	If (width=0)
+		Local testword:=split[index];
+		lines:=lines+1;
+		testdata[2+lines]:=testword;
+		width:=GumpTextWidthFast(testword);
+		index:=index+1;
+	Else
+		Local testword:=" "+split[index];
+		Local testwidth:=GumpTextWidthFast(testword);
+		If (width+testwidth<CInt(500/1.5))
+		testdata[2+lines]:=testdata[2+lines]+testword;
+		width:=width+testwidth;
+		index:=index+1;
+		Else
+		width:=0;
+		EndIf
+	EndIf
+	EndWhile
+	If (lines>12)
+	testdata[1+lines]:=testdata[1+lines]+"...";
+	Else
+	While (lines<12)
+		lines:=lines+1;
+		testdata[2+lines]:="";
+	EndWhile
+	EndIf
+EndFunction

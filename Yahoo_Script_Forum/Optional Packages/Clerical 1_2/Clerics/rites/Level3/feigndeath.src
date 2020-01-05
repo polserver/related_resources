@@ -1,0 +1,50 @@
+use uo;
+use os;
+
+include "../../cleric";
+
+program dispelmagic(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif
+
+	var slave, hair;
+	var hair2;
+	var temp;
+	
+	foreach person in ListMobilesNearLocation(who.x, who.y, who.z, piety+2)
+		if (GetObjProperty(person, "Devotion") == devotion && checklineofsight(person,who))
+			person.frozen := 1;
+			person.hidden := 1;
+			slave := CreateNPCFromTemplate("clone", person.x, person.y, person.z);
+			slave.color := person.color;
+			slave.truecolor := person.color;
+			slave.name := person.name;
+			slave.graphic := person.graphic;
+			foreach item in ListEquippedItems(slave)
+				DestroyItem(item);
+			endforeach
+			foreach item in ListEquippedItems(person)
+				temp := CreateItemInContainer(person.backpack.serial, item.objtype, 1);
+				setname(temp, item.desc);
+				temp.color := item.color;
+				temp.graphic := item.graphic;
+				if (!EquipItem(slave, temp))
+					DestroyItem(temp);
+				endif
+				temp.movable := 0;
+			endforeach
+			PlayObjectCenteredEffect(person, 0x36bd, 10, 10);
+			EraseObjProperty(slave, "guardkill");
+			ApplyRawDamage(slave, 1000);
+			sleepms(900);
+			person.frozen := 0;
+		endif
+	endforeach
+endprogram

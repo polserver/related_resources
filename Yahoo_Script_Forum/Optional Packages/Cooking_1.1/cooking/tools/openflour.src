@@ -1,0 +1,36 @@
+//
+// 1.1
+// 
+// openflour.src
+//
+// By Austin Heilman
+// Aheilman@home.com
+//
+// Double click a closed sack of flour... open it up.
+// Dough needs the flour in the sack, not the WHOLE sack.
+//
+// Created 6/19/2001 12:45PM
+// Modified 6/19/2001 12:45PM
+//
+
+use uo;
+use basic;
+use os;
+
+program openbag(who, bag)
+	var openbag;
+	
+	if (bag.objtype == 0x1039)
+		openbag := 0x103A;
+	elseif (bag.objtype == 0x1045)
+		openbag := 0x1046;
+	endif
+	SendSysMessage(who, "You tear open the bag.");
+	PlaySoundEffect(who, 0x59);
+	if (!bag.container)
+		CreateItemAtLocation(bag.x, bag.y, bag.z, openbag, 1);
+	else
+		CreateItemInContainer(bag.container, openbag, 1);
+	endif
+	SubtractAmount(bag, 1);
+endprogram

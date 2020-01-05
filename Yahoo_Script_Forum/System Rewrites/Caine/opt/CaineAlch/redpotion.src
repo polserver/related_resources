@@ -1,0 +1,32 @@
+use os;
+use uo;
+use util;
+use cfgfile;
+include "drinkpotion";
+
+program drink_blue (character, potion)
+if (!checkifcandrink(character,potion))
+        return;
+endif
+    local potion_strength := get_potion_strength(potion);
+
+    if (is_poison(potion))
+        do_poison(character, potion);
+    else
+           if (potion_strength = 3)
+		character.stamina := character.maxstamina;
+	   else
+	        local heal_amount := RandomDiceRoll("5d6+3");
+                if ( ( heal_amount + character.stamina)  > character.maxstamina )
+			heal_amount := character.maxstamina - character.stamina;
+		endif
+	        character.stamina := character.stamina + heal_amount;
+	   endif
+           empty_bottle(character, potion);
+           PlaySoundEffect( character,  SOUND_EFFECT_HEAL );
+    endif
+
+detach();
+sleep(10);
+candrink(character);
+endprogram

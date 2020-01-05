@@ -1,0 +1,21 @@
+use uo;
+use util;
+
+program snow( who , params )
+    params := SplitWords( params );
+    
+
+    var rand := RandomInt( 30 );
+    var res := 
+      SetRegionWeatherLevel( params[1],       // region name
+                                2,            // weather type = snow
+                                2,            // severity
+                                0,            // aux
+                               -1 );          // lightoverride
+
+    broadcast( "A light snow begins to fall in " + params[1] );
+    
+    if (!res)
+        SendSysMessage( who, "Error: " + res.errortext );
+    endif
+endprogram

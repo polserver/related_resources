@@ -1,0 +1,52 @@
+use uo;
+
+program RotateMulti1( who, Item )
+var Part2;
+var Space2;
+var Right := 0;
+var Lef := 0;
+var Picture1 := 3;
+var Picture2 := 3;
+
+	case( Item.facing )
+	0:
+		Right := -1;
+	1:
+		Lef := -1;
+		Picture1 := -2;
+		Picture2 := -4;
+	2:
+		Right := 1;
+	3:
+		Lef := 1;
+		Picture1 := -4;
+		Picture2 := -2;
+	endcase
+
+	Part2 := ListItemsAtLocation( Item.x + Right, Item.y + Lef, Item.z );
+	if(( Item.movable = 0) or ( Part2[1].movable = 0 ))
+		sendsysmessage( who, "That item is locked down" );
+		return;
+	endif
+
+	Space2 := ListItemsAtLocation( Item.x - Lef, Item.y + Right, Item.z);
+	if( Space2[1].objtype )
+		sendsysmessage( who, "That location is blocked" );
+		return;
+	endif
+
+	if((Item.objtype + 1 = Part2[1].objtype) or (Item.objtype - 1 = Part2[1].objtype))
+		Item.facing := Item.facing + 1;
+		if( Item.facing >= 4 )
+			Item.facing := 0;
+		endif
+		Part2[1].facing := Part2[1].facing + 1;
+		if( Part2[1].facing >= 4 )
+			Part2[1].facing := 0;
+		endif
+		Item.graphic := Item.graphic + Picture1;
+		Part2[1].graphic := Part2[1].graphic + Picture2;
+		MoveItemToLocation( Part2[1], Item.x - Lef, Item.y + Right, Item.z, 0 );
+	endif
+endprogram
+

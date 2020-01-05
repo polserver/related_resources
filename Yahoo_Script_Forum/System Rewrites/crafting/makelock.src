@@ -1,0 +1,62 @@
+use uo;
+use cfgfile;
+global keys := {0x100e, 0x100f, 0x100f, 0x1012, 0x1013};
+
+include "include/client";
+include "util/key";
+program uselock(who, lock)
+ local classname := getobjproperty(who, "class");
+ if (!(lower(classname)["artisan"]))
+ 	sendsysmessage(who, "Only Artisans may install locks!");
+ 	return;
+ endif
+ if (getskill(who, SKILLID_TINKERING) < 65)
+ 	sendsysmessage(who, "You are not skilled enough to lock containers yet");
+ 	return;
+ endif
+ 
+Sendsysmessage(who, "In which container do you wish to install this?");
+local what := target(who, TGTOPT_CHECK_LOS);
+if (!what)
+	return;
+endif
+local cfg := readconfigfile("::itemdesc");
+if (!cfg[what.objtype].lockable)
+	sendsysmessage(who, "That can't be locked!");
+	return;
+endif
+
+if (what.container.serial != who.backpack.serial)
+	sendsysmessage(who, "You may only install locks in containers in the top level of your backpack!");
+	return;
+endif
+
+sendsysmessage(who, "Select the key you'd like to use");
+local key := target(who, TGTOPT_CHECK_LOS);
+
+if (!key)
+	return;
+endif
+
+if (!(key.graphic in keys))
+	sendsysmessage(who, "That's not a key!");
+	return;
+endif
+
+if (checkskill(who, SKILLID_TINKERING, 65, 400))
+			local theitem := what;
+	                SetObjProperty(theitem, "lockable","1");
+                        local lockid := AllocLockId();
+                        what.locked := 1;
+                        local thekey := key; 
+                        SetObjProperty(thekey, "lockid",lockid);
+                        SetObjProperty(theitem,"lockid",lockid);
+                        destroyitem(lock);
+                        sendsysmessage(who, "You lock the container");
+                        return;
+else
+	destroyitem(lock);
+	sendsysmessage(who, "You fail, and damage the lock mechanism");
+	return;
+endif
+endprogram

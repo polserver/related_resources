@@ -1,0 +1,55 @@
+// Script for use under POL v0.95
+// Copyright (C) 2003 Jacobo Lata Fernández
+// choofi@infoactiva.net
+//
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+//
+//
+// Originally created for the Gallaecia Shard - http://gallaecia.infoactiva.net
+//
+//
+// /scripts/textcmd/coun/follow.src
+//
+// Command to follow a player/npc
+// CmdLevel: 1 (coun)
+
+
+use uo;
+
+include "include/follow";
+
+program textcmd_follow( who )
+	SendSysMessage( who , "Who do you want to follow?" );
+	var target := Target( who , TGTOPT_NOCHECK_LOS );
+	if( !target )
+		SendSysMessage( who , "Cancelled" );
+		return 0;
+	endif
+	if( !target.name )
+		SendSysMessage( who , "That's not a player or npc" );
+	elseif( target == who )
+		SendSysMessage( who , "Hahahaha, nice try" );
+	elseif( target.cmdlevel >= who.cmdlevel )
+		SendSysMessage( who , "You can't follow a player with a higher CmdLevel" );
+	else
+		print( "ACCOUNT:'" + who.acctname + "' :: PLAYER:'" + who.name + "' -> (FOLLOW) Starting to follow '" + target.name + "' ('" + target.acctname + "')" );
+		SendSysMessage( who , "You start to follow " + target.name );
+		SendSysMessage( who , "You can stop following by changing your War/Peace status" );
+		PerseguirJugador( who , target , 1 );
+		print( "ACCOUNT:'" + who.acctname + "' :: PLAYER:'" + who.name + "' -> (FOLLOW) Stopped following '" + target.name + "' ('" + target.acctname + "')" );
+		SendSysMessage( who , "You stop following " + target.name );
+	endif
+endprogram

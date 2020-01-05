@@ -1,0 +1,81 @@
+// ********************************************************************************
+// ***
+// ***	SOS Message Script
+// ***
+// ***  This script was primarily implemented by Louds (louds.geo@yahoo.com)
+// ***	Portions were modified by Tomas (tbaffy@baffyland.com)
+// ***
+// ***	This script is the item handler that is called when the user double-clicks
+// ***	on an SOS message.
+// ***
+// ***	I changed the original script to display a gump dialog instead of 
+// ***	printing the message above the message graphic.
+// ***
+// ***	I added support for multiple messages to the sosmessage object  There
+// ***	are currently four different SOS messages that can be displayed.
+// ***
+// ********************************************************************************
+
+// ********************************************************************************
+//	function modules that will be used
+// ********************************************************************************
+use uo;
+use cfgfile;
+use os;
+use util;
+
+// ********************************************************************************
+//	Main program
+//	
+//	This is the main SOS message handler.  It is called when the player
+//	double-clicks on an SOS message.
+// ********************************************************************************
+program use_message( who, message )
+	// get the properties from the sosmessage object that are needed
+	// to display the message
+	local tox := GetObjProperty(message , "tileX");
+	local toy := GetObjProperty(message , "tileY");
+	local msgindex := GetObjProperty(message , "msgnum");
+	// debug messages
+	// sendsysmessage(who, "The SOS location is " + tox + ", " + toy);
+	// sendsysmessage(who, "The SOS message number is " + msgindex);
+	// check for a corrupted SOS message
+	if( tox.errortext or toy.errortext)
+		syslog("bad message "+tox+" "+toy);
+		destroyitem(message);
+		sendsysmessage(who, "The message is garbled beyond your ability to read!");
+		return;
+	endif
+	// define the gump dialog layout
+	local layout := array(  "page 0",
+    	                    "resizepic 0 0 3500 300 200",
+        	                "button 110 140 1148 1149 1 0 1",
+            	            "text 20 30 0 0",
+                	        "text 20 50 0 1",
+                    	    "text 20 70 0 2");
+	// start with empty array for dialog text
+	local data := array();
+	// Fill the data array with the proper text for the message that is
+	// indicated in the "msgnum" Cprop in the sosmessage object.  We put
+	// the msgnum into the msgindex local variable earlier.  The text of
+	// each SOS message should be three lines.  Care should be taken to
+	// make the length of each line look decent on the dialog gump.  It
+	// is also important to use the tox and toy variables to insert the
+	// coordinates into the message.
+	case (msgindex)
+	    0: 	data[1] := "Help, our ship is sinking!  We are";
+			data[2] := "at coordinates " + tox + ", " + toy + "!  Please";
+			data[3] := "hurry, we are slipping away fast!";
+	    1: 	data[1] := "We are under attack by a gigantic";
+			data[2] := "sea serpent!  We are at coordinates";
+			data[3] := tox + ", " + toy + "!  Please help us!";
+	    2: 	data[1] := "A savage beast has holed our ship.";
+			data[2] := "We are at location " + tox + ", " + toy + "!";
+			data[3] := "We will hang on as long as possible.";
+	    3: 	data[1] := "We have encountered a terrible storm";
+			data[2] := "at coordinates " + tox + ", " + toy + "!";
+			data[3] := "The ship may capsize soon, hurry!";
+	endcase
+	// Were all set now, show the gump dialog         
+	local res := SendDialogGump( who, layout, data );             
+endprogram

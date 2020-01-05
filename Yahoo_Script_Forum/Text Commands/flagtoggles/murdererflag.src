@@ -1,0 +1,34 @@
+//
+// .murdererflag {target} - Toggle a player's murderer flag on and off.
+//
+
+use uo;
+
+program textcmd_togglemurderer( who )
+
+SendSysMessage( who, "Whose murderer flag would you like to toggle?" );
+local player := Target( who );
+
+if (player.strength)
+  if (player.acctname)
+    if (player.murderer)
+      player.setmurderer(0);
+      PrintTextAbovePrivate( player, player.name + " is no longer a murderer.", who );
+    else
+      player.setmurderer(1);
+      PrintTextAbovePrivate( player, player.name + " is now a murderer!", who );
+    endif
+  else
+    SendSysMessage( who, "Invalid Selection.");
+    PrintTextAbovePrivate( player, "Only player characters can be flagged as murderers.", who);
+  endif
+
+else
+  if (!player)
+    SendSysMessage( who, "Cancelled.");
+  else
+    SendSysMessage( who, "Invalid Selection.");
+  endif
+endif
+
+endprogram

@@ -1,0 +1,46 @@
+Use uo;
+Use util;
+
+include "include/client";
+include "include/spellattack";
+include "include/spellrestrictions";
+
+program earthquake( parms )
+
+	local circle := 8;
+	local caster;
+
+	if (parms[1] = "#MOB")
+		caster := parms[2];
+	else
+		caster := parms;
+		if (!can_cast(caster, circle))
+        		return;
+		endif
+	endif
+
+	local magery := GetSkill(caster, SKILLID_MAGERY);
+	local range := magery/15;
+	local victims := ListMobilesNearLocation( caster.x , caster.y , caster.z , range );
+	local dmg;
+
+	PlaySoundEffect( caster, SFX_220 );
+	foreach mobile in victims
+
+	    SetObjProperty(mobile, "LastHit", {caster.name, caster.serial, caster });
+
+	if( mobile.serial != caster.serial )
+        	send_attack(mobile,caster, 57);
+        	dmg := CalcSpellDamage(circle,caster,mobile);
+		PrintTextAbovePrivate( mobile ,
+		 "You are tossed about as the earth trembles below your feet!" , mobile );
+        	PlaySoundEffect( mobile, SFX_SPELL_EARTHQUAKE );
+		PlayObjectCenteredEffect( mobile, FX_SMOKE, 7, 7);
+		ApplyRawDamage( mobile , Resisted(circle,caster,mobile,dmg) );
+    	endif
+	endforeach
+
+	sleep(2);
+	PlaySoundEffect( caster, SFX_223 );
+
+endprogram

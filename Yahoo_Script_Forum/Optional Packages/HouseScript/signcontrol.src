@@ -1,0 +1,195 @@
+use uo;
+use os;
+use basic;
+
+global signg;
+include "include/eventid";
+include "include/objtype";
+
+program SignListener( sign )
+
+    signg := sign;
+
+    local cown;
+    local i;
+    local house := SystemFindObjectBySerial( GetObjProperty( sign , "house_serial" ) );
+
+    while (1)
+        CheckBan( house );
+        RegisterForSpeechEvents( sign, 30 );
+        local ev := wait_for_event( 10 );
+        if (ev)
+            if (ev.type = EVID_SPEECH)
+                   for(i := 1; i <= 5; i := i + 1)
+                     if(GetObjProperty( house , "Co-owner" + i ) = ev.source.serial)
+                       cown := 1;
+                       break;
+                     endif
+                   endfor
+                 if ( (ev.source.multi.serial = house.serial) and (GetObjProperty( house , "ownerserial" ) = ev.source.serial ) or (cown));  
+                    handle_speech( ev, house );
+                 endif
+            endif
+        endif
+    endwhile
+endprogram
+
+
+function handle_speech( event, house )
+
+    local text := lower( event.text );
+    if( text["i wish to lock this down"] )
+        HouseFunction( house, event, 1 );
+    elseif( text["i wish to unlock this"] )
+        HouseFunction( house, event, 2 );
+    elseif( text["i wish to add secure east"] )
+        HouseFunctione( house, event );
+    elseif( text["i wish to add secure south"] )
+        HouseFunctions( house, event );
+    elseif( text["i wish to delete secure"] )
+        HouseFunctionUs( house, event );
+    endif
+
+endfunction
+
+
+function HouseFunction( house, event, num )
+
+    local itemt := Target( event.source , TGTOPT_NOCHECK_LOS );
+
+    if(!itemt)
+       SendSysmessage( event.source, "Cancelled." );
+       return;
+    endif
+
+    local inside := 0;
+
+    foreach item in (house.items)
+       if( itemt.serial = item.serial )
+           inside := 1;
+       endif
+    endforeach
+
+    if( inside )
+       case( num )
+          1: if(( GetObjProperty( house , "numlockdowns" ) > 0 ) and (itemt.movable))
+                     itemt.movable := 0;
+                     SetObjProperty( house, "numlockdowns" , GetObjProperty( house, "numlockdowns") - 1 );
+                     SetObjProperty( itemt, "lockeddown" , 1 );
+                     SendSysmessage( event.source , "Locked." );
+             elseif (GetObjProperty( itemt , "lockeddown" ))
+                SendSysmessage( event.source , "That is already locked down." );
+	     else
+                 SendSysmessage( event.source , "The house has no more lockdowns remaining." );
+             endif
+          2: if(GetObjProperty( itemt , "lockeddown" ))
+                itemt.movable := 1;
+                EraseObjProperty( itemt , "lockeddown" );
+                SetObjProperty( house, "numlockdowns" , GetObjProperty( house, "numlockdowns") + 1 );
+                SendSysmessage( event.source , "Unlocked." );
+             else
+                SendSysmessage( event.source , "You can't unlock this." );
+             endif
+       endcase
+    else
+       SendSysmessage( event.source , "That is not inside the building." );
+    endif
+
+endfunction
+
+function HouseFunctione( house, event )
+
+    local itemt := TargetCoordinates( event.source );
+
+    if(!itemt)
+       SendSysmessage( event.source, "Cancelled." );
+       return;
+    endif
+
+     if(GetObjProperty( house , "numsecure" ))
+            Local box := CreateItemAtLocation( itemt.x, itemt.y, itemt.z, 0xE41, 1 );
+             local inside := 0;
+               foreach item in (house.items)
+                   if( box.serial = item.serial )
+                   inside := 1;
+                   endif
+               endforeach
+            if (inside)
+            local newbox := CreateItemInContainer( box, 0xE41, 1);
+            box.movable := 0;
+            SetObjProperty( box, "boxserial" , newbox.serial );
+            SetObjProperty( box, "houseserial" , house.serial );
+            box.usescript := ":housing:securecont";
+            SetObjProperty( house, "numsecure" , GetObjProperty( house, "numsecure") - 1 );
+            SendSysmessage( event.source , "Secure On." );
+            else
+            DestroyItem(box);
+            SendSysmessage( event.source , "That is not inside the building.");
+            endif
+     else
+       SendSysmessage( event.source , "The house has no more secure containers remaining." );
+     endif
+endfunction
+
+function HouseFunctions( house, event )
+
+    local itemt := TargetCoordinates( event.source );
+
+    if(!itemt)
+       SendSysmessage( event.source, "Cancelled." );
+       return;
+    endif
+
+     if(GetObjProperty( house , "numsecure" ))
+            Local box := CreateItemAtLocation( itemt.x, itemt.y, itemt.z, 0xE40, 1 );
+             local inside := 0;
+               foreach item in (house.items)
+                   if( box.serial = item.serial )
+                   inside := 1;
+                   endif
+               endforeach
+            if (inside)
+            local newbox := CreateItemInContainer( box, 0xE40, 1);
+            box.movable := 0;
+            SetObjProperty( box, "boxserial" , newbox.serial );
+            SetObjProperty( box, "houseserial" , house.serial );
+            box.usescript := ":housing:securecont";
+            SetObjProperty( house, "numsecure" , GetObjProperty( house, "numsecure") - 1 );
+            SendSysmessage( event.source , "Secure On." );
+            else
+            DestroyItem(box);
+            SendSysmessage( event.source , "That is not inside the building.");
+            endif
+     else
+       SendSysmessage( event.source , "The house has no more secure containers remaining." );
+     endif
+endfunction
+
+function HouseFunctionUs( house, event )
+
+    local itemt := Target( event.source );
+
+    if(!itemt)
+       SendSysmessage( event.source, "Cancelled." );
+       return;
+    endif
+
+     if(GetObjProperty( itemt , "houseserial" ) = house.serial)
+            DestroyItem(itemt);
+            SetObjProperty( house, "numsecure" , GetObjProperty( house, "numsecure") + 1 );
+            SendSysmessage( event.source , "UnSecure On." );
+     else
+       SendSysmessage( event.source , "This is a secure container." );
+     endif
+endfunction
+
+function CheckBan( house )
+
+     Local i;
+     foreach mobile in (house.mobiles)
+         if(GetObjProperty( house , "Banned" + i ) = mobile.serial)
+           ApplyRawDamage( mobile, mobile.maxhp+5 );
+         endif
+     endforeach
+
+endfunction

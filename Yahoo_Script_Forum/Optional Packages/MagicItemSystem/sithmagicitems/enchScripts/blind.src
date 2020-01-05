@@ -1,0 +1,17 @@
+////////////////////////////////////////////////
+//Blinds victim for a random amount of time
+////////////////////////////////////////////////
+
+use uo;
+use util;
+
+include "sdmg";
+include "include/client";
+
+program five_pc_fs_a( parms )
+
+	var defender := parms[2];
+	defender.setlightlevel( 30, GetObjProperty(parms[7],"e_blen") );
+	return;
+	
+endprogram

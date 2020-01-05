@@ -1,0 +1,38 @@
+use datafile;
+use os;
+use uo;
+use util;
+
+include "regionmanaging";
+include "../../inc/datatypes";
+
+program BuildAllManagers(who)
+
+   var regionfile := OpenDataFile(REGION_DATAFILE);
+   var keys := regionfile.keys();
+   var elem;
+   
+   var region;
+   CreateNewRegion(region);
+   
+   var count := 0;
+   
+   foreach key in keys
+      elem := regionfile.FindElement(key);
+      region.serial := elem.GetProp("serial");
+      region.ref := SystemFindObjectBySerial(region.serial);
+      if(region.ref)
+         continue;
+      endif
+      region.rects := elem.GetProp("rects");
+      BuildRegionManager(region);
+      elem.SetProp("serial", region.serial);
+      SetObjProperty(region.ref, "num", key);
+      count := count + 1;
+   endforeach
+
+   var cout := "Created "+count+" managers out of "+keys.size()+".";
+   Syslog(who.name + " " + cout);
+   SendSysMessage(who, cout);
+
+endprogram

@@ -1,0 +1,31 @@
+use uo;
+use os;
+
+include "include/datafile";
+include "include/sysevent";
+
+program LoggingStone(stone)
+	var LoggerDataFile := DFOpenDataFile("Logger", DF_CREATE);
+	SetObjProperty(stone, "#ListenPid", GetPid());
+	
+	if (!GetObjProperty(stone, "Enabled"))
+		return;
+	endif
+	
+	var LoggerElem := DFFindElement(LoggerDataFile, GetObjProperty(stone, "StoneName"), DF_CREATE);
+	
+	var Count := DFGetProp(LoggerElem, "LineNum", DF_CREATE, 1);
+			
+	RegisterForSpeechEvents(stone, 20);
+	EnableEvents(SYSEVENT_SPEECH,20);
+	
+	while(1)
+		var ev := wait_for_event(5);
+		case (ev.type)
+			SYSEVENT_SPEECH:
+				Count := Count+1;
+				LoggerElem.SetProp("LineNum", Count);
+				LoggerElem.SetProp(hex(Count), {ev.source.name, ev.text});
+		endcase
+	endwhile
+endprogram

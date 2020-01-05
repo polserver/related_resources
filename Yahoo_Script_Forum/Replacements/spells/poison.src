@@ -1,0 +1,52 @@
+use os;
+use uo;
+use util;
+
+include "include/client";
+include "include/spellattack";
+include "include/spellrestrictions";
+
+program cast_poison( parms )
+
+	local circle := 3;
+	local caster;
+	local cast_on;
+
+
+	if (parms[1] = "#MOB")
+		caster := parms[2];
+		cast_on := parms[3];
+		send_attack(cast_on,caster, 20);
+	else
+		caster := parms;
+		cast_on := CanTargetSpell(caster, circle, TGTOPT_HARMFUL + TGTOPT_CHECK_LOS );
+		if (!cast_on)
+			return;
+		endif
+	endif
+
+	if (Reflected(cast_on))
+		cast_on := caster;
+		if (GetObjProperty( caster, "mr") = "1")
+			EraseObjProperty(caster, "mr");
+			SendSysMessage(caster, "Your magic reflect spell saved you!");
+			return;
+		endif
+	endif
+
+	SetObjProperty(cast_on, "LastHit", {caster.name, caster.serial, caster });
+	PlayObjectCenteredEffect( cast_on, FX_CURSE_EFFECT, 0x0a,0x1e);
+	local p_level := Resisted(circle,caster,cast_on,cint(GetSkill( caster, SKILLID_MAGERY ) /15));
+
+	local poison_level := Cint(GetObjProperty(cast_on, "poison_level"));
+
+	if (p_level < poison_level)
+		p_level := poison_level;
+	else
+		SendSysmessage (cast_on, "You have been poisoned by " + caster.name +"!");
+		SetObjProperty(cast_on, "poison_level",cstr(p_level));
+	endif
+
+	start_script( "poisondamage", cast_on ); 
+
+endprogram

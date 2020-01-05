@@ -1,0 +1,35 @@
+/*
+*****************************************************************
+*			   jail.src			 	*
+*      		     Simple Jail System 1.1			*
+*			   by bzagh				*
+*			 bzagh@bzagh.de				*
+*								*
+*****************************************************************
+*/
+
+
+use uo;
+
+
+program jail( who )
+ 
+ SendSysMessage( who, "Whom should be jailed?");
+ local player :=  Target( who , TGTOPT_NOCHECK_LOS );
+ 
+ if(!player.acctname)
+   SendSysMessage( who, "You can only jail PCs");
+   return;
+ endif
+ 
+ if( who.cmdlevel < player.cmdlevel )
+   SendSysMessage( who, "The target cmdlevel is higher than yours");
+   return;
+ endif
+ 
+ local account := player.acct;
+ 
+ account.SetProp( "Jail", 1 );
+ MoveCharacterToLocation( who, 5304, 1184, 0, 0);
+
+endprogram

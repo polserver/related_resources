@@ -1,0 +1,21 @@
+use uo;
+use os;
+use cfgfile;
+
+var itemdesc := ReadConfigFile("itemdesc");
+
+program destroyarmor(item)
+        var whoserial := GetObjProperty(item,"a_equipped");
+        set_critical(1);
+        if( whoserial != error );
+                var who := SystemFindObjectBySerial( whoserial );
+                if (!who or who.npctemplate)
+                        return 1;
+                endif
+                var penalty := cint(itemdesc[item.objtype].DexPenalty);
+                if (!penalty) return 1; endif
+                who.dexterity_mod := who.dexterity_mod + penalty;
+        endif
+        return 1;
+endprogram
+

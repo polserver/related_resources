@@ -1,0 +1,32 @@
+use npc;
+use uo;
+use os;
+
+include "herding_settings";
+
+program sheep_ai (me)
+
+           if (!GetObjProperty(me, "destinationx"))
+               return;
+           elseif (!GetObjProperty(me, "destinationx"))
+              return;
+           endif
+
+          local destinationx := GetObjProperty(me, "destinationx");
+          local destinationy := GetObjProperty(me, "destinationy");
+          local oldscript := GetObjProperty(me, "oldscript");
+
+          case PKG_HERDING_RUNORWALK
+             0: WalkTowardLocation( destinationx, destinationy );
+             1: RunTowardLocation( destinationx, destinationy );
+             default: WalkTowardLocation( destinationx, destinationy );
+          endcase
+
+          repeat
+              sleep(1);
+          until ( me.x = destinationx and me.y = destinationy );
+
+          me.script := oldscript;
+          RestartScript(me);
+
+endprogram

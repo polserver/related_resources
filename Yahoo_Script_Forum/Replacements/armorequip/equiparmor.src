@@ -1,0 +1,19 @@
+use uo;
+use os;
+use cfgfile;
+
+var itemdesc := ReadConfigFile("itemdesc");
+program equiparmor(who,item,startup)
+
+set_critical(1);
+if(!who.npctemplate)
+        SetObjProperty(item,"a_equipped",who.serial);
+        var penalty := cint(itemdesc[item.objtype].DexPenalty);
+        if (penalty)
+                who.dexterity_mod := who.dexterity_mod - penalty;
+        endif
+endif
+
+return 1;
+        
+endprogram

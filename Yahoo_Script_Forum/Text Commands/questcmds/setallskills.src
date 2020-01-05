@@ -1,0 +1,26 @@
+include "include/modules";
+include "include/client";
+include "include/coreconstants";
+include "include/attributes";
+
+var skillsdef_cfg := ReadConfigFile( "skillsdef" );
+
+program textcmd_setskill( who, text )
+	SendSysMessage(who, "Select target.");
+	var targ := Target(who);
+	var skill;
+	var value := CInt( CDbl(text) * 10 );
+	for( skill := 0; skill <= SKILLID_HIGHEST; skill := skill + 1 )
+		var elem := FindConfigElem( skillsdef_cfg, skill );
+		var attribute := lower(elem.Name);
+		if( skill != error && value != error )
+			var res := SetAttributeBaseValue( targ, attribute, value );
+			if( res == error )
+				SendSysMessage( who, "Unable to set raw skill: " + res.errortext );
+			else
+				SendSysMessage( who, "New value of " + attribute + " is: " + GetAttribute(who,attribute) );
+			endif
+		endif
+		sleepms(1);
+	endfor
+endprogram

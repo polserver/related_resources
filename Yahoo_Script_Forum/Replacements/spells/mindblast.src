@@ -1,0 +1,55 @@
+use os;
+use uo;
+
+include "include/client";
+include "include/spellrestrictions";
+include "include/spellattack";
+
+program cast_mind_blast( parms )
+
+	local circle := 5;
+	local caster;
+	local cast_on;
+
+	if (parms[1] = "#MOB")
+		caster := parms[2];
+		cast_on := parms[3];
+		send_attack(cast_on, caster, 37);
+	else
+		caster := parms;
+		cast_on := CanTargetSpell(caster, circle, TGTOPT_HARMFUL + TGTOPT_CHECK_LOS );
+		if (!cast_on)
+			return;
+		endif
+	endif
+
+	local my_int := cint(caster.intelligence);
+	local his_int := cint(cast_on.intelligence);
+
+	if (his_int > my_int)
+		cast_on := caster;
+		SendSysMessage(caster, "Their superior intellect reflects the spell!");
+	elseif (his_int = my_int)
+		SendSysMessage(caster, "You are of equal intellect!");
+		return;
+	endif
+
+	if (Reflected(cast_on))
+		if ( cast_on.serial = caster.serial )
+			return;
+		endif
+		cast_on := caster;
+		if (GetObjProperty( caster, "mr") = "1")
+			EraseObjProperty(caster, "mr");
+			SendSysMessage(caster, "Your magic reflect spell saved you!");
+			return;
+		endif
+	endif
+
+	SetObjProperty(cast_on, "LastHit", {caster.name, caster.serial, caster });
+	PlaySoundEffect(cast_on, SFX_SPELL_MIND_BLAST);
+	PlayObjectCenteredEffect( cast_on, FX_CURSE_EFFECT, 7,0x10);
+	local dmg := CalcSpellDamage(circle,caster,cast_on);
+	ApplyRawDamage( cast_on, Resisted(circle,caster,cast_on,dmg) );
+
+endprogram

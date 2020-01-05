@@ -1,0 +1,686 @@
+
+use uo;
+use cfgfile;
+
+include "../pkg/foundation/gumps/gumps";
+include "include/client";
+include "include/math";
+
+program displaySpellbook(who, spellbook)
+
+// Figure out what spells are in the spellbook
+local spellArray := GetObjProperty(spellbook, "Circles");
+local firstCircle := BitOut(spellArray[1]);
+local secondCircle := BitOut(spellArray[2]);
+local thirdCircle := BitOut(spellArray[3]);
+local fourthCircle := BitOut(spellArray[4]);
+local fifthCircle := BitOut(spellArray[5]);
+local sixthCircle := BitOut(spellArray[6]);
+local seventhCircle := BitOut(spellArray[7]);
+local eighthCircle := BitOut(spellArray[8]);
+
+// Define the world's spells
+var spelllist := ReadConfigFile("spelllist");
+if (!spelllist)
+  syslog("No spell list in spellbook package!");
+endif
+var firstCircleList := FindConfigElem(spelllist, "First");
+var secondCircleList := FindConfigElem(spelllist, "Second");
+var thirdCircleList := FindConfigElem(spelllist, "Third");
+var fourthCircleList := FindConfigElem(spelllist, "Fourth");
+var fifthCircleList := FindConfigElem(spelllist, "Fifth");
+var sixthCircleList := FindConfigElem(spelllist, "Sixth");
+var seventhCircleList := FindConfigElem(spelllist, "Seventh");
+var eighthCircleList := FindConfigElem(spelllist, "Eighth");
+
+local openspellbook := 1;
+ReserveItem(spellbook);
+
+while (openspellbook)
+openspellbook := 0;
+
+GFInitGump(100,100);
+GFPage(0);
+  GFGumpPic(0,0,0x08AC);
+
+// Add page buttons
+  GFButtonPage(60,175,0x08b1,0x08b1,2);
+  GFButtonPage(95,175,0x08b2,0x08b2,2);
+
+  GFButtonPage(130,175,0x08b3,0x08b3,3);
+  GFButtonPage(165,175,0x08b4,0x08b4,3);
+
+  GFButtonPage(222,175,0x08b5,0x08b5,4);
+  GFButtonPage(257,175,0x08b6,0x08b6,4);
+
+  GFButtonPage(292,175,0x08b7,0x08b7,5);
+  GFButtonPage(327,175,0x08b8,0x08b8,5);
+
+// Return to front page button
+  GFButtonPage(5,100,0x09ce,0x09ce,1);
+
+GFPage(1);
+
+  GFButtonPage(321,8,0x08bc,0x08bc,2);
+
+  local sigil := GetObjProperty(spellbook,"sigil");
+  if (!sigil)
+     sigil := 0x08e7;
+  endif
+  local customize := GFButtonID(101,112,sigil,sigil,1);
+  
+  local owner := GetObjProperty(spellbook,"owner");
+  local ownercolor := 0;
+  if (!owner)
+    owner := "Unmelded";
+    ownercolor := 748;
+  endif
+  GFTextMid(60,20,126,ownercolor,owner);
+
+  var yval := 36;
+ 
+  local showfealty := GetObjProperty(spellbook,"fealty");
+  if (showfealty) 
+     if (who.serial = GetObjProperty(spellbook,"ownerserial"))
+         if (!GetObjProperty(who,"fealty"))
+             setfealty(spellbook, "");
+             showfealty := "";
+         elseif (!showfealty[GetObjProperty(who, "fealty")])
+             setfealty(spellbook,GetObjProperty(who, "fealty"));
+             showfealty := GetObjProperty(spellbook,"fealty");
+         endif
+     endif
+     if (showfealty)
+        GFTextMid(60,yval,126,0,showfealty);
+     endif
+     yval := yval + 16;
+  endif
+
+  local showtitle := GetObjProperty(spellbook,"title");
+  if (showtitle)
+       if (who.serial = GetObjProperty(spellbook,"ownerserial"))
+            local title := gettitle(who);
+            if (title != showtitle)
+                 settitle(spellbook,title);
+                 showtitle := GetObjProperty(spellbook,"title");
+            endif
+       endif
+       GFTextMid(60,yval,126,0,showtitle);
+       yval := yval+16;
+  endif
+
+  local showguild := GetObjProperty(spellbook,"guild");
+  if (showguild)
+       if (who.serial = GetObjProperty(spellbook,"ownerserial"))
+            local guild := GetObjProperty(who,"guild");
+            if (guild)
+                setguild(spellbook,guild);
+                showguild := GetObjProperty(spellbook,"guild");
+            else
+                setguild(spellbook,"");
+                showguild := "";
+            endif
+       endif
+       if (showguild)
+            GFTextMid(60,yval,126,0,showguild);
+       endif
+  endif
+
+  GFTextLine(222,20,748,"Linear Spells");
+  GFTextLine(222,36,0,"Douse");
+  GFTextLine(222,52,0,"Gust");
+  GFTextLine(222,68,0,"Ignite");
+  GFTextLine(222,84,0,"Melody");
+  GFTextLine(222,100,0,"Glimmer");
+  GFTextLine(222,116,0,"Stone");
+  GFTextLine(222,132,0,"Thunder");
+  GFTextLine(222,148,0,"Transcribe");
+
+  var bookreturn := dictionary;
+
+  local douse := GFButtonID(335,40,0x08af,0x08af,1);
+  bookreturn[douse.keyid] := 101;
+  local glimmer := GFButtonID(335,56,0x08af,0x08af,1);
+  bookreturn[glimmer.keyid] := 102;
+  local gust := GFButtonID(335,72,0x08af,0x08af,1);
+  bookreturn[gust.keyid] := 103;
+  local ignite := GFButtonID(335,88,0x08af,0x08af,1);
+  bookreturn[ignite.keyid] := 104;
+  local melody := GFButtonID(335,104,0x08af,0x08af,1);
+  bookreturn[melody.keyid] := 105;
+  local stone := GFButtonID(335,120,0x08af,0x08af,1);
+  bookreturn[stone.keyid] := 106;
+  local thunder := GFButtonID(335,136,0x08af,0x08af,1);
+  bookreturn[thunder.keyid] := 107;
+  local transcribe := GFButtonID(335,152,0x08af,0x08af,1);
+  bookreturn[transcribe.keyid] := 108;
+
+GFPage(2);
+
+  GFButtonPage(321,8,0x08bc,0x08bc,3);
+  GFButtonPage(50,8,0x08bb,0x08bb,1);
+
+//  GFTilePic(101,80,0x20c0);
+//  GFTilePic(262,80,0x20c1);
+
+  yval := 36;
+
+  GFTextLine(80,20,748,"First Circle");
+  if (firstcircle[1])
+    GFTextLine(80,yval,0,GetConfigString(firstCircleList, "spellname1"));
+    var first1 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[first1.keyid] := GetConfigInt(firstCircleList, "spellID1");
+    yval := yval + 16;
+  endif
+  if (firstcircle[2])
+    GFTextLine(80,yval,0,GetConfigString(firstCircleList, "spellname2"));
+    var first2 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[first2.keyid] := GetConfigInt(firstCircleList, "spellID2");
+    yval := yval + 16;
+  endif
+  if (firstcircle[3])
+    GFTextLine(80,yval,0,GetConfigString(firstCircleList, "spellname3"));
+    var first3 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[first3.keyid] := GetConfigInt(firstCircleList, "spellID3");
+    yval := yval + 16;
+  endif
+  if (firstcircle[4])
+    GFTextLine(80,yval,0,GetConfigString(firstCircleList, "spellname4"));
+    var first4 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[first4.keyid] := GetConfigInt(firstCircleList, "spellID4");
+    yval := yval + 16;
+  endif
+  if (firstcircle[5])
+    GFTextLine(80,yval,0,GetConfigString(firstCircleList, "spellname5"));
+    var first5 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[first5.keyid] := GetConfigInt(firstCircleList, "spellID5");
+    yval := yval + 16;
+  endif
+  if (firstcircle[6])
+    GFTextLine(80,yval,0,GetConfigString(firstCircleList, "spellname6"));
+    var first6 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[first6.keyid] := GetConfigInt(firstCircleList, "spellID6");
+    yval := yval + 16;
+  endif
+  if (firstcircle[7])
+    GFTextLine(80,yval,0,GetConfigString(firstCircleList, "spellname7"));
+    var first7 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[first7.keyid] := GetConfigInt(firstCircleList, "spellID7");
+    yval := yval + 16;
+  endif
+  if (firstcircle[8])
+    GFTextLine(80,yval,0,GetConfigString(firstCircleList, "spellname8"));
+    var first8 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[first8.keyid] := GetConfigInt(firstCircleList, "spellID8");
+  endif
+
+  yval := 36;
+
+  GFTextLine(222,20,748,"Second Circle");
+  if (secondcircle[1])
+    GFTextLine(222,yval,0,GetConfigString(secondCircleList, "spellname1"));
+    var second1 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[second1.keyid] := GetConfigInt(secondCircleList, "spellID1");
+    yval := yval + 16;
+  endif
+  if (secondcircle[2])
+    GFTextLine(222,yval,0,GetConfigString(secondCircleList, "spellname2"));
+    var second2 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[second2.keyid] := GetConfigInt(secondCircleList, "spellID2");
+    yval := yval + 16;
+  endif
+  if (secondcircle[3])
+    GFTextLine(222,yval,0,GetConfigString(secondCircleList, "spellname3"));
+    var second3 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[second3.keyid] := GetConfigInt(secondCircleList, "spellID3");
+    yval := yval + 16;
+  endif
+  if (secondcircle[4])
+    GFTextLine(222,yval,0,GetConfigString(secondCircleList, "spellname4"));
+    var second4 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[second4.keyid] := GetConfigInt(secondCircleList, "spellID4");
+    yval := yval + 16;
+  endif
+  if (secondcircle[5])
+    GFTextLine(222,yval,0,GetConfigString(secondCircleList, "spellname5"));
+    var second5 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[second5.keyid] := GetConfigInt(secondCircleList, "spellID5");
+    yval := yval + 16;
+  endif
+  if (secondcircle[6])
+    GFTextLine(222,yval,0,GetConfigString(secondCircleList, "spellname6"));
+    var second6 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[second6.keyid] := GetConfigInt(secondCircleList, "spellID6");
+    yval := yval + 16;
+  endif
+  if (secondcircle[7])
+    GFTextLine(222,yval,0,GetConfigString(secondCircleList, "spellname7"));
+    var second7 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[second7.keyid] := GetConfigInt(secondCircleList, "spellID7");
+    yval := yval + 16;
+  endif
+  if (secondcircle[8])
+    GFTextLine(222,yval,0,GetConfigString(secondCircleList, "spellname8"));
+    var second8 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[second8.keyid] := GetConfigInt(secondCircleList, "spellID8");
+  endif
+
+GFPage(3);
+
+  GFButtonPage(321,8,0x08bc,0x08bc,4);
+  GFButtonPage(50,8,0x08bb,0x08bb,2);
+
+//  GFTilePic(101,80,0x20c2);
+//  GFTilePic(262,80,0x20c3);
+
+  yval := 36;
+
+  GFTextLine(80,20,748,"Third Circle");
+  if (thirdcircle[1])
+    GFTextLine(80,yval,0,GetConfigString(thirdCircleList, "spellname1"));
+    var third1 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[third1.keyid] := GetConfigInt(thirdCircleList, "spellID1");
+    yval := yval + 16;
+
+  endif
+  if (thirdcircle[2])
+    GFTextLine(80,yval,0,GetConfigString(thirdCircleList, "spellname2"));
+    var third2 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[third2.keyid] := GetConfigInt(thirdCircleList, "spellID2");
+    yval := yval + 16;
+  endif
+  if (thirdcircle[3])
+    GFTextLine(80,yval,0,GetConfigString(thirdCircleList, "spellname3"));
+    var third3 := GFButtonID(53,yval,0x08b0,0x08b0,1);
+    bookreturn[third3.keyid] := GetConfigInt(thirdCircleList, "spellID3");
+    yval := yval + 16;
+  endif
+  if (thirdcircle[4])
+    GFTextLine(80,yval,0,GetConfigString(thirdCircleList, "spellname4"));
+    var third4 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[third4.keyid] := GetConfigInt(thirdCircleList, "spellID4");
+    yval := yval + 16;
+  endif
+  if (thirdcircle[5])
+    GFTextLine(80,yval,0,GetConfigString(thirdCircleList, "spellname5"));
+    var third5 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[third5.keyid] := GetConfigInt(thirdCircleList, "spellID5");
+    yval := yval + 16;
+  endif
+  if (thirdcircle[6])
+    GFTextLine(80,yval,0,GetConfigString(thirdCircleList, "spellname6"));
+    var third6 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[third6.keyid] := GetConfigInt(thirdCircleList, "spellID6");
+    yval := yval + 16;
+  endif
+  if (thirdcircle[7])
+    GFTextLine(80,yval,0,GetConfigString(thirdCircleList, "spellname7"));
+    var third7 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[third7.keyid] := GetConfigInt(thirdCircleList, "spellID7");
+    yval := yval + 16;
+  endif
+  if (thirdcircle[8])
+    GFTextLine(80,yval,0,GetConfigString(thirdCircleList, "spellname8"));
+    var third8 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[third8.keyid] := GetConfigInt(thirdCircleList, "spellID8");
+  endif
+
+  yval := 36;
+
+  GFTextLine(222,20,748,"Fourth Circle");
+  if (fourthcircle[1])
+    GFTextLine(222,yval,0,GetConfigString(fourthCircleList, "spellname1"));
+    var fourth1 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[fourth1.keyid] := GetConfigInt(fourthCircleList, "spellID1");
+    yval := yval + 16;
+  endif
+  if (fourthcircle[2])
+    GFTextLine(222,yval,0,GetConfigString(fourthCircleList, "spellname2"));
+    var fourth2 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[fourth2.keyid] := GetConfigInt(fourthCircleList, "spellID2");
+    yval := yval + 16;
+  endif
+  if (fourthcircle[3])
+    GFTextLine(222,yval,0,GetConfigString(fourthCircleList, "spellname3"));
+    var fourth3 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[fourth3.keyid] := GetConfigInt(fourthCircleList, "spellID3");
+    yval := yval + 16;
+  endif
+  if (fourthcircle[4])
+    GFTextLine(222,yval,0,GetConfigString(fourthCircleList, "spellname4"));
+    var fourth4 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[fourth4.keyid] := GetConfigInt(fourthCircleList, "spellID4");
+    yval := yval + 16;
+  endif
+  if (fourthcircle[5])
+    GFTextLine(222,yval,0,GetConfigString(fourthCircleList, "spellname5"));
+    var fourth5 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[fourth5.keyid] := GetConfigInt(fourthCircleList, "spellID5");
+    yval := yval + 16;
+  endif
+  if (fourthcircle[6])
+    GFTextLine(222,yval,0,GetConfigString(fourthCircleList, "spellname6"));
+    var fourth6 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[fourth6.keyid] := GetConfigInt(fourthCircleList, "spellID6");
+    yval := yval + 16;
+  endif
+  if (fourthcircle[7])
+    GFTextLine(222,yval,0,GetConfigString(fourthCircleList, "spellname7"));
+    var fourth7 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[fourth7.keyid] := GetConfigInt(fourthCircleList, "spellID7");
+    yval := yval + 16;
+  endif
+  if (fourthcircle[8])
+    GFTextLine(222,yval,0,GetConfigString(fourthCircleList, "spellname8"));
+    var fourth8 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[fourth8.keyid] := GetConfigInt(fourthCircleList, "spellID8");
+  endif
+
+
+GFPage(4);
+
+  GFButtonPage(321,8,0x08bc,0x08bc,5);
+  GFButtonPage(50,8,0x08bb,0x08bb,3);
+
+//  GFTilePic(101,80,0x20c4);
+//  GFTilePic(262,80,0x20c5);
+
+  yval := 36;
+
+  GFTextLine(80,20,748,"Fifth Circle");
+  if (fifthcircle[1])
+    GFTextLine(80,yval,0,GetConfigString(fifthCircleList, "spellname1"));
+    var fifth1 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[fifth1.keyid] := GetConfigInt(fifthCircleList, "spellID1");
+    yval := yval + 16;
+  endif
+  if (fifthcircle[2])
+    GFTextLine(80,yval,0,GetConfigString(fifthCircleList, "spellname2"));
+    var fifth2 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[fifth2.keyid] := GetConfigInt(fifthCircleList, "spellID2");
+    yval := yval + 16;
+  endif
+  if (fifthcircle[3])
+    GFTextLine(80,yval,0,GetConfigString(fifthCircleList, "spellname3"));
+    var fifth3 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[fifth3.keyid] := GetConfigInt(fifthCircleList, "spellID3");
+    yval := yval + 16;
+  endif
+  if (fifthcircle[4])
+    GFTextLine(80,yval,0,GetConfigString(fifthCircleList, "spellname4"));
+    var fifth4 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[fifth4.keyid] := GetConfigInt(fifthCircleList, "spellID4");
+    yval := yval + 16;
+  endif
+  if (fifthcircle[5])
+    GFTextLine(80,yval,0,GetConfigString(fifthCircleList, "spellname5"));
+    var fifth5 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[fifth5.keyid] := GetConfigInt(fifthCircleList, "spellID5");
+    yval := yval + 16;
+  endif
+  if (fifthcircle[6])
+    GFTextLine(80,yval,0,GetConfigString(fifthCircleList, "spellname6"));
+    var fifth6 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[fifth6.keyid] := GetConfigInt(fifthCircleList, "spellID6");
+    yval := yval + 16;
+  endif
+  if (fifthcircle[7])
+    GFTextLine(80,yval,0,GetConfigString(fifthCircleList, "spellname7"));
+    var fifth7 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[fifth7.keyid] := GetConfigInt(fifthCircleList, "spellID7");
+    yval := yval + 16;
+  endif
+  if (fifthcircle[8])
+    GFTextLine(80,yval,0,GetConfigString(fifthCircleList, "spellname8"));
+    var fifth8 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[fifth8.keyid] := GetConfigInt(fifthCircleList, "spellID8");
+  endif
+
+  yval := 36;
+
+  GFTextLine(222,20,748,"Sixth Circle");
+  if (sixthcircle[1]) 
+    GFTextLine(222,yval,0,GetConfigString(sixthCircleList, "spellname1"));
+    var sixth1 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[sixth1.keyid] := GetConfigInt(sixthCircleList, "spellID1");
+    yval := yval + 16;
+  endif
+  if (sixthcircle[2]) 
+    GFTextLine(222,yval,0,GetConfigString(sixthCircleList, "spellname2"));
+    var sixth2 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[sixth2.keyid] := GetConfigInt(sixthCircleList, "spellID2");
+    yval := yval + 16;
+  endif
+  if (sixthcircle[3]) 
+    GFTextLine(222,yval,0,GetConfigString(sixthCircleList, "spellname3"));
+    var sixth3 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[sixth3.keyid] := GetConfigInt(sixthCircleList, "spellID3");
+    yval := yval + 16;
+  endif
+  if (sixthcircle[4])
+    GFTextLine(222,yval,0,GetConfigString(sixthCircleList, "spellname4"));
+    var sixth4 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[sixth4.keyid] := GetConfigInt(sixthCircleList, "spellID4");
+    yval := yval + 16;
+  endif
+  if (sixthcircle[5])
+    GFTextLine(222,yval,0,GetConfigString(sixthCircleList, "spellname5"));
+    var sixth5 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[sixth5.keyid] := GetConfigInt(sixthCircleList, "spellID5");
+    yval := yval + 16;
+  endif
+  if (sixthcircle[6])
+    GFTextLine(222,yval,0,GetConfigString(sixthCircleList, "spellname6"));
+    var sixth6 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[sixth6.keyid] := GetConfigInt(sixthCircleList, "spellID6");
+    yval := yval + 16;
+  endif
+  if (sixthcircle[7]) 
+    GFTextLine(222,yval,0,GetConfigString(sixthCircleList, "spellname7"));
+    var sixth7 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[sixth7.keyid] := GetConfigInt(sixthCircleList, "spellID7");
+    yval := yval + 16;
+  endif
+  if (sixthcircle[8]) 
+    GFTextLine(222,yval,0,GetConfigString(sixthCircleList, "spellname8"));
+    var sixth8 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[sixth8.keyid] := GetConfigInt(sixthCircleList, "spellID8");
+  endif
+
+
+GFPage(5);
+
+  GFButtonPage(50,8,0x08bb,0x08bb,4);
+
+//  GFTilePic(101,80,0x20c6);
+//  GFTilePic(262,80,0x20c7);
+
+  yval := 36;
+
+  GFTextLine(80,20,748,"Seventh Circle");
+  if (seventhcircle[1])
+    GFTextLine(80,yval,0,GetConfigString(seventhCircleList, "spellname1"));
+    var seventh1 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[seventh1.keyid] := GetConfigInt(seventhCircleList, "spellID1");
+    yval := yval + 16;
+  endif
+  if (seventhcircle[2])
+    GFTextLine(80,yval,0,GetConfigString(seventhCircleList, "spellname2"));
+    var seventh2 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[seventh2.keyid] := GetConfigInt(seventhCircleList, "spellID2");
+    yval := yval + 16;
+  endif
+  if (seventhcircle[3])
+    GFTextLine(80,yval,0,GetConfigString(seventhCircleList, "spellname3"));
+    var seventh3 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[seventh3.keyid] := GetConfigInt(seventhCircleList, "spellID3");
+    yval := yval + 16;
+  endif
+  if (seventhcircle[4])
+    GFTextLine(80,yval,0,GetConfigString(seventhCircleList, "spellname4"));
+    var seventh4 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[seventh4.keyid] := GetConfigInt(seventhCircleList, "spellID4");
+    yval := yval + 16;
+  endif
+  if (seventhcircle[5])
+    GFTextLine(80,yval,0,GetConfigString(seventhCircleList, "spellname5"));
+    var seventh5 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[seventh5.keyid] := GetConfigInt(seventhCircleList, "spellID5");
+    yval := yval + 16;
+  endif
+  if (seventhcircle[6])
+    GFTextLine(80,yval,0,GetConfigString(seventhCircleList, "spellname6"));
+    var seventh6 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[seventh6.keyid] := GetConfigInt(seventhCircleList, "spellID6");
+    yval := yval + 16;
+  endif
+  if (seventhcircle[7])
+    GFTextLine(80,yval,0,GetConfigString(seventhCircleList, "spellname7"));
+    var seventh7 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[seventh7.keyid] := GetConfigInt(seventhCircleList, "spellID7");
+    yval := yval + 16;
+  endif
+  if (seventhcircle[8])
+    GFTextLine(80,yval,0,GetConfigString(seventhCircleList, "spellname8"));
+    var seventh8 := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+    bookreturn[seventh8.keyid] := GetConfigInt(seventhCircleList, "spellID8");
+  endif
+
+  yval := 36;
+
+  GFTextLine(222,20,748,"Eighth Circle");
+  if (eighthcircle[1])
+    GFTextLine(222,yval,0,GetConfigString(eighthCircleList, "spellname1"));
+    var eighth1 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[eighth1.keyid] := GetConfigInt(eighthCircleList, "spellID1");
+    yval := yval + 16;
+  endif
+  if (eighthcircle[2]) 
+    GFTextLine(222,yval,0,GetConfigString(eighthCircleList, "spellname2"));
+    var eighth2 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[eighth2.keyid] := GetConfigInt(eighthCircleList, "spellID2");
+    yval := yval + 16;
+  endif
+  if (eighthcircle[3])
+    GFTextLine(222,yval,0,GetConfigString(eighthCircleList, "spellname3"));
+    var eighth3 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[eighth3.keyid] := GetConfigInt(eighthCircleList, "spellID3");
+    yval := yval + 16;
+  endif
+  if (eighthcircle[4])
+    GFTextLine(222,yval,0,GetConfigString(eighthCircleList, "spellname4"));
+    var eighth4 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[eighth4.keyid] := GetConfigInt(eighthCircleList, "spellID4");
+    yval := yval + 16;
+  endif
+  if (eighthcircle[5])
+    GFTextLine(222,yval,0,GetConfigString(eighthCircleList, "spellname5"));
+    var eighth5 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[eighth5.keyid] := GetConfigInt(eighthCircleList, "spellID5");
+    yval := yval + 16;
+  endif
+  if (eighthcircle[6])
+    GFTextLine(222,yval,0,GetConfigString(eighthCircleList, "spellname6"));
+    var eighth6 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[eighth6.keyid] := GetConfigInt(eighthCircleList, "spellID6");
+    yval := yval + 16;
+  endif
+  if (eighthcircle[7])
+    GFTextLine(222,yval,0,GetConfigString(eighthCircleList, "spellname7"));
+    var eighth7 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[eighth7.keyid] := GetConfigInt(eighthCircleList, "spellID7");
+    yval := yval + 16;
+  endif
+  if (eighthcircle[8])
+    GFTextLine(222,yval,0,GetConfigString(eighthCircleList, "spellname8"));
+    var eighth8 := GFButtonID(335,yval+4,0x08af,0x08af,1);
+    bookreturn[eighth8.keyid] := GetConfigInt(eighthCircleList, "spellID8");
+  endif
+
+  local castme := GFSendGump(who);
+
+  if (castme[0] = customize.keyid)
+       if (owner = "Unmelded")
+          GFInitGump(300,260);
+          GFGumpPic(0,0,0x0816);
+          GFTextLine(35,21,0,"Do you wish to");
+          GFTextLine(35,35,0,"meld with this");
+          GFTextLine(35,49,0,"spellbook now?");
+          local yesmeld := GFButtonID(35,75,0x081a,0x081b,1);
+          local cancelmeld := GFButtonID(85,75,0x0817,0x0818,1);
+
+          local domeld := GFSendGump(who);
+          if (domeld[0] = yesmeld.keyid)
+               openspellbook := 1;
+               SetObjProperty(spellbook,"ownerserial",who.serial);
+               SetObjProperty(spellbook,"owner",who.name);
+          endif
+       else
+          GFInitGump(100,100);
+          GFResizePic(0,0,0x09d8,300,300);
+          // finish customization code
+       endif
+  else
+    var parms := {who, bookreturn[castme[0]]};
+    start_script("castspell", parms);
+  endif
+       
+endwhile
+
+endprogram
+
+function gettitle(char)
+  local magery := GetSkill(char, SKILLID_THAUMATURGY);
+  var title := "";
+  if (magery < 10)
+     title := "Unskilled";
+  elseif (magery = 10)
+     title := "Untrained";
+  elseif ((magery > 10) and (magery < 25))
+     title := "Apprentice";
+  elseif (magery = 25)
+     title := "Learned Apprentice";
+  elseif ((magery > 25) and (magery < 40))
+     title := "Skilled";
+  elseif ((magery >= 40) and (magery <50))
+     title := "Journeyman";
+  elseif (magery = 50) 
+     title := "Learned Journeyman";
+  elseif ((magery > 50) and (magery < 65))
+     title := "Expert";
+  elseif ((magery >= 65) and (magery < 75))
+     title := "Adept";
+  elseif (magery = 75)
+     title := "Learned Adept";
+  elseif ((magery > 75) and (magery < 90))
+     title := "Master";
+  elseif ((magery >= 90) and (magery < 100))
+     title := "Adept Master";
+  elseif (magery = 100)
+     title := "Grandmaster";
+  elseif (magery > 100)
+     title := "Great Master";
+  else 
+     title := "The Unknown";
+  endif
+  return title;
+
+endfunction
+
+function setfealty(book,phrase)
+  if ((phrase = "Moonglow") or (phrase = "Moon") or (phrase = "Britain") or (phrase = "Skara Brae") or (phrase = "Fawn") or (phrase = "Trinsic") or (phrase = "Montor East") or (phrase = "Jhelom") or (phrase = "Montor West") or (phrase = "Yew") or (phrase = "Cove") or (phrase = "Gray") or (phrase = "Vesper") or (phrase = "Magincia") or (phrase = "Minoc"))
+    phrase := "of " + phrase;
+  elseif (phrase = "Mondain")
+    phrase := "Legion of Mondain";
+  endif
+  SetObjProperty(book,"fealty",phrase);
+
+endfunction
+
+function settitle(book,phrase)
+
+endfunction
+
+function setguild(book,phrase)
+
+endfunction

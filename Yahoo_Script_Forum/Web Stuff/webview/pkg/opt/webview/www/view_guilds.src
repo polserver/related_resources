@@ -1,0 +1,310 @@
+/* view_guilds.src
+ * Last Modified: 06/28/04
+ * 
+ * This will list the guilds.
+ *
+*/
+
+
+/* Quick Refrence List
+ * guildname		// name of guild
+ * guilddeclarestatus	// declare status
+ * type			// guild type
+ * guildabv		// abreviation
+ * recruits		// list of recruits
+ * gc			// charter
+ * webpage		// webpage
+ * guildallies		// list of allies
+ * guildenemies		// list of enemies
+ * 
+ * nametime		// time name was changed
+ * virtuetime		// time virtue type was changed
+ * abrvtime		// time abrv was changed
+ * movetime		// last time stone was moved
+ *
+ * x			// x cord of guild stone
+ * y			// y cord of guild stone
+ * z			// z cord of guild stone
+ * timecreated		// time the guild was created in UNIX time()
+*/
+
+
+use http;
+use uo;
+use os;
+use basic;
+
+include "include/string";
+include ":utilsdate:utilsDate";
+include ":webview:webProfile";
+include ":webview:webLocation";
+include ":webview:webGuilds";
+
+if (QueryParam("guildid"))
+  ViewGuildProfile(CInt(QueryParam("guildid")));
+  exit;
+endif
+
+const REQ		:= GUILD_SCR + "?";
+
+const VIEW		:= 0;	// not used
+const START		:= 1;
+const SORT		:= 2;
+const QUERY		:= 3;
+const PAGE		:= 4;
+const REVERSE		:= 5;
+
+const NAME_VAL		:= 1;
+const ABBRV_VAL		:= 2;
+const CREATED_VAL	:= 3;
+const MEMBERS_VAL	:= 4;
+const WEBPAGE_VAL	:= 5;
+const GUILDID_VAL	:= 6;
+
+var opt       := array;
+var guildlist := array;
+var slist     := array;
+
+opt           := GetParams(1);
+guildlist     := GetGuildlist();
+
+var get := { "", "", "", "", "" };
+
+if (opt[START])
+  get[START] := "&start=" + opt[START];
+endif
+
+if (opt[SORT])
+  get[SORT] := "&sort="  + opt[SORT];
+endif
+
+if (opt[QUERY])
+  get[QUERY] := "&query=" + opt[QUERY];
+endif
+
+if (opt[PAGE])
+  get[PAGE] := "&page="  + opt[PAGE];
+endif
+
+if (opt[REVERSE])
+  get[REVERSE] := "&reverse=1";
+endif
+
+
+program ViewGuilds()
+
+  var i;
+
+  // Output letter selection
+  WriteHtml("<div align=\"center\">\n<font size=\"+1\">");
+  for (i := CAsc("A"); i <= CAsc("Z"); i := i + 1)
+
+    if (QueryParam("start") && CChr(i) == QueryParam("start"))
+      WriteHtml("<a href=\"" + REQ + "&start=" + CChr(i) + "\"><b>" + CChr(i) + "</b></a>");
+    else
+      WriteHtml("<a href=\"" + REQ + "&start=" + CChr(i) + "\">" + CChr(i) + "</a>");
+    endif
+
+    sleepms(10);
+  endfor
+
+  WriteHtml("</font><br>");
+
+  WriteHtml("<font size=\"-1\">[ <a href=\"" + GUILD_SCR + "\"><b>View All</b></a> ]");
+
+  if (SHOW_GUILD_LOC)
+    WriteHtml(" - [ <a href=\"" + LOC_SCR + "\?guilds=1\" target=\"_blank\">Guild Locations</a> ]");
+  endif
+
+  WriteHtml("</div>\n<br>");
+  WriteHtml("\n\n<p>&nbsp;</p>\n\n");
+
+  OutputOpts(1);
+
+  // Make sorted guild array list
+  var splist := array;
+  splist := SortGuildlist(opt[SORT], opt[START], opt[QUERY], opt[PAGE], opt[REVERSE]);
+
+  OutputPages(slist, MAX_PAGE_G);
+
+
+  // Output main guild info table
+  WriteHtml("<div align=\"center\">\n");
+  WriteHtml("<table width=\"100%\" bordercolor=\"#9c3010\" border=\"1\">\n");
+
+  // Give reverse option
+  if (opt[REVERSE])
+    WriteHtml("<div align=\"right\">\n<a href=\"" + REQ + get[START] + get[SORT] +
+      get[PAGE] + get[QUERY] + "\">Unreverse Order</a>\n</div>\n\n");
+  else
+    WriteHtml("<div align=\"right\">\n<a href=\"" + REQ + get[START] + get[SORT] +
+      get[PAGE] + get[QUERY] + "&reverse=1\">Reverse Order</a>\n</div>\n\n");
+  endif
+
+
+  WriteHtml("<tr bgcolor=\"#ffffff\">\n" +
+    "  <td align=\"center\">#\n" +
+    "  <td align=\"center\"><a href=\"" +
+         REQ + get[START] + get[QUERY] + "&sort=name\">Name</a></td>\n" +
+    "  <td align=\"center\"><a href=\"" +
+         REQ + get[START] + get[QUERY] + "&sort=abbrv\">Abbreviation</a></td>\n" +
+    "  <td align=\"center\"><a href=\"" +
+         REQ + get[START] + get[QUERY] + "&sort=timecreated\">Time Created</a></td>\n" +
+    "  <td align=\"center\"><a href=\"" +
+         REQ + get[START] + get[QUERY] + "&sort=members\">Members</a></td>\n" +
+    "  <td align=\"center\">Website</td>\n" +
+    "</tr>\n");
+
+  // Output dynamic section of guild info table
+  var spelm;
+
+  for (i := 1; i <= len(splist); i := i + 1)
+    spelm := splist[i];
+    
+    if (spelm[WEBPAGE_VAL])
+      spelm[WEBPAGE_VAL] := "<a href=\"" + spelm[WEBPAGE_VAL] + "\" target=\"_blank\">" + spelm[WEBPAGE_VAL] + "	</a>";
+    else
+      spelm[WEBPAGE_VAL] := "N/A";
+    endif
+
+    WriteHtml("<tr>\n" +
+      "  <td>" + (i + MAX_PAGE_G * (CInt(opt[PAGE]) - 1)) +"</td>\n" +
+      "  <td><a href=\"" + GUILD_SCR + "?guildid=" + spelm[GUILDID_VAL] + "\">" + spelm[NAME_VAL] + "</a></td>\n" +
+      "  <td>" + spelm[ABBRV_VAL] + "</td>\n" +
+      "  <td>" + CDateTimeStr(spelm[CREATED_VAL]) + "</td>\n" +
+      "  <td>" + spelm[MEMBERS_VAL] + "</td>\n" +
+      "  <td>" + spelm[WEBPAGE_VAL] + "</td>\n" +
+      "</tr>\n");
+    sleepms(10);
+  endfor
+
+  WriteHtml("</table>\n</div>\n");
+
+
+  // Output search form
+  WriteHtml("<div align=\"right\">\n" +
+    "<form name=\"search\" method=\"get\" action=\"" + GUILD_SCR + "\">" +
+    "  <table>\n" +
+    "    <tr>\n" +
+    "      <td>\n" +
+    "        Search names for:<br>\n" +
+    "        <input name=\"query\" type=\"text\" value=\"" + opt[QUERY] + "\" size=\"30\">\n" +
+    "      </td>\n" +
+    "      <td valign=\"bottom\"><input type=\"submit\" name=\"submit\" value=\"Search\"></td>\n" +
+    "    </tr>\n" +
+    "  </table>\n" +
+    "</form>\n" +
+    "</div>");
+
+  WriteHtml("<br><br>\n");
+
+  OutputPages(slist, MAX_PAGE_G);
+
+  WriteHtml("\n\n<p>&nbsp;</p>\n\n");
+
+endprogram
+
+
+function GetGuildlist()
+
+  var guilds := array;
+  var retarray := array;
+  var guild;
+
+  guilds := ListGuilds();
+
+  foreach guild in guilds
+    retarray[NAME_VAL]		:= RemoveError(guild.GetProp("guildname"));
+    retarray[ABBRV_VAL]		:= RemoveError(guild.GetProp("guildabv"));
+    retarray[CREATED_VAL]	:= RemoveError(guild.GetProp("timecreated"));
+    retarray[MEMBERS_VAL]	:= len(guild.members);
+    retarray[WEBPAGE_VAL]	:= RemoveError(guild.GetProp("webpage"));
+    retarray[GUILDID_VAL]	:= RemoveError(guild.guildid);
+    guildlist.append(retarray);
+    sleepms(10);
+  endforeach
+
+  return guildlist;
+
+endfunction
+
+
+function SortGuildlist(sort, start, query, page, reverse)
+
+  var retlist := array;
+  var temparray := array;
+  var temparray2 := array;
+  var pelm := array;
+  var i, c := 1;
+
+  // Search for string
+  for (i := 1; i <= len(guildlist); i := i + 1)
+    pelm := guildlist[i];
+
+    if (find(lower(pelm[NAME_VAL]), lower(query), 1))
+      temparray.append(pelm);
+    endif
+
+    sleepms(10);
+  endfor
+
+  guildlist := temparray;
+  slist := guildlist;
+
+  // Sort based on sort (name, abbrv, timecreated, members)
+  if (sort == "name")
+    slist := SortMultiArrayByIndex(slist, NAME_VAL);
+  elseif (sort == "abbrv")
+    slist := SortMultiArrayByIndex(slist, ABBRV_VAL);
+  elseif (sort == "timecreated");
+    slist := SortMultiArrayByIndex(slist, CREATED_VAL);
+  elseif (sort == "members");
+    slist := SortMultiArrayByIndex(slist, MEMBERS_VAL);
+  else
+    slist := SortMultiArrayByIndex(slist, NAME_VAL);
+  endif
+
+  // Sort based on starting letter
+  temparray := array;
+
+  if (start)
+
+    for (i := 1; i <= len(slist); i := i + 1)
+      pelm := slist[i];
+      pelm := CStr(pelm[1]);
+      pelm := pelm[1];
+
+      if (lower(pelm) == lower(start))
+        temparray.append(slist[i]);
+        print(slist[i]);
+      endif
+
+      sleepms(10);
+    endfor
+
+    slist := temparray;
+  endif
+
+  if (sort != "name" && !reverse)
+    slist.reverse();
+  elseif (sort == "name" && reverse)
+    slist.reverse();
+  endif
+
+  // Return the current page
+  for (i := 1; i <= MAX_PAGE_G; i := i + 1)
+
+    if (slist[i + (MAX_PAGE_G * (CInt(page) - 1))])
+      retlist[i] := slist[i + (MAX_PAGE_G * (CInt(page) - 1))];
+    endif
+
+    sleepms(10);
+  endfor
+
+  if (DEBUG)
+    print("DEBUG: SortGuildlist - retlist: " + retlist);
+  endif
+
+  return retlist;
+
+endfunction

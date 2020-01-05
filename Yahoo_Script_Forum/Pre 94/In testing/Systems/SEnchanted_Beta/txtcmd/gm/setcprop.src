@@ -1,0 +1,24 @@
+use uo;
+use util;
+
+program getcprop( who, input )
+
+	if ( ! input )
+		SendSysmessage( who, "CProp and/or Value not defined. Usage: .getcprop [CProp] [Value]" );
+		return;
+	endif
+
+	local argArray := SplitWords( input ); // split the arguments.
+	local cpropy  := CInt( argArray[ 1 ] );
+	local valuey    := CInt( argArray[ 2 ] );    
+
+	SendSysmessage( who, "Select Item/Mobile." );
+	local thingy := TargetCoordinates( who );
+
+	SetObjProperty( thingy, ( cpropy ), ( valuey ) );
+
+	SendSysmessage( who, thingy.name + "'s value for CProp " + cpropy + " is now " + valuey );
+
+	print( who.name + " has set CProp " + ( cpropy ) + " on object " + ( thingy.name ) + " with value " + ( valuey ) + ", have a nice day." );
+
+endprogram

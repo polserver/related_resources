@@ -1,0 +1,28 @@
+use uo;
+use cfgfile;
+
+include "include/spellRestrictions";
+include "include/attributes";
+include "sorcery";
+
+program cast_fireball(parms)
+  var circle := 8;
+  var delivery := "direct";
+  var noto := "harmful";
+  var result := maincast(parms, delivery, circle, noto, 18);
+  var dmg;
+  if(result == 0)
+    return;
+  endif
+  var caster := result[1];
+  var cast_on := result[2];
+  PlayMovingEffect(caster, cast_on, FX_FIREBALL, 5, 1);
+  PlaySoundEffect(caster, 0x15f);
+  SetObjProperty(cast_on, "LastHit", {caster.name, caster.serial, "fireblast"});
+  if(GetHp(cast_on) > 1)
+    if(cast_on.npctemplate)
+      dmg := dmg * 2;
+    endif
+    SpellDamage(circle, caster, cast_on);
+  endif
+endprogram

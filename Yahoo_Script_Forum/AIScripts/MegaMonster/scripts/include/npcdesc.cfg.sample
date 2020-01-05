@@ -1,0 +1,36 @@
+NpcTemplate greatwyrm
+{
+    Name        <random> der Grossdrache
+    script      firebreather
+
+    ObjType     0x3b
+    Color       62
+    TrueColor   62
+    gender      0
+    CProp genderwarp i1
+    STR         11111
+    INT         11111
+    DEX         180
+    HITS        11111
+    MANA        11111
+    STAM        180
+    spell    flamestrike
+    Tactics     180
+    Anatomy     150
+    Wrestling     200
+    MagicResistance 200
+    Magery      150
+    EvaluatingIntelligence 150
+    AttackSpeed         55
+    AttackDamage        8d10+25
+    AttackSkillId       Wrestling
+    AttackHitSound      0x16D
+    AttackMissSound     0x239
+    AR      7d3+53
+
+    lootgroup 39
+    tameskill      190
+    provoke 95
+    Magicitemchance 5
+    dstart 10
+}

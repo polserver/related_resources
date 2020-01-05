@@ -1,0 +1,210 @@
+// spawnpointcontrol.src
+// This is the "brains" of the spawnpoint.  It checks every minute to
+// see if any of it's "children" have died.  If so, it adds one to a
+// spawn queue.  It then checks the queue for any creatures due to be
+// spawned this minute, and does so.   It decrements the counters for
+// all other spawns.  It then goes back and starts over.  If it 
+// detects a reset ("ResetMe" is set on the object), then it wipes
+// the queue, kills all it's children, and restarts.  Note: if the
+// shard crashes, or something else happens to cause it to "lose" it's
+// children, it will check it's memory and kill off the old children
+// before spawning new ones.
+
+use uo;
+use os;
+use util;
+
+program spawnpointcontrol(spawnpoint)
+
+// Initializing spawnpoint.   If there are stranded children, we
+// kill them off here.   We also reset the queue, and load it up with
+// monsters.  If the point isn't initialized, we wait.
+
+	local Spawn := GetObjProperty(spawnpoint, "Spawn");
+	local Amount := GetObjProperty(spawnpoint, "Amount");
+	local i, x;
+	local SpawnQueue := {};
+	local Children := {};
+
+	Spawn := GetObjProperty(spawnpoint, "Spawn");
+	While (Spawn = "NONE")
+		Sleep(10);
+		Spawn := GetObjProperty(spawnpoint, "Spawn");
+	endwhile
+
+	KillChildren(spawnpoint);
+	ResetSpawnQueue(spawnpoint);
+
+// Main loop begins here.
+	
+	While(1)
+
+// if we need to reset, reset.  If the stone is not set (that is,
+// spawn = "None") then we wait for it to be set.
+
+		local ResetMe := GetObjProperty(spawnpoint, "ResetMe");
+		if (ResetMe)
+			Amount := GetObjProperty(spawnpoint, "Amount");
+			KillChildren(spawnpoint);
+			ResetSpawnQueue(spawnpoint);
+			EraseObjProperty(spawnpoint, "ResetMe");
+		endif
+
+		Spawn := GetObjProperty(spawnpoint, "Spawn");
+		While (Spawn = "NONE")
+			Sleep(10);
+			Spawn := GetObjProperty(spawnpoint, "Spawn");
+		endwhile
+	
+// Check to see if any children have died.   Remove their numbers from
+// the child list, and set their position in the queue to "empty".
+// Then we reset the queue again.
+
+		Children := GetObjProperty(spawnpoint, "Children");
+		SpawnQueue := GetObjProperty(spawnpoint, "SpawnQueue");
+		for (i := 1; i <= Amount; i := i + 1);
+			if (Children[i] != "Empty")
+				x := SystemFindObjectBySerial(Children[i]);
+				if ( (!x) or (x.dead = 1) )
+					SpawnQueue[i] := "Empty";
+					Children[i] := "Empty";
+				endif
+			endif
+		endfor
+		SetObjProperty(spawnpoint, "Children", Children);
+		SetObjProperty(spawnpoint, "SpawnQueue", SpawnQueue);
+		ResetSpawnQueue(spawnpoint);
+
+// Check to see if we have any current spawns (0 delay), and spawn
+// them.   We add their numbers to the child list.
+
+		SpawnQueue := GetObjProperty(spawnpoint, "SpawnQueue");
+		for(i := 1; i <= Amount; i := i + 1)
+			x := SpawnQueue[i];
+			if ( (x != "Empty") and (x != "Active") )
+				if (x = 0)
+					Children[i] := CreateSpawn(spawnpoint);
+					SpawnQueue[i] := "Active";
+				else
+					SpawnQueue[i] := x - 1;
+
+				endif
+			endif
+		endfor
+		SetObjProperty(spawnpoint, "SpawnQueue", SpawnQueue);
+		SetObjProperty(spawnpoint, "Children", Children);
+// We wait a minute, then repeat the process.
+
+		Sleep(60);
+
+	endwhile
+endprogram
+
+
+// KillChildren(spawnpoint)
+// This function simply kills off lost children, and is called when
+// the server is reinitialized, or when the server starts.  It also
+// resets the SpawnQueue to empty slots, so that it can be restocked.
+
+function KillChildren(spawnpoint)
+
+	local i, x;
+	local Children := GetObjProperty(spawnpoint, "Children");
+	if (Children)
+		foreach x in Children
+			if (x != "Empty")
+				x := cint(x);
+				i := SystemFindObjectBySerial(x);
+				SetObjProperty(i, "summoned", 1);
+				ApplyRawDamage(i, i.hp+3);
+			endif
+		endforeach
+	endif
+
+	local Amount := GetObjProperty(spawnpoint, "Amount");
+	local SpawnQueue := {};
+	Children := {};
+
+	for (i := 1; i <= Amount; i := i + 1);
+		SpawnQueue[i] := "Empty";
+		Children[i] := "Empty";
+	endfor
+
+	SetObjProperty(spawnpoint, "Children", Children);
+	SetObjProperty(spawnpoint, "SpawnQueue", SpawnQueue);
+
+endfunction
+
+
+// ResetSpawnQueue(spawnpoint)
+// This function restocks a spawnpoint by checking each "Empty" slot
+// on the SpawnQueue and filling it with a duration.
+
+function ResetSpawnQueue(spawnpoint)
+
+	local i;
+	local Amount := GetObjProperty(spawnpoint, "Amount");
+	local MinDelay := GetObjProperty(spawnpoint, "MinDelay");
+	local MaxDelay := GetObjProperty(spawnpoint, "MaxDelay");
+	local SpawnQueue := GetObjProperty(spawnpoint, "SpawnQueue");
+
+	for (i := 1; i <= Amount; i := i + 1)
+		if (SpawnQueue[i] = "Empty")
+			if (MinDelay = MaxDelay)
+				SpawnQueue[i] := MinDelay;
+			else
+				SpawnQueue[i] := RandomInt(MaxDelay - MinDelay) + MinDelay + 1;
+			endif
+		endif
+	endfor
+
+	SetObjProperty(spawnpoint, "SpawnQueue", SpawnQueue);
+
+endfunction
+
+
+// CreateSpawn(spawnpoint)
+// This function creates a spawn with a random distance from the
+// spawn point equal to the Range value on the spawnpoint.   For
+// purposes of range, the function computes (x + y) <= Range.  It
+// also checks to see if it has line of sight to the destination.
+// It will try 10 times to create the spawn.   If it cannot find
+// a suitable location after this, it will simply create it on top
+// of the spawnpoint itself.  It will return the serial number of
+// the spawn.
+
+function CreateSpawn(spawnpoint)
+
+	local Spawn := GetObjProperty(spawnpoint, "Spawn");
+	local Range := GetObjProperty(spawnpoint, "Range");
+	local x, y, z, success := 0;
+	local i := 1;
+
+	While (success = 0)
+
+		if (Range = 0)
+			x := spawnpoint.x;
+			y := spawnpoint.y;
+			z := spawnpoint.z;
+		else
+			x := spawnpoint.x + RandomInt(2 * Range) - Range;
+			y := spawnpoint.y + RandomInt(2 * Range) - Range;
+			z := GetWorldHeight(x, y);
+		endif
+
+		if (CheckLOSAt(spawnpoint, x, y, z) )
+			local i := CreateNPCFromTemplate(Spawn, x, y, z);
+			success := 1;
+			return i.serial;
+		endif
+
+		i := i + 1;
+		if (i > 10)
+			local i := CreateNPCFromTemplate(Spawn, spawnpoint.x, spawnpoint.y, spawnpoint.z);
+			success := 1;
+			return i.serial;
+		endif
+
+	endwhile
+
+endfunction

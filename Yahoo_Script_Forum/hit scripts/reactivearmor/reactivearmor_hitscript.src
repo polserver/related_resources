@@ -1,0 +1,31 @@
+//reflects melee based combat attacks back to the attacker *hopefully*
+
+use uo;
+use util;
+use os;
+
+include "include/hitscriptinc";
+
+program reactivearmor_hitscript(param)
+	var attacker	:= param[1];
+	var defender	:= param[2];
+	var weapon		:= param[3];
+	var armor		:= param[4];
+	var basedamage	:= param[5];
+	var rawdamage	:= param[6];
+	var magery		:= cdbl(GetObjProperty(defender, "reactive_amt"));
+	var mag_diff	:= cdbl(1-magery);
+	if( mag_diff > 1.0 )
+		mag_diff := 1.0;
+	endif
+	var rawdamage1	:= cint(rawdamage * magery);
+	var rawdamage2	:= cint(rawdamage * mag_diff);
+	DealDamage(attacker, defender, rawdamage1);
+	SetObjProperty( defender, "TempDamage", rawdamage2 );
+endprogram
+
+function output( who, msg )
+	if( who.cmdlevel )
+		SendSysMessage( who, msg );
+	endif
+endfunction

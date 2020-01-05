@@ -1,0 +1,49 @@
+Use uo;
+
+include "../../spawnnet";
+
+program global_prop(who,params)
+
+params := SplitWords(params);
+
+if(!params[2])
+	SendSysMessage(who,"Anwendung: globalprop 'propname' 'propval' ");
+	return;
+endif
+
+
+case(params[1])
+	"mintime": //
+	"maxtime"://
+	"range"://
+	"maxamount"://
+	"flags"://    fall intencionaly
+	"aux":  params[2] := cint(params[2]);
+		if(!params[2])
+			SendSysMessage(who,"Dieser Eigenschaftswert muss eine Nummer sein.");
+			return;
+		endif
+	"template": break;
+
+	default: SendSysMessage(who,"Das ist keine gueltige Eigenschaft.");
+SendSysMessage(who,"Ihr koennt nur aendern: mintime maxtime range maxamount flags aux or template");
+		 return;
+endcase
+
+local runeserial := GetGlobalProperty("runeserial");
+
+local dummy;
+
+foreach rune in runeserial
+	if(!rune)
+		continue;
+	endif
+	dummy := SystemFindObjectBySerial(rune);
+	if(!dummy)
+		continue;
+	endif
+	SetObjProperty(dummy,params[1],params[2]);
+endforeach
+
+SendSysMessage(who,"Alle Runen wurden geaendert.");
+endprogram

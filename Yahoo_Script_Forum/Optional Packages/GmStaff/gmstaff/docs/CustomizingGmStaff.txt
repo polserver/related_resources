@@ -1,0 +1,78 @@
+/////////////////////////////////////////////
+//
+// Config Files
+// ============
+//
+// 1.TextCommands Config - Callscripts.cfg
+// ---------------------------------------
+// - The gmstaff gump calls textcmds based on the entries
+//   in callscripts.cfg .
+//
+// - For the moment only scripts which are passed a single 
+//   parm (ie. the gm's <charref> ) can be sucessfully called.
+//
+// - You can add/remove/alter from callscripts.cfg to call 
+//   different textcmds as you see fit, but make sure you 
+//   keep the index sequential.
+//
+// 2.UO Item Config Files - UO********.cfg
+// ---------------------------------------
+// - SelectItem.src uses the UO*****.cfg files in 
+//   :gmstaff:\config\  , these were converted
+//   from DoHItems.scp (a Dundee's Other 
+//   Hand config file)
+//
+// - ! IMPORTANT ! You can alter the item entries in any 
+//   of these files ok, but if you rename/add/delete any 
+//   of the groups themselves or the cfg files then 
+//   selectItem will stop working properly.
+//
+// - If you do wish to do so for any reason then easiest
+//   is to email me & i'll send you the slower script for
+//   doing it on the fly!
+//  
+/////////////////////////////////////////////
+//
+// Compile Options
+// ===============
+//
+// 1. useGmStaff.src
+// -----------------
+// - contains the Consts GUMP_X and GUMP_Y which
+//   determine the initial position in client
+//   (from top left) of the use gm staff gump
+//
+// 2. textcmd\gm\cmdLevel.src
+// --------------------------
+// - contains the Const GM_MAKE_GM ......
+//    if GM_MAKE_GM 1 then GMs will be 
+//      able to make players into seer/coun/gm 
+//    if GM_MAKE_GM  0 then GMs will be
+//      able to make players into seer/coun 
+//   (read notes in the .src for further details)
+//
+// NB:
+//   For changes to compile options to take effect,
+//   remember to recompile the script and unload it.
+//
+/////////////////////////////////////////////
+//
+// Cprops
+// ======
+//
+// "GMRobeColor" (cprop attached to gm)
+// ------------- 
+// - this determins the gm's gmrobe color when
+//   they don their gm robes.
+//
+// - defaults to standard GMRed.
+//
+// - you need to be careful with changing this
+//   since it's easy to crash client, basically
+//   unless you know the colour you want is valid 
+//   for a mobile's skin don't change this.
+//   (Its something like you have to add 0x7000 
+//   to the normal color value, but i can't
+//   remember for sure at the moment ...... )
+//
+/////////////////////////////////////////////

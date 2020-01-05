@@ -1,0 +1,28 @@
+use uo;
+use os;
+
+program autores( param)
+  local who;
+  local clean := 0;
+  if( len( param))
+    who := param[1];
+    clean := param[2];
+  else
+    who := param;
+  endif
+  
+  if( clean)
+    return 1;
+  endif
+  
+  if( !who.dead)
+    return 0;
+  endif
+  
+  local parms array;
+  parms[1] := "#MOB";
+  parms[2] := who;
+  parms[3] := who;
+
+  start_script( ":spells:resurrect", parms);
+endprogram

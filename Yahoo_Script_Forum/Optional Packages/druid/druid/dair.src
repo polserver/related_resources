@@ -1,0 +1,50 @@
+use uo;
+use util;
+use os;
+use cfgfile;
+
+include "include/client";
+include "include/attributes";
+include "druid";
+
+const KillSound := 0x202;
+const KillEffect := 0x375a;
+const SFX_SPELL_FAIL := 0x005b;
+
+program cast_dair(caster)
+
+
+	local casterskill := GetEffectiveSkill(caster, SKILLID_ANIMALLORE);
+//	local casterpower := GetEffectiveSkill(caster, SKILLID_MAGERY);
+
+	if(!checkstaff(caster))
+		return;
+	endif
+	
+	checkdruidopts(caster, 3);
+
+	local victim := target(caster);
+	local victimlevel := victim.hp;
+	local victimsave := 0;
+        local alt := RandomDiceRoll("1d2");
+        local dmg := randomdiceroll("5d10")+(casterskill/2);
+		
+        usemana(caster, 3);
+        local sx := victim.x, sy := victim.y, sz := victim.z;
+        local cast := caster;
+        local mage  := Cint(GetEffectiveSkill(caster, SKILLID_ANIMALLORE)/10);
+        local mage2 := Cint(GetEffectiveSkill(caster, SKILLID_ANIMALLORE)/20);
+        local kickbackx := Cint((RandomInt(mage) - 5 ));
+        local kickbacky := Cint((RandomInt(mage) - 5 ));
+        local kickbackz := Cint((RandomInt(mage) - 5 ));
+
+	SendSysMessage(caster, "Select victim.");
+
+                PlaySoundEffect(victim, SFX_108);
+//                PlayStationaryEffect(sx, sy, sz, 0x3789, speed:=30, loop:=30);
+                PlayStationaryEffect(sx, sy, sz, 0x37cc, speed:=30, loop:=30);
+                PlaySoundEffect(victim, SFX_109);
+                movecharactertolocation(victim, victim.x - kickbackx, victim.y + kickbacky, victim.z + kickbackz);
+                ApplyRawDamage(victim, dmg);
+                PrintTextAbove(victim, "A sudden gust of wind cuts through " + victim.name + " for " + dmg + " damage!");
+endprogram

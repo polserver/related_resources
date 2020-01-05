@@ -1,0 +1,52 @@
+include "include/modules";
+
+program textcmd_makedoor(who)
+	var metaldoors := { 0x0675, 0x0677, 0x067d, 0x067f, 0x06c5, 0x06c7, 0x06cd, 0x06cf };
+	var metalnames := { "Short SW out", "Short SE out", "Short ES Out", "Short EN Out",
+				  "Tall SW Out", "Tall SE Out", "Tall ES Out", "Tall EN Out" };
+	var barreddoors := { 0x0685, 0x0687, 0x068d, 0x068f };
+	var barrednames := { "S to W out", "S to E out", "E to S Out", "E to N Out" };
+	var wooddoors := { 0x06a5, 0x06a7, 0x06ad, 0x06af, 0x06b5, 0x06b7, 0x06bd, 0x06bf, 0x06d5,
+				 0x06d7, 0x06dd, 0x06df, 0x06e5, 0x06e7, 0x06ed, 0x06ef, 0x0695, 0x0697,
+				 0x069d, 0x069f };
+	var woodnames := { "SW out", "SE out", "ES Out", "EN Out", "SW Out", "SE Out", "ES Out",
+				 "EN Out", "SW out", "SE out", "ES Out", "EN Out", "SW Out", "SE Out",
+				 "ES Out", "EN Out", "ES Out", "EN Out" };
+	var metalgates := { 0x0828 };
+	var gatenames := { "S to W Out" };
+	var chosen, chosennames, nameindex:=0;
+	var doortype := CreateMenu( "Select a door type" );
+	AddMenuItem( doortype, metaldoors[1],  "Metal doors"  );
+	AddMenuItem( doortype, barreddoors[1], "Barred doors" );
+	AddMenuItem( doortype, wooddoors[1],   "Wood doors"   );
+	AddMenuItem( doortype, metalgates[1],  "Gates"        );
+	var doorcat:=SelectMenuItem2( who, doortype );
+	if( !doorcat )
+    		SendSysMessage(who,"Door creation cancelled");
+    		return 1;
+	endif
+	case( doorcat.index )
+    		1: 	chosen := metaldoors;
+        		chosennames:=metalnames;
+    		2: 	chosen := barreddoors;
+        		chosennames:=barrednames;
+    		3: 	chosen := wooddoors;
+    	    		chosennames:=woodnames;
+    		4: 	chosen := metalgates;
+        		chosennames:=gatenames;
+	endcase
+	var doormenu := CreateMenu("Select a door");
+	foreach door in chosen
+    		nameindex:=nameindex+1;
+    		AddMenuItem(doormenu,door,chosennames[nameindex]);
+	endforeach
+	var doorchosen:=SelectMenuItem2(who, doormenu);
+	if (!doorchosen)
+		SendSysMessage(who,"Door selection cancelled");
+    		return 1;
+	endif
+	SendSysMessage(who, "Where do you want the door created?");
+	var place:=TargetCoordinates(who);
+	var created:=CreateItemAtLocation(place.x, place.y, place.z,doorchosen.objtype,1);
+	created.decayAt := 0;
+endprogram

@@ -1,0 +1,39 @@
+use npc;
+use os;
+use uo;
+use cfgfile;
+
+include "include/eventid";
+include "include/randname";
+include "include/npcutil";
+include "include/objtype";
+include "include/dist";
+include "include/anchors";
+include "ai/main/mainloopcat";
+include "ai/combat/fight";
+include "ai/combat/defaultcombatevent";
+include "ai/setup/animalsetup";
+include "ai/main/sleepmode";
+
+const HALT_THRESHOLD := 5; // how close before he attacks?
+
+program KillPlayers()
+
+    	SetWarMode( 0 );
+  
+    	main_AI_loop();
+
+endprogram
+
+function CloseDistance( opponent )
+
+    case Distance( me, opponent )
+        1:              // the most likely, so first 
+        0:
+            return 1;
+        default:
+            RunToward( opponent );
+            return 0;
+    endcase
+
+endfunction

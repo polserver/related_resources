@@ -1,0 +1,80 @@
+use uo;
+use os;
+
+include "../../cleric";
+
+program dispelevil(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif
+	
+	var player1, player2;
+	
+	player1 := ClericalTarget(who, info.npctarget, "Select the first target.");
+	player2 := ClericalTarget(who, info.npctarget, "Select the second target.");
+	
+	if (!player1.ip || player1.ghost)
+		SendSysMessage(who, "Cancelled");
+		return;
+	elseif (!player2.ip || player2.ghost)
+		SendSysMessage(who, "Cancelled");
+		return;
+	elseif (player1 == player2)
+		SendSysMessage(who, "Cancelled");
+		return;
+	endif
+	
+	ReleaseScript(info.pid);
+	
+	var duration := (5*60);
+	duration := duration + (60*piety);
+	duration := duration * 3;
+	
+	var i, hpavg, stamavg, manaavg;
+	for (i:=1;i<=duration;i:=i+1)
+		if (player1.dead)
+			ApplyRawDamage(player2, cint(player2.maxhp));
+			break;
+		elseif (player2.dead)
+			ApplyRawDamage(player1, cint(player2.maxhp));
+			break;
+		endif
+		
+		hpavg := cint((player1.hp + player2.hp) / 2);
+		if ( (hpavg != player1.hp) || (hpavg != player2.hp) )
+			PlayObjectCenteredEffect(player1, 0x376a, 10, 30);
+			PlayObjectCenteredEffect(player2, 0x376a, 10, 30);
+		endif
+		
+		player1.hp := hpavg;
+		player2.hp := hpavg;
+		
+		stamavg := cint((player1.stamina + player2.stamina) / 2);
+		if ( (stamavg != player1.stamina) || (stamavg != player2.stamina) )
+			PlayObjectCenteredEffect(player1, 0x376a, 10, 30);
+			PlayObjectCenteredEffect(player2, 0x376a, 10, 30);
+		endif
+		
+		player1.stamina := stamavg+20;
+		player2.stamina := stamavg+20;
+		
+		manaavg := cint( (player1.mana + player2.mana) / 2);
+		if ( (manaavg != player1.mana) || (manaavg != player2.mana) )
+			PlayObjectCenteredEffect(player1, 0x376a, 10, 30);
+			PlayObjectCenteredEffect(player2, 0x376a, 10, 30);
+		endif
+		
+		player1.mana := manaavg;
+		player2.mana := manaavg;
+		
+		sleepms(500);	
+	endfor
+	
+	SendSysMessage(who, "The link is broken...");
+endprogram

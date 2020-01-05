@@ -1,0 +1,86 @@
+////////////////////////////////////////////////////////////////////////////
+// build.src
+//
+// In an effort to centralize a number of text commands, I have embarked
+// upon a task in which all of the buil type commands will be accessible
+// through a single gump-driven script.
+//
+// Author: Angreal
+// Date: 10/22/01
+//
+// To Do:	- replace the npc section with something more 'buildish'
+//		- re-write all of the existing scripts
+//		- prune out the unneccessary/multiple scripts
+//		- re-organize in a better format
+/////////////////////////////////////////////////////////////////////////////
+include "include/modules";
+include "include/client";
+include "include/gumps";
+include "include/output";
+
+var i, j, lalign := 20, buttonx := 220, fns := {};
+fns[1]  := { "Create Singles & Stacks", "Create an Area of Items", "Creating/Placing Sets",
+		 "Teleporters & Gates", "Moving Items", "Item Alteration", "Locking & Unlocking",
+		 "Equip Templates & NPC's", "Copying Items", "Item Destruction" };
+fns[2]  := { "Create", "CreateAt", "CreateStack", "MakeDoors", "---", "---", "---", "---", "---", "---" };
+fns[3]  := { "CreateRect", "MakeFloor", "RangeRect", "Tile", "---", "---", "---", "---", "---", "---" };
+fns[4]  := { "AddSet", "MakeSet", "---", "---", "---", "---", "---", "---", "---", "---" };
+fns[5]  := { "AddTeleporter", "---", "---", "---", "---", "---", "---", "---", "---", "---" };
+fns[6]  := { "MoveRect", "MoveItem", "MX", "MY", "MZ", "PX", "PY", "PZ", "MoveToPack", "---" };
+fns[7]  := { "ColorRect", "Color", "ColorChart", "---", "---", "---", "---", "---", "---", "---" };
+fns[8]  := { "LockRadius", "UnLockRadius", "SetMovable", "SetUnMovable", "---", "---", "---", "---", "---", "---" };
+fns[9]  := { "Equip", "Equipt", "Writequip", "WriteNPC", "ReCreateNPC", "---", "---", "---", "---", "---" };
+fns[10] := { "Copy", "ReplaceRad", "---", "---", "---", "---", "---", "---", "---", "---" };
+fns[11] := { "Destroy", "DestroyRadius", "DestroyType", "DestroyMulti", "BreakIt", "Nuke", "---", "---", "---", "---" };
+
+program skills(who)
+	GFSetRef( 10, 10 );
+	GFNoDispose();
+	page_nil();
+	fill_in_pages();
+	var res := GFSendGump( who );
+	var thisscript := ChooseScript( who, CInt(res[0]-1024) );
+	start_script( "../scripts/textcmd/building/" + thisscript, who );
+endprogram
+
+function page_nil()
+	var width := 245, height := 270;
+	GFPage( 0 );
+	GFResizePic( 0, 0, BKGND_SILVERTRIM, width, height );
+	GFTextLine( 20, 12, 4, "EZ-Build" );
+	GFTextLine( 125, 12, 8, "Main Menu" );
+	GFGumpPic( 10, 30, 0x0039 );
+	GFGumpPic( width-38, 30, 0x003B );
+	for( i := 1; i <= CInt((width-78)/16)+1; i := i + 1 )
+		GFGumpPic( 16*i + 23, 30, 0x003A );
+	endfor
+endfunction
+
+function fill_in_pages()
+	for( j := 1; j <= 11; j := j + 1 )
+		GFPage( j );
+		if( j == 1 )
+			for( i := 1; i <= 10; i := i + 1 )
+				var yval := 50 + (i-1)*20;
+				GFTextLine( lalign, yval, 8, fns[j][i] );
+				GFButtonPage( buttonx, yval, 0x37, 0x38, i+1 );
+			endfor
+		else
+			GFButtonPage( buttonx, 12, 0x38, 0x37, 1 );
+			for( i := 1; i <= len(fns[j]); i := i + 1 )
+				var yval := 50 + (i-1)*20;
+				GFTextLine( lalign,  yval, 10, fns[j][i] );
+				GFButtonID( buttonx, yval, 0x37, 0x38, 1 );
+			endfor
+		endif
+	endfor
+endfunction
+
+function ChooseScript( who, idnum )
+	for( i := 1; i <= 10; i := i + 1 )
+		if( idnum <= i * 10 )
+			var thescript := CStr( lower( fns[i+1][idnum-(i-1)*10] ) );
+			return thescript;
+		endif
+	endfor
+endfunction

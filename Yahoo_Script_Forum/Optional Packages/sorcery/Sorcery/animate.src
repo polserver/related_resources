@@ -1,0 +1,37 @@
+use util;
+
+include "../pkg/skills/spells/summon";
+include "include/attributes";
+include "include/spellRestrictions";
+
+program cast_conjure( parms )
+  var circle := 8;
+  var delivery := "direct";
+  var noto := "neutral";
+  var result := maincast(parms, delivery, circle, noto, 40);
+  if(result == 0)
+    return;
+  endif
+  var caster := result[1];
+  var cast_on := result[2];
+  setscriptcontroller(caster);
+  var thecreature;
+  var thecritter;
+  var critgroup;
+  var critter;
+  var cast_onitem := getobjproperty(cast_on, "totem");
+  if(!cast_onitem)
+	sendsysmessage(caster, "you need to target a totem");
+	return 0;
+  elseif(cast_onitem == 1)
+	thecreature := "drake1";
+  elseif(cast_onitem == 2)
+	thecreature := "giant_serpent";
+  elseif(cast_onitem == 3)
+	thecreature := "nightmare";
+  endif
+  Consumevital(caster,"mana", 50);
+  sendsysmessage(caster, "now target where to summon it.");
+  var where := Targetcoordinates( caster );
+  summon_creature( caster, circle, thecreature, where );
+endprogram

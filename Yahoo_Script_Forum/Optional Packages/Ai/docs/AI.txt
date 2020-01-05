@@ -1,0 +1,79 @@
+AI PACKAGE
+==========
+Written by: GM Mercy (mkow@sympatico.ca)
+
+This is a modular AI system which makes it very, very easy to create new and unique AI.  All files and functions are well documented.  You should not have any trouble creating your own AI.
+
+Everything is very well documented, with module functions and config files having very good documentation.
+
+AI FILE STRUCTURE
+=================
+ai/include/*	Main AI code modules.
+ai/combat/*		Combat modules.
+ai/noncombat/*	Non-combat modules.
+ai/consider/*	Consider modules.
+ai/speech/*		Speech modules.
+ai/npcspeech/*	NPC Speech config files.  Look in ai/npcspeech/template for description.
+ai/npcspells/*	NPC Spells config file is located in this dir.
+ai/*			All the AI scripts are stored here.
+ai/PutMeInPolConfig/*  Put these file into pol/config, you will need to edit the
+
+MODULAR DESIGN
+==============
+The AI package is created with a modular design in mind.  All you need to do is take the Default* module from a module directory, copy it and rename it.  Then write the code you would like the AI to do.  Include that module in the main AI script and compile.  Voila! A new AI after only a couple of lines of code.  DO NOT EDIT THE DEFAULT MODULES, THEY ARE NOT ONLY TEMPLATES, BUT THE DEFAULT BEHAVIOUR FOR A VANILLA AI.
+
+INSTALLATION
+============
+Just put the AI package in /pkg/std.  You also need to link the function in ai/include/GroupingDeath.inc to scripts/misc/death.src.  After that, make sure your NPCs have the correct script, :ai:* (i.e. :ai:orc or :ai:merchant).
+
+Add these events to scripts/include/eventid.inc
+// AI Package Grouping Messages.
+const EVID_GROUP_JOIN   	 	:= 1002;
+const EVID_GROUP_DEATH    		:= 1004;
+const EVID_GROUP_HELP			:= 1006;
+
+Add to /scripts/misc/death.src:
+include "../pkg/std/ai/include/GroupingDeath";
+// AI Package grouping cleanup.
+AiGroupingDeath(corpse);
+
+
+THE AI STRUCTURE
+================
+Look in ai/include/AiSetup.inc.  There you will find the 'ai' structure with all the default values and descriptions of each.  Those options are all used by the AI Core.  You can set them in your main AI script in the ai/* directory to control how the AI is to behave.  The rest you can put in the modules.  That's basically all you need to configure the AI.  Anything extra special can be hooked from the module functions.
+
+HOOKING INTO THE AI CORE
+========================
+Functions are available for you to hook into the core processing, they may all be found in the module directories, the defaults are named DefaultXXXX.inc.  You can create your own custom and varied modules, just copy the default and edit it, don't forget to include it into the AI script.
+
+IDLE NPCS
+=========
+Npcs will sleep till someone comes close enough for them towake up.  This property is set in the AiSetup.inc file.  If you don't want this feature, just set it to 0.
+
+///////////////////////////////////////////////////////////
+// AI PACKAGE SPECIFIC PROPERTIES TO NPCTEMPLATE:
+//	flee_point #	At what pct of my HP do I flee at?
+//	immobile 1|0	Can I move at all?
+//	dstart #		My wandering Range.
+//	psub #			Pct chance that Wander() will fail per tile past dstart, cumulative.
+//	move_delay #	What is the delay on all my actions (milliseconds), for slow critters.
+//	group <string> <string>	.. Group tags that determines who else can group with me.
+//  groupleader 1|0 Am I the leader type?
+//	groupmax #		Max number of buddies that can group with me.
+//	undead <type>	If undead and type = Mindless | Lesser | Greater.
+//  castpct	#		Pct chance that I will try to cast a spell per cycle.
+//  castcircle #	Max circle of spells that I can cast up to, use all spells available.
+///////////////////////////////////////////////////////////
+
+CREDITS
+=======
+Thanks to Syzygy for POL and every single person who uploaded a script or package to the e-Scriptforum. Thanks to those who worked on the current distribution AI scripts, they were and invaluable asset when learning how to script AI of my own.  I also stole some code from them. :)
+
+Keep sharing scripts!
+
+
+Enjoy, it took longer to write than I expected.  Lots of little caveats and gotchas.  I learned a lot and had a blast writing it.  Hope you have use for it.
+
+GM Mercy
+www.geocities.com/darkageuo
+mkow@sympatico.ca

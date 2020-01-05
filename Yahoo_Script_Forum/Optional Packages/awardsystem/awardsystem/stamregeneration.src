@@ -1,0 +1,40 @@
+use uo;
+use os;
+
+program stamregeneration( param)
+  var who;
+  var clean := 0;
+  if( len( param))
+    who := param[1];
+    clean := param[2];
+  else
+    who := param;
+  endif
+  
+  if( who.dead)
+    return 0;
+  endif
+  
+  var amount := who.dexterity;
+  var oldamount := GetObjProperty( who, "stamregenmod");
+
+  if( clean)
+    if( oldamount)
+      who.stamina_regen_rate := who.stamina_regen_rate - oldamount;
+      EraseObjProperty( who, "stamregenmod");
+      SendSysMessage( who, "Your stamina regeneration returned to normal!");
+    endif
+    return 1;
+  endif
+  
+  if( !oldamount)
+    who.stamina_regen_rate := who.stamina_regen_rate + amount;
+    SetObjProperty( who, "stamregenmod", amount);
+    SendSysMessage( who, "Your stamina are regenerating faster now");
+  elseif( oldamount < amount)
+    who.stamina_regen_rate := who.stamina_regen_rate - oldamount;
+    who.stamina_regen_rate := who.stamina_regen_rate + amount;
+    SetObjProperty( who, "stamregenmod", amount);
+    SendSysMessage( who, "Your stamina are regenerating faster now");
+  endif
+endprogram

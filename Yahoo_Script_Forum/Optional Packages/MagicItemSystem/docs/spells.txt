@@ -1,0 +1,112 @@
+*************************
+Working with magic spells
+*************************
+
+If you have the scripts installed for spell resistances/bonuses (step #7 in sreadme.txt), then you can use them :) Otherwise, go through step #7 now...
+
+Assuming you have installed them, you can setup your spells to work with the system. First open up the script of the spell you want to setup. For this example, we're using flamestrike, so open pol\pkg\std\spells\fstrike.src
+
+Scroll down to the bottom of the spell script, and it should have a line like
+
+  ApplyRawDamage( cast_on, Resisted(circle,caster,cast_on,dmg) );
+
+The problem with making resistances/bonuses for certain spells is knowing what spell the person is casting from Resisted, which calculates the final damage. As much as i would like automatic detection from the calling script or something, i dont think i can... so we just pass an extra variable:
+
+  ApplyRawDamage( cast_on, Resisted(circle,caster,cast_on,dmg,"fstrike") );
+
+The last variable can be any string you want, it will be used later to identify the spell in the enchantment. Other spell scripts will work fine without passing the extra variable.
+
+
+
+******************************
+Making the resistances/bonuses
+******************************
+
+Now that you have setup your spell(s), you can use them in the enchantment files. Say you wanted to make a special fire enchantment, that made the caster resist flamestrikes a bit, and made their flamestrikes do more damage...
+ We can start of with a basic enchantment we will call "m_s_fstrike" - for magic_super_flamestrike. Shorter enchantment names use up less memory :)
+
+Enchantment m_s_fstrike
+{
+	Name         m_s_fstrike
+
+	//This enchantment is not effective in physical combat
+	noNormalMods 1
+}
+
+
+Now we have to add the lines that make the spells do something, they are in the following format:
+   -Format for resistences is:
+    spellResist [id] [percentige]
+     +percentige is the percentige to absorb. 100 is complete resistence. 50% is half, etc...
+
+   -Format for bonuses is:
+    spellBonus [id] [percentige]
+     +percentige is the percentige of damage to do. 200 is double. 50 is half, etc...
+
+We used "fstrike" as our name for flamestrike, so for the [id] you enter "fstrike", for now we will have a 40% resist, and a 140% bonus.
+
+
+Enchantment m_s_fstrike
+{
+	Name         m_s_fstrike
+	noNormalMods 1
+
+	spellResist fstrike 40
+	spellBonus fstrike 140
+}
+
+
+This is all good, but say we wanted the amounts to be random, depending on the item. We can pass the name of a CProp as the amount tag:
+
+
+Enchantment m_s_fstrike
+{
+	Name         m_s_fstrike
+	noNormalMods 1
+
+	//set CProp fsAmount to 10-40
+	AddRanProp fsAmount 10 40
+
+	spellResist fstrike fsAmount
+	spellBonus fstrike fsAmount
+}
+
+
+Now, say we wanted to effect all the fire spells. We could go and write the tags for every one, but that would take ages... instead, there is a thing called spellgroups...
+
+
+
+****************************************************
+Using Spellgroups (dont those asterixes look seksee)
+****************************************************
+
+Open up the file pol\pkg\std\combat\sithmagicitems\configuration\spellgroups.cfg
+the spellgroups.cfg, in the configuration directory inside of the magic items package :)
+
+Here, you can specify a group of spells under a groupname. Eg:
+
+
+SpellGroup fire
+{
+    fstrike 1
+    fireball 1
+    magicarrow 1
+}
+
+
+The names used are the same ones we pass through in the spell script (remember we used "fstrike"). You can then use the name of the group to effect all of the spells the same:
+
+
+Enchantment m_s_fstrike
+{
+	Name         m_s_fstrike
+	noNormalMods 1
+	AddRanProp fsAmount 10 40
+
+	spellResist fire fsAmount
+	spellBonus fire fsAmount
+}
+
+
+Ok. Thats about it... if you have any suggestions/comments about the spell mod system, email me!
+s1th@stoned.com

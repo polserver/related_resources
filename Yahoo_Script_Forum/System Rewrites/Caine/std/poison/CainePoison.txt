@@ -1,0 +1,19 @@
+CainePoison
+-----------
+
+Now this one i changed like so... 
+
+I have now changed it to use the same poisoning field as my Alchemy pkg (and the rest of the pkg's btw) and in doing so, have made it so that cure potions/cure spells actually work on the posioned player.
+
+So in otherwords... Poison is a leeetle less fatal ;)
+(provided you have the right equiptment available, heheh)
+
+19/9/2000 :
+-----------
+
+oops, i forgot to take out the irritaing debug "print" lines... sorry about that, fixed now.
+reduced the amount of re-poisoning (is that a word?) you get. 
+increased the checks it makes to take care of the "after death green" bug.
+
+
+Caine

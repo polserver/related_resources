@@ -1,0 +1,6 @@
+use uo;
+include "../../disguise";
+
+program undisguise(who)
+	RemoveDisguise(target(who));
+endprogram

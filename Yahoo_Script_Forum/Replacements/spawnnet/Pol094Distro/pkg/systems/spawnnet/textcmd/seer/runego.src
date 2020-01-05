@@ -1,0 +1,26 @@
+use uo;
+use os;
+use util;
+use basic;
+
+const UOBJ_SPAWN_RUNE := 0xa300;
+
+program textcmd_runego(who, param)
+
+if(!param)
+	SendSysMessage(who, "Benutzung ist    runego 'rune_number'");
+	return 0;
+endif
+
+local list := GetGlobalProperty("runeserial");
+local rune := SystemFindObjectBySerial(list[cint(param)]);
+
+if(!rune)
+	SendSysMessage(who,"Rune nicht gefunden");
+	return;
+endif
+
+sendsysmessage(who, "Gehe zur Rune");
+MoveCharacterToLocation( who, rune.x, rune.y, rune.z);
+
+endprogram

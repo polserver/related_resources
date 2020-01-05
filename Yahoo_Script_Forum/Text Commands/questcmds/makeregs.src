@@ -1,0 +1,19 @@
+include "include/modules";
+include "include/objtype";
+
+program makeregs( who, amount )
+	amount := CInt(amount);
+	if( !amount )
+		amount := SendTextEntryGump( who, "How many of each reg would you like?" );
+		amount := CInt( amount );
+		if( !amount )
+			amount := 20;
+		endif
+	endif
+	var backpack := CreateItemInBackpack( who, "backpack", 1 );
+	backpack.color := 0x5;
+	var i;
+	for ( i := REAGENT_START; i <= REAGENT_STOP; i := i + 1)
+		CreateItemInContainer( backpack, i, amount);
+	endfor
+endprogram

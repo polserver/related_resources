@@ -1,0 +1,144 @@
+//Creator:	Sam Thomas (mindlurker@hotmail.com)
+//Last Updated:	July 18, 2001
+//Purpose:	Duplicate an item X number of times
+//Type:		textcmd
+//Suggested:	Seer
+
+//Missing Features:
+//   I haven't yet coded the ability to dupe the items
+//   in containers or spellbooks.
+
+use uo;
+
+program dupe(who, intAmount)
+   local i;		//Generic iterate
+
+   //Booleans that determine whether duping is possible
+   local bolMobile, bolMulti, bolBoat;
+   local bolHouse, bolCorpse, bolSpellbook;
+   local bolContainer;
+
+   //Item information
+   local intItem_type;	//The type of item chosen
+   local intPileAmount;	//The amount of the pile on the item
+
+   //Item property information
+   local arrItemProperties;	//An array containing item property names
+   local strItemPropertyName;	//A specific property's name
+   local strItemPropertyValue;	//A specific property's value
+
+   //Make the user target the item they want to dupe
+   local objClicked_item := Target(who);
+
+   //Get the properties for an item
+   arrItemProperties := GetObjPropertyNames(objClicked_item);
+
+   //**********************************************************
+   //Start Program Logic
+   //**********************************************************
+
+   //If the user changed his/her mind, exit this command
+   if(!objClicked_item)
+      return;
+   endif
+
+   //If the amount of dupes isn't set, default to 1
+   if(!CInt(intAmount))
+      intAmount := 1;
+   endif
+
+   //Fetch the item type to dupe
+   intItem_type := GetObjType(objClicked_item);
+   intPileAmount := CInt(GetAmount(objClicked_item));
+
+   //If the amount in the pile isn't set, default to 1
+   if(!intPileAmount)
+      intPileAmount := 1;
+   endif
+
+   //**********************************************************
+   //Set the booleans for the permissions chain
+   //**********************************************************
+
+   //These will never be duped
+   bolMobile := objClicked_item.isa(POLCLASS_MOBILE);
+   bolMulti := objClicked_item.isa(POLCLASS_MULTI);
+   bolBoat := objClicked_item.isa(POLCLASS_BOAT);
+   bolHouse := objClicked_item.isa(POLCLASS_HOUSE);
+   bolCorpse := objClicked_item.isa(POLCLASS_CORPSE);
+
+   //Things I want to be able to be duped, but not yet ;)
+   bolSpellbook := objClicked_item.isa(POLCLASS_SPELLBOOK);
+   bolContainer := objClicked_item.isa(POLCLASS_CONTAINER);
+
+   //This is a simple permissions chain... existance of a true
+   //in any of it fails the procedure entirely
+   if(bolMobile || bolMulti || bolBoat ||
+      bolHouse || bolCorpse)
+
+      //Notify the user that the dupe won't work
+      SendSysMessage(who, "Cannot duplicate items of this type.");
+
+      return;
+   endif
+
+   //**********************************************************
+   //Since all tests must have passed at this point,
+   //the item can now be duped!
+   //**********************************************************
+
+   // Duplicate X number of items to player's backpack
+   for( i := 1; i <= CInt(intAmount); i := i + 1 )
+      local objItem := CreateItemInBackpack( who, CInt(intItem_type), intPileAmount);
+
+      //Duplicate Object properties to new item
+      objItem.name := objClicked_item.name;
+      objItem.color := objClicked_item.color;
+      objItem.graphic := objClicked_item.graphic;
+      objItem.facing := objClicked_item.facing;
+
+      //Duplicate Item properties to new item
+      objItem.usescript := objClicked_item.usescript;
+      objItem.equipscript := objClicked_item.equipscript;
+      objItem.unequipscript := objClicked_item.unequipscript;
+      objItem.desc := objClicked_item.desc;
+      objItem.movable := objClicked_item.movable;
+      objItem.decayat := objClicked_item.decayat;
+      objItem.sellprice := objClicked_item.sellprice;
+      objItem.newbie := objClicked_item.newbie;
+
+      //Duplicate Equipment properties to new item
+      objItem.quality := objClicked_item.quality;
+      objItem.hp := objClicked_item.hp;
+      objItem.maxhp_mod := objClicked_item.maxhp_mod;
+
+      //Duplicate Armor properties to new item
+      objItem.ar_mod := objClicked_item.ar_mod;
+
+      //Duplicate Weapon properties to the new item
+      objItem.dmg_mod := objClicked_item.dmg_mod;
+      objItem.hitscript := objClicked_item.hitscript;
+
+      //Duplicate Map properties to the new item
+      objItem.xeast := objClicked_item.xeast;
+      objItem.xwest := objClicked_item.xwest;
+      objItem.ynorth := objClicked_item.ynorth;
+      objItem.ysouth := objClicked_item.ysouth;
+      objItem.gumpwidth := objClicked_item.gumpwidth;
+      objItem.gumpheight := objClicked_item.gumpheight;
+
+      //Duplicate Locked properties to the new item
+      objItem.locked := objClicked_item.locked;
+
+      // Duplicate the Cprops to the item to be duped
+      foreach strItemPropertyName in arrItemProperties
+         strItemPropertyValue := GetObjProperty(objClicked_item, strItemPropertyName);
+
+         SetObjProperty( objItem, strItemPropertyName, strItemPropertyValue);
+      endforeach
+
+   endfor
+
+   //Notify the user that the dupe is complete
+   SendSysMessage(who, "Duplicated " + (i - 1) + " time(s)");
+endprogram

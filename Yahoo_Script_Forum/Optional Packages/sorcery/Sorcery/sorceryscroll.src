@@ -1,0 +1,58 @@
+use uo;
+use os;
+use cfgfile;
+
+include "include/client";
+
+program use_scroll( who, scroll )
+
+	if( GetObjProperty(who, "mute") )
+	    SendSysMessage(who, "You are muted!");
+	    return;
+	endif
+
+	set_critical( 1 );
+	if (!scroll.amount)
+		return;
+    	endif
+
+	ReserveItem(scroll);
+
+        local spellid := Cint(GetObjProperty( scroll, "SpellID" ) );
+
+	PerformAction(who,ANIM_CAST_DIR);
+	local spells_cfg := ReadConfigFile( "spells" );
+	local element := FindConfigElem ( spells_cfg, spellid );
+	PrintTextAbove( who, GetConfigString(element, "PowerWords") );
+	sleep(2);
+
+                	Detach();
+			SubtractAmount( scroll, 1 );
+                	StartSpellEffect( who, spellid );
+			return;
+
+		PlaySoundEffect(who,0x005d);
+		PlayObjectCenteredEffect(who, 0x3735,0x0a, 0x1e);
+		return;
+
+
+endprogram
+
+function CanReadScroll (me)
+
+	local cfg := readconfigfile(":combat:itemdesc");
+	local item;
+	local circle := 2;
+
+	local theweapon := GetEquipmentByLayer( me,  LAYER_HAND1   );
+	if (!theweapon)
+		theweapon := GetEquipmentByLayer( me,  LAYER_HAND2   );
+	endif
+	
+	if (theweapon)
+		return 0;
+	else
+		return 1;
+	endif
+
+endfunction

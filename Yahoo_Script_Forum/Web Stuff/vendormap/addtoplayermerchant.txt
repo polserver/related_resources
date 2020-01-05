@@ -1,0 +1,9 @@
+	set_critical(1);
+        local vendors := getglobalproperty("pcvendors");
+        if (me.serial in vendors)
+        
+	else 
+	vendors.append(me.serial);
+	endif
+        setglobalproperty("pcvendors", vendors);
+        set_critical(0);    

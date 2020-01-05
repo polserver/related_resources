@@ -1,0 +1,23 @@
+/* logoff.src
+ * Last Modified: 06/17/04
+*/
+
+use uo;
+use os;
+
+include ":webview:webProfile";
+
+program onlogoff(who)
+
+  if (DEBUG)
+    print("DEBUG: onlogoff - Running logoff functions...");
+  endif
+
+  // Set last client
+  SetObjProperty(who, "LastClient", who.clientversion);
+  
+  SetLongestOnline(who);
+  SetLastLogoff(who);
+  IncreaseTotalOnline(who);
+
+endprogram

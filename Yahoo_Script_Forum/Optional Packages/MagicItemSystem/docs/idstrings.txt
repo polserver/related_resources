@@ -1,0 +1,41 @@
+the "idstring" entry in the enchantment config elements controls what is displayed for that enchantment when Item ID'd
+format is:
+
+	idstring [string]
+
+ie:
+
+	idstring This enchantment is extremely funky.
+
+--------------------------------------------------------------------------------------------------------
+To get a variable from the object being identified, use a $ before the variable name, and a # after. Eg:
+
+	idstring The variable 'dewd' is: $dewd#
+
+Would return, if "dewd" was 1337:
+
+	The variable 'dewd' is: 1337
+
+------------------------------------------------------
+You can have as many variable entries as you like, ie:
+
+	idstring There are $d_amts# lots of $d_ratings# rated level $c_level# chickens.
+
+Would return somefin like
+
+	There are 14 lots of 4 rated level 8 chickens.
+
+---------------------------------------------------------
+As of v1.11, you can have more than one "idstring" entry:
+
+	idstring The thorns enchantment
+	idstring Is an extreme rip-off
+	idstring From Diablo II
+
+Would Display, in the Item ID gump:
+
+	The thorns enchantment
+	Is an extreme rip-off
+	From Diablo II
+
+They all work with variable entries etc too...

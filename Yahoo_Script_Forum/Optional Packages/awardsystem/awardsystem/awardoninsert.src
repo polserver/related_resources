@@ -1,0 +1,11 @@
+use uo;
+use os;
+
+program on_insert( who, book, item )
+  if( !ReserveItem( book ) )
+    return 0;
+  endif
+  
+  return 0;
+endprogram
+

@@ -1,0 +1,31 @@
+///////////////////////////////////////////////////////////
+// DestroyPoint.src
+//
+// Script that runs when point is destroyed.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+include "SpawnPoint";
+include "include/eventid";
+
+program DestroySpawnPoint(point)
+	var pid := GetGlobalProperty("#SpawnPointManagerPID");
+	var proc := GetProcess(pid);
+
+	var ev := struct;
+	ev.+type := EVID_SPAWNPOINT_DESTROYED;
+	ev.+source := point.serial;
+	proc.SendEvent(ev);
+
+	if (GetObjProperty(point, "Despawn"))
+		DespawnAll(point);
+	endif
+
+	return 1;
+endprogram

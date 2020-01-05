@@ -1,0 +1,63 @@
+
+use cfgfile;
+use uo;
+use os;
+
+include "include/client";
+
+program open_door(door)
+
+    local doordesc := ReadConfigFile("itemdesc");
+
+    local xmod := CInt(doordesc[door.objtype].xmod);
+    local ymod := CInt(doordesc[door.objtype].ymod);
+
+    local newx := (door.x + xmod);
+    local newy := (door.y + ymod);
+    local newz := door.z;
+
+    local closesound;
+    local opensound;
+
+    case (doordesc[door.objtype].doortype)
+        default:
+         "stone":
+                opensound := SFX_OPEN_METAL_DOOR;
+                closesound := SFX_CLOSE_METAL_DOOR;
+
+         "wood": 
+                opensound := SFX_OPEN_WOODEN_DOOR;
+                closesound := SFX_CLOSE_WOODEN_DOOR;
+
+         "metal": 
+                opensound := SFX_OPEN_METAL_DOOR;
+                closesound := SFX_CLOSE_METAL_DOOR;
+    endcase
+
+    local opengraphic := GetObjProperty(door, "opengraphic");
+    if ((!opengraphic) or (opengraphic == ""))
+        opengraphic := door.graphic + 1;
+    endif
+
+    local whenopened := ReadGameClock();
+
+    if (GetObjProperty( door, "WhenOpened"))
+         return;
+    endif
+
+    set_critical(1);
+    PlaySoundEffect( door, opensound );
+    door.graphic := opengraphic;
+    door.movable := 1;
+    MoveItemToLocation (door, newx, newy, newz, MOVEITEM_FORCELOCATION);    
+    door.movable := 0;
+    SetObjProperty( door, "WhenOpened", whenopened );
+
+    sleep( 10 );
+    if (GetObjProperty( door, "WhenOpened" ))
+        start_script(":doors:close_door", door);
+    endif
+
+    set_critical(0);
+
+endprogram

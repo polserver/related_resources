@@ -1,0 +1,37 @@
+use os;
+use uo;
+use util;
+use cfgfile;
+include "drinkpotion";
+include "include/statmod";
+
+program drink_blue (character, potion)
+
+	if (!CanMod(character, "dex"))
+		SendSysMessage(character,"Already under the influence!");
+		return;
+	endif    
+
+	if (!checkifcandrink(character,potion))
+        	return;
+	endif
+	
+	local potion_strength := get_potion_strength(potion);
+
+	if (is_poison(potion))
+        	do_poison(character, potion);
+    	else
+        	empty_bottle (character, potion);
+
+		local duration := potion_strength *120;
+        	local thestring := cstr(potion_strength) + "d10";
+        	local agil_gain := RandomDiceRoll( thestring );
+
+		DoTempMod(character, "dex", agil_gain, duration);
+
+        	detach();
+        	sleep(10);
+		candrink(character);
+	endif
+
+endprogram

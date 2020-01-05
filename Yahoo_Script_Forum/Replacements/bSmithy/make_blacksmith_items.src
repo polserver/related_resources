@@ -1,0 +1,348 @@
+/////////////////
+// make_blacksmith_items.src
+//
+// Use a smithy hammer to either repair arms & armor or
+// to work with metal to create new items. You need to be
+// skillful to work with the rarer metals.
+//
+// TODO: remove hardcoding of skill pointvalue
+//
+// Author: DreamWeaver:
+//              original
+//         Racalac:
+//              colored items
+// Updates: Dream Weaver 6/3/99 handled item quality an HP to new specs
+//          Ignatius     99/06/10 added name of maker to exceptional items.		
+//	    S!tH	 9/05/2001 All coloured mods run through ingots.cfg.
+//				   -4 qualities.
+////////////////
+
+use uo;
+use cfgfile;
+use os;
+use util;
+use basicio;
+
+include "util/repair";
+include "include/client";
+include "include/objtype";
+include "include/yesno";
+include "include/string";
+
+Global itemcfg   := ReadConfigFile(":combat:itemdesc");
+Global smith_cfg := ReadConfigFile( "blacksmithy" );    
+Global ingotsCfg := ReadConfigFile( ":blacksmithy:ingots" );
+
+// called when a player double-clicks a hammer or other blacksmith tool
+program use_hammer( character, hammer )
+
+    SendSysmessage( character, "What would you like to use that on?" );
+    Local use_on := Target( character );
+    if( !use_on )
+        SendSysmessage( character, "Targetting cancelled" );
+        return;
+    endif
+
+	ReserveItem(use_on);
+    
+    if( is_weapon_armor(use_on.objtype) )
+        repair_item( character, use_on, SKILLID_BLACKSMITHY );
+        return;
+    endif
+    
+    if( !isIngot(use_on.objtype) )
+        SendSysMessage( character, "You can only use that on ingots!" );       
+        return;
+    endif
+
+    if( !CheckSkillForDifferentMetals( character , use_on, hammer ) )
+        SendSysmessage( character, "You have no chance to successfully work with that metal." );
+        return;
+    endif
+
+    Local Near_Items := ListItemsNearLocation(character.x, character.y, character.z,2);
+    foreach item in Near_Items
+         if ((item.objtype = UOBJ_ANVIL1) or (item.objtype = UOBJ_ANVIL2))
+              MakeBlacksmithItems(character, use_on);
+              Return;
+         endif
+    endforeach
+    SendSysmessage( character, "You must be near an anvil to smith items!" );
+       
+endprogram
+
+
+function is_weapon_armor(what)
+    local elem := FindConfigElem(itemcfg, what);
+    if (elem)
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+function MakeBlacksmithItems( character, ingots )
+    local skill;          //skill needed to create the item
+    local element;        // entry in smith_config
+    local material;       //amount of material needed to create the item
+    local points;
+    local retval;
+    local maxhp;
+    local quality;
+    local itemname;
+    
+    if ( !Accessible( character, ingots))
+        SendSysmessage( character, "You don't have any ingots!" );
+        return;
+    endif
+    
+    if (!smith_cfg)
+        SendSysmessage (character, "Could not open blacksmith.cfg");
+        return;
+    endif
+    
+    local what := SelectMenuItem2( character, "blacksmith" );
+    if ( !what )
+          SendSysmessage( character, "Targetting cancelled" );
+          return;
+    endif
+
+    what := what.objtype;
+    maxhp := itemcfg[what].maxhp;
+    element := FindConfigElem( smith_cfg,what ); //need to make sure the key reflects the menu return value
+    
+    if (element)
+        material := GetConfigInt( element, "material" );
+        skill := GetConfigInt( element, "skill" );
+        itemname := GetConfigString( element, "Name") ;
+        points := GetConfigInt( element , "points" );
+    else
+        print("Bad stuff goin on!");
+    endif
+
+	local metalElem, bonusSkill, newColour, bonusPoints, bonusHp, prefix, suffix, enchantments, DmgMod, ArmMod, cashMod;
+	metalElem := FindConfigElem( ingotsCfg, ingots.objtype );
+	if( metalElem)
+		DmgMod := GetConfigInt( metalElem, "damageMod" );
+		ArmMod := GetConfigInt( metalElem, "armourMod" );
+		bonusSkill := GetConfigInt( metalElem, "bonusSkill" );
+		newColour := GetConfigInt( metalElem, "newColour" );
+		bonusPoints := GetConfigInt( metalElem, "bonusPoints" );
+		bonusHp := GetConfigInt( metalElem, "bonusHp" );
+		prefix := GetConfigString( metalElem, "prefix" );
+		suffix := GetConfigString( metalElem, "suffix" );
+		enchantments := GetConfigString( metalElem, "enchantments" );
+		enchantments := SplitWords( enchantments );
+		points := points + bonusPoints;
+		skill := skill + bonusSkill;
+		cashMod := GetConfigInt( metalElem, "minSkill" ) / 50;
+		if( skill > 99.0 )
+			skill := 99.0;
+		endif
+		itemname := prefix + " " + itemname + " " + suffix;
+	endif
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//This is something so that higher smiths find it easier to craft stuff.
+//Uncomment & modify if you want.
+////////////////////////////////////////////////////////////////////////////////////////////
+//	local noSkillSub := GetConfigInt( metalElem, "noSkillSub" );
+//	if( !noSkillSub )
+//		if( skill > 86 )
+//			local tSkill := GetSkill( character, SKILLID_BLACKSMITHY ) - 86;
+//			if( tSkill > 0 )
+//				skill := skill - tSkill;
+//			endif
+//		endif
+//	endif
+////////////////////////////////////////////////////////////////////////////////////////////
+
+	if( !cashMod || cashMod < 1.0 )
+		cashMod := 1.0;
+	endif
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//For AutoLoop: Uncomment this and the endwhile lower down.
+////////////////////////////////////////////////////////////////////////////////////////////
+//    local mx := character.x;
+//    local my := character.y;
+//    local doLoop := 1;
+//    local calledLoopGump := 0;
+// 
+//    while( GetAmount(ingots) > material && mx = character.x && my = character.y && doLoop )
+//
+//    if( !calledLoopGump )
+//	doLoop := YesNo( character, "Autoloop?" );
+//	calledLoopGump := 1;
+//    endif
+////////////////////////////////////////////////////////////////////////////////////////////
+
+            retval := PlaySoundEffect(character, SFX_ANVIL);
+            sleep (2);
+            retval := PlaySoundEffect(character, SFX_ANVIL);
+            sleep (2);
+            retval := PlaySoundEffect(character, SFX_ANVIL);
+            sleep (2);
+
+	if( metalElem )
+
+        if (CheckSkill( character, SKILLID_BLACKSMITHY, skill, points ))
+            Local theitem := CreateItemInBackpack( character, what, 1 );
+        
+            if (theitem) //they sucessfully create the item
+
+                if( !SubtractAmount( ingots, material ) )
+			print("Character " + character.name + " tries to smith without using resources" );
+			DestroyItem( theitem );
+			return;
+		endif
+
+	        theitem.ar_mod := ArmMod;
+	        theitem.dmg_mod := DmgMod;
+		SetObjProperty( theitem, "cashMod", cashMod );
+
+		if( metalElem )
+			if( newColour && newColour != "$420$" )
+				theitem.color := newColour;
+			elseif( !newColour )
+				theitem.color := 0;
+			elseif( newColour = "$420$" )
+				theitem.color := ingots.color;
+			endif
+			theitem.maxhp := theitem.maxhp + bonusHp;
+			SetObjProperty( theitem, "Enchantments", enchantments );
+		endif
+
+		//Exceptional Quality Etc
+		modifyQuality( character, points, quality, itemname, theitem, skill );
+
+            endif //theitem
+        else  //checkskill
+            SubtractAmount( ingots, RandomInt(material) );
+            SendSysmessage( character, "You destroy some ingots." );
+        endif //checkskill
+
+	endif //metalElem
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//    endwhile  //autoloop
+////////////////////////////////////////////////////////////////////////////////////////////
+
+    if( GetAmount(ingots) < material )
+	SendSysMessage( character, "You do not have enough ingots." );
+    endif
+  
+endfunction
+
+function modifyQuality( who, points, quality, itemname, theitem, skill )
+
+		local eskill := skill + 15;
+		local askill := skill + 10;
+		local nskill := skill + 5;
+		local bskill := skill;
+		points := 0;
+
+		if( eskill > 99 )
+			eskill := 99;
+		endif
+		if( askill > 99 )
+			askill := 99;
+		endif
+		if( nskill > 99 )
+			nskill := 99;
+		endif
+		if( bskill > 99 )
+			bskill := 99;
+		endif
+
+		if (CheckSkill( who, SKILLID_BLACKSMITHY, eskill, points ) && randomint(100) < GetSkill( who, SKILLID_BLACKSMITHY ) )
+		    //Exceptional Quality 1.3
+                    theitem.quality := (130 / 100);
+                    theitem.hp := theitem.maxhp;
+                    SetObjProperty(theitem, "type","b");
+                    SetName(theitem, "Exceptional " + itemname + " [Crafted by " + who.name + "]" );
+                    SendSysmessage( who, "You create an exceptional " + itemname + " and place it in your pack." );
+		elseif (CheckSkill( who, SKILLID_BLACKSMITHY, askill, points ) && randomint(100) < GetSkill( who, SKILLID_BLACKSMITHY ) )
+		    //Above Average Quality 1.0 - 1.2
+                    theitem.quality := ( RandomInt(20) + 100 ) / 100;
+                    theitem.hp := theitem.maxhp;
+                    SetObjProperty(theitem, "type","b");
+                    SetName(theitem, "Above Average Quality " + itemname );
+                    SendSysmessage( who, "You create an above average quality " + itemname + " and place it in your pack." );
+		elseif (CheckSkill( who, SKILLID_BLACKSMITHY, nskill, points ) && randomint(100) < GetSkill( who, SKILLID_BLACKSMITHY ) )
+		    //Normal Quality 0.7 - 1.0
+                    theitem.quality := ( RandomInt(30) + 70 ) / 100;
+                    theitem.hp := theitem.maxhp;
+                    SetObjProperty(theitem, "type","b");
+                    SetName(theitem, itemname );
+                    SendSysmessage( who, "You create " + AddArticle(itemname) +  " and place it in your pack." );
+		else
+		    //Below Quality 0.4 - 0.7
+                    theitem.quality := ( RandomInt(30) + 40 ) / 100;
+                    theitem.hp := theitem.maxhp;
+                    SetObjProperty(theitem, "type","b");
+                    SetName(theitem,  "Below Average Quality " + itemname );
+                    SendSysmessage( who, "You create a below average quality " + itemname + " and place it in your pack." );
+		endif
+
+endfunction
+
+function CheckSkillForDifferentMetals( character, ingot, tool )
+
+	local ingotElem := FindConfigElem( ingotsCfg, ingot.objtype );
+	local minSkill := GetConfigInt( ingotElem, "minSkill" );
+
+	//Special Smithy Tool Requirements
+	local toolProp := GetConfigString( ingotElem, "reqProp" );
+	if( toolProp && toolProp != "error" );
+		if( !GetObjProperty( tool, toolProp ) )
+			SendSysMessage( character, "You require a special tool to work with these ingots." );
+			return 0;
+		endif
+	endif
+
+	local toolEnch := GetConfigString( ingotElem, "reqEnch" );
+	if( toolEnch && toolEnch != "error" )
+		local tEnchantments := GetObjProperty( tool, "Enchantments" );
+		local hasEnch := 0;
+		foreach ench in tEnchantments
+			if( ench = toolEnch )
+				hasEnch := 1;
+			endif
+		endforeach
+		if( !hasEnch )
+			SendSysMessage( character, "You require a specially enchanted tool to work with these ingots." );
+			return 0;
+		endif
+	endif
+
+	if( CheckHisSkill( character, minSkill ) )
+		return 1;
+	else
+		return 0;
+	endif
+
+endfunction
+
+function isIngot( objtype )
+
+	local ingotElem := FindConfigElem( ingotsCfg, objtype );
+	if( ingotElem )
+		return 1;
+	else
+		return 0;
+	endif
+
+endfunction
+
+function CheckHisSkill( character , skill )
+
+    local his_skill := GetSkill( character , SKILLID_BLACKSMITHY );
+
+    if( his_skill >= skill )
+        return 1;
+    else
+        return 0;
+    endif
+
+endfunction

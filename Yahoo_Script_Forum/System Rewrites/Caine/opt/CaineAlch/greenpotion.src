@@ -1,0 +1,19 @@
+use os;
+use uo;
+use util;
+use cfgfile;
+include "drinkpotion";
+
+program drink_blue (character, potion)
+if (!checkifcandrink(character,potion))
+        return;
+endif
+    local potion_strength := get_potion_strength(potion);
+    
+
+
+        do_poison(character, potion);
+
+detach();
+
+endprogram

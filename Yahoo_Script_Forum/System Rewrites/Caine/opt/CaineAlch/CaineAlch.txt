@@ -1,0 +1,127 @@
+CaineAlch ver 2.5
+---------
+
+This is a almost a total re-write of Dreamweavers' original alchemy package...
+
+i changed a load of things, added some extra functionality and fixed up some major bugs.
+
+todo:
+-----
+get a script for those npcs, so that they can also throw the deadly explosion potions! and partake of the fun! ;)) 
+add in "chaos" factors for purple potions
+need to add "how many potions to make"
+if a player mixes the potion, it should print the right name (ie. "A mana potion", instead of "a black potion")
+make sure its running smoothly ;)
+
+
+what i did:
+-----------
+
+ver 2.5
+-------
+
+1) fixed those damn purple potions (actually, most of the time was spent on the purple potions, hehehe)
+	1.1) They have a 3 second fuse
+	1.2) They can be thrown from inside the players pack, or from the ground.
+	1.3) Damage is done on the formula : local dmg := ( ( Randomint(30) + 1 ) * str ) / dist_mod
+		where dist_mod is the distance from ground zero.
+
+2) revamped drinkpotion.inc
+	-you can now specify (in the .inc file) the time between drinking/using purple potions and others
+		*and whole load more checking.
+
+
+notes:
+---------
+ummm, lemme see...
+i haven't done extensive testing on this one in a fully multiplayer environ. so well see what bugs turn up.
+
+
+
+ver 2.0
+-------
+
+hehehehe, found a huge bug.... teehee... thats what you get for not checking others work first.
+
+1) fixed (almost most importantly) whether you can drink a potion according to distance and line of sight.
+	-hehehe, now you can't drink potions from across the screen and through walls ;)
+		*damn i feel stupid. (hehehe, mabye i shouldn't have said anything)
+
+2) changed the way the poison works again...
+
+3) healthbar now turns green while poisoned! ('bout time)
+
+4) cure potions now say whether you cured youself partially or completely.
+
+
+notes:
+------
+
+i cant get those purple potions to work like i want them to just yet.
+the problem: it wont display an explosion on the potion... only on the mobiles near it.
+
+i'll hopefully get them working soon.
+Well i hope i will anyway.
+
+
+
+Ver 1.5
+-------
+1) revamped the whole poison system. (ie. i fixed some of my own bugs, hehehe)
+
+2) changes the time between the poison damage effect to use new formula ( time = 30 / strength of poison * 2)
+	-so the more you poisoned... the more damage you take, and you take it faster 
+		*(its what you get for being dumb enough to drink more than one deadly poison, :> )
+
+3) Healer is now able to cure you (yay)
+
+
+note!
+-----
+i am using two functions and setting my own flags to find out if the creature is poisoned. 
+if there is a standard flag for being poisoned. if it really causes any hassles, i'll just change it so
+if the "poison_level" is > 0 the char is poisoned. But for now, i set a "is_poisoned" flag.
+
+
+
+Ver 1.0
+-------
+1) fixed the whole creation of mana potion bit, and added another potion.
+
+2) fixed the potion poison. It actually poisons you now, imagine that. =)
+
+3) fixed the fact that you can now do other actions while poisoned
+	-if you drink more than one poison potion, the effects are accumulative. (ouch)
+		*not like you'd want to... but now you can ;)
+
+4) fixed the menu for creating the mana potions.
+
+5) Made it damn hard to create Mana potions (to prevent swarms of invincible mages, with neverending mana)
+	-ie. not only is it made from the "Dragons Blood" reagent, but it requires an alch. skill of 80 to
+         create the lesser mana potion.
+
+6) If you mix a potion without an empty flask, it keeps the potion in the mortar, until you have an empty flask.
+ 
+
+notes: 
+-----
+to stop mixing potions... move around...
+hehehe, next ver. ill put in the option to specify how many potions to make.
+
+thats about all i can think of.
+
+
+Install Instructions:
+---------------------
+
+uncompress this file into your <serverdir>\pkg\opt\
+(it should uncompress into a directory of the same name... but if it doesn't for some dumb reason, just create one and
+move the files there)
+
+enable the package via the pkg.cfg file.
+disable the old alchemy package.
+
+(preferably... replace the std alchemy pkg with this one... then hopefully everything that references alch. will work)
+
+
+caine

@@ -1,0 +1,49 @@
+use uo;
+use util;
+
+include "include/client";
+include "include/spellattack";
+include "include/spellrestrictions";
+
+program cast_poisoncloud( parms )
+
+	var circle := 8;
+	var caster;
+	var cast_on;
+
+	if (parms[1] = "#MOB")
+		caster := parms[2];
+		cast_on := parms[3];
+	else
+		caster := parms;
+		cast_on := CanTargetSpell(caster, circle, TGTOPT_HARMFUL + TGTOPT_CHECK_LOS );
+		if (!cast_on)
+			return;
+		endif
+	endif
+
+	var resist := GetObjProperty(cast_on, "poison_prot");
+	if(resist = 1)
+		SendSysMessage(cast_on, "Your poison protection spell saved you!");
+		EraseObjProperty(cast_on, "poison_prot");
+		return;
+	elseif(resist = 2)
+		SendSysMessage(cast_on, "Your poison protection spell saved you!");
+		return;
+	endif
+
+	var victims := ListMobilesNearLocation(cast_on.x, cast_on.y, cast_on.z, 8);
+
+	PlaySoundEffect(cast_on, SFX_SPELL_NIGHT_SIGHT);
+	ConsumeVital( caster, "mana", 6000 );
+    foreach mobile in victims
+	if(mobile != caster)
+	  SetObjProperty(mobile, "LastHit", {caster.name, caster.serial, caster });
+	    SetObjProperty(mobile, "poison_level", 3);
+	    mobile.setlightlevel(30, 150);
+	    PlayObjectCenteredEffect(mobile, 0x113a, 10, 10);
+	    start_script(":spells:poisondamage", mobile);
+	endif
+    endforeach
+	 
+endprogram

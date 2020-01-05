@@ -1,0 +1,14 @@
+use uo;
+
+include "../cleric";
+
+program senseaura(params)
+	var who := params[1];
+	
+	foreach person in ListMobilesInLineOfSight(who, 15)
+		if (GetObjProperty(person, "Devotion"))
+			PrintTextAbovePrivate(person, GetObjProperty(person, "Devotion"), who);
+		endif
+	endforeach
+endprogram
+	

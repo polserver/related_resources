@@ -1,0 +1,28 @@
+use uo;
+use util;
+use os;
+
+include "sdmg";
+
+program silverhit(param)
+	var attacker := param[1];
+	var defender := param[2];
+	var weapon := param[3];
+	var armor := param[4];
+	var basedamage := param[5];
+	var rawdamage := param[6];
+	
+	var zDmg := param[6];
+	var zMulti := GetObjProperty( param[7], "d2mAmt" );
+	
+	if( GetObjProperty(defender,"undead") )
+		rawdamage := rawdamage*2.5;
+		PrintTextAbove(defender,defender.name + " shrieks from the holy burn!");
+	endif
+
+	SetMana( attacker, (GetMana(attacker)+(zDmg*zMulti/100)) );
+
+	return rawdamage;
+endprogram
+
+		

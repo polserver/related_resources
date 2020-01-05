@@ -1,0 +1,51 @@
+use uo;
+use os;
+use util;
+
+include "../../cleric";
+
+program animateundead(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif
+	
+	var config := ReadConfigFile("::corpses");
+	var slave;
+	
+	ReleaseScript(info.pid);
+	
+	foreach corpse in listitemsnearlocationoftype(who.x,who.y,who.z,piety+1, 0x2006)
+		if (config[corpse.corpsetype].NoAminate);
+		elseif (!GetObjProperty(corpse,"risen") && checklineofsight(corpse, who))
+			SetObjProperty(corpse, "risen", 1);
+			printtextabove(corpse, "*twitches*");
+			sleepms(800);
+			slave := CreateNPCFromTemplate(randtype(), corpse.x, corpse.y, corpse.z);
+			printtextabove(slave, slave.name + " rises from " + corpse.desc);
+			SetObjProperty(slave, "master" , who.serial);
+			SetObjProperty(slave, "summoned", 1);
+			slave.SetMaster(who);
+			slave.script := "tamed";
+			RestartScript(slave);
+			sleepms(1200);
+		endif
+	endforeach
+	
+endprogram
+
+function randtype()
+	var dice := randomint(3);
+	case dice
+		0: return "newbieskeleton";
+		1: return "skeleton";
+		2: return "zombie";
+		3: return "ghost";
+	endcase
+endfunction
+	

@@ -1,0 +1,104 @@
+/////////////////////////////////////////////////////////////////////
+// CREAMOONGATE.SRC                                                //
+//                                                                 //
+// Author: Girometta Luca                                          //
+// Date: 24/aprile/2000                                            //
+//                                                                 //
+// Questo script crea 2 moongate in base ai parametri scelti:      //
+// uno nel posto in cui ti trovi e l'altro alle coordinate scelte. //
+//                                                                 //
+// .creamoongate [x] [y] [z] [tempo]                               //
+//                                                                 //
+// [tempo]= il tempo, in secondi, in cui il moongate rimane aperto.//
+// Se il valore di [tempo]=0 il moongate non si chiude.            //
+/////////////////////////////////////////////////////////////////////
+
+use uo;
+use os;
+
+include "include/eventid";
+include "include/clock";
+include "include/math";
+
+include "include/objtype";
+include "include/client";
+
+program textcmd_creamoongate( who, text )
+
+       Local params := SplitWords( text );
+          if (len(params) < 3) // didn't pass Z
+              params[3] := GetMapInfo( CInt(params[1]), CInt(params[2]) ).z;
+          endif
+       Local x:= CInt(params[1]);
+       Local y:= CInt(params[2]);
+       Local z:= CInt(params[3]);
+       Local tempo:= CInt(params[4]);
+	
+       Local res := CreateMoongate(who, x, y, z, tempo);
+
+endprogram
+
+function CreateMoongate (who, x, y, z, tempo)
+        
+	Local i:=1;
+	Local Gate1;
+	Local Gate2;
+    	    	
+    	    	sleepms(500);
+		PerformAction( who, ANIM_CAST_DIR );		
+    	    	sleepms(4500);
+    	    	
+		//Create Gates
+
+    	    	set_critical(1);
+    	    	
+    	    	Gate1 := CreateItemAtLocation(who.x , who.y+1, who.z, UOBJ_BLUE_MOONGATE, 1);
+    	    	Gate1.movable :=0;
+    	    	Gate1.graphic :=1;
+    	    	Gate2 := CreateItemAtLocation(x, y, z, UOBJ_BLUE_MOONGATE, 1);
+    	    	Gate2.graphic :=1;
+    	    	Gate2.movable :=0;
+    	    	    	    	    	    	
+    	    	    	    	    	    	
+    	    	SetObjProperty(gate1, "GateDestX", Gate2.x);
+    	    	SetObjProperty(gate1, "GateDestY", Gate2.y);
+    	    	SetObjProperty(gate1, "GateDestZ", Gate2.z);
+    	    	
+    	    	SetObjProperty(gate2, "GateDestX", Gate1.x);
+    	    	SetObjProperty(gate2, "GateDestY", Gate1.y);
+    	    	SetObjProperty(gate2, "GateDestZ", Gate1.z);
+   	    	
+    	    	set_critical(0);
+    	    	
+    	    	PlaySoundEffect( who, SFX_SPELL_GATE_TRAVEL );
+    	    	
+    	    	For (i:=6899;i<=6907;i:=i+1)
+    	    	   Gate1.graphic := i;
+    	    	   Gate2.graphic := i;
+    	    	   sleepms(150);
+    	    	Endfor
+
+    	    	Gate1.graphic := UOBJ_BLUE_MOONGATE;
+    	    	Gate2.graphic := UOBJ_BLUE_MOONGATE;
+
+                SendSysMessage( who, "Hai creato un moongate.");
+
+              if (tempo > 0)
+	        SendSysMessage( who, "Il moongate si chiudera' tra " + tempo + " secondi.");
+                sleep(tempo);
+    	    	
+    	    	For (i:=6907;i>=6899;i:=i-1)
+    	    	   Gate1.graphic := i;
+    	    	   Gate2.graphic := i;
+    	    	   sleepms(150);
+    	    	Endfor
+
+    	    	set_critical(1);
+    	    	DestroyItem(Gate1);
+    	    	DestroyItem(Gate2);
+                set_critical(0);
+
+                SendSysMessage( who, "Il moongate si e' chiuso.");
+
+              endif	    	
+endfunction

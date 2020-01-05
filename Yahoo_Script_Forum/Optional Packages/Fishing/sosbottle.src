@@ -1,0 +1,93 @@
+// ********************************************************************************
+// ***
+// ***	SOS Bottle Script
+// ***
+// ***  This script was primarily implemented by Louds (louds.geo@yahoo.com)
+// ***	Portions were modified by Tomas (tbaffy@baffyland.com)
+// ***
+// ***	This script is the item handler that is called when the user double-clicks
+// ***	on an SOS bottle.
+// ***
+// ***	I altered this script to remove the use of the SOS tile because I don't
+// ***	use that method to detect the target of an SOS.  I compare the target of
+// ***	a fishing attempt to the coordinates of any SOS messages in the players 
+// ***	pack instead.  I felt the small amount of extra overhead in the script
+// ***	was worth getting rid of the extra world objects represented by the tiles.
+// ***
+// ********************************************************************************
+
+// ********************************************************************************
+//	function modules that will be used
+// ********************************************************************************
+use uo;
+use cfgfile;
+use os;
+use util;
+
+// ********************************************************************************
+//	included modules that will be used
+// ********************************************************************************
+include "include/client";
+include "include/objtype";
+include "include/starteqp";
+include "include/skillpoints";
+include "include/dist";
+include "fishing";
+
+// ********************************************************************************
+//	Main program
+//	
+//	This is the main SOS bottle handler.  It is called when the player
+//	double-clicks on an SOS bottle.
+// ********************************************************************************
+program use_bottle( who, bottle )
+	// indicate the bottle is in use
+	reserveitem(bottle);
+	// load sosarea.cfg to find a target location for the SOS bottle
+	local cfg := ReadConfigFile("sosarea");
+	if (!cfg)
+		// Error, we could not read sosarea.cfg file
+		sendsysmessage(who, "Could not read sosarea.cfg");
+	endif	
+	// find out how many defined areas there are
+	local maxI := GetConfigMaxIntKey(cfg);
+	// debug message
+	// sendsysmessage(who, "There are " + maxI + " SOS areas defined");
+	// randomly pick one of the defined SOS areas
+	local elem := cfg[randomint(maxI)+1];
+	// debug message
+	// sendsysmessage(who, "Using area " + elem);
+	// Select a random spot inside the selected SOS area
+	local X := cint(elem.x)+Randomint(cint(elem.range)*2) - cint(elem.range);
+	local Y := cint(elem.y)+Randomint(cint(elem.range)*2) - cint(elem.range);
+	// we don't need susarea.cfg any more
+	UnloadConfigFile( "sosarea");
+	// write a log entry (commented out by default)
+	// syslog("New SOS bottle targeted at "+X+","+Y);
+	// Set the properties of the new SOS bottle
+	// tileX,tileY is the location of the SOS treasure
+	// tileart is the artwork that will
+	SetObjProperty(bottle, "tileX", X);
+	SetObjProperty(bottle, "tileY", Y);
+	// create the message in player's backpack
+	local message := CreateItemInContainer(who.backpack, UOBJ_SOS_MESSAGE);
+	// if SOS message could not be created then display an error message
+	if(!message)
+		syslog("Failed to create SOS message from bottle");
+		destroyitem(bottle);
+		sendsysmessage(who, "You cannot make out the writing on the message!");
+		return;
+	endif
+	// Set the Cprops of the SOS message
+	// tileX,tileY are the coordinates of the SOS treasure
+	// msgnum is the index of the SOS message that will be displayed
+	SetObjProperty(message, "tileX", X);
+	SetObjProperty(message, "tileY", Y);
+	SetObjProperty(message, "msgnum", RandomInt(MSG_COUNT));
+	// display success message
+	sendsysmessage(who, "You have extracted a message from the bottle!");
+	// log message is commented out by default
+	// syslog("SOS message was created from SOS bottle");
+	// get rid of the used SOS bottle
+	destroyitem(bottle);
+endprogram

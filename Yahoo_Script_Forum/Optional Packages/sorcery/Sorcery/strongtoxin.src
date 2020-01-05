@@ -1,0 +1,25 @@
+use uo;
+use util;
+
+include "include/client";
+include "sorcery";
+
+program cast_toxicloud(caster)
+
+	var circle := 3;
+	
+	if(sorcopts(circle, caster)!=1)
+		SendSysMessage(caster, "Spell fails");
+		return;
+	endif
+	
+	var cast_on := Target(caster, TGTOPT_HARMFUL + TGTOPT_CHECK_LOS );
+	
+	SetObjProperty(cast_on, "LastHit", {caster.name, caster.serial, caster });
+	PlaySoundEffect(cast_on, SFX_SPELL_POISON);
+	PlayObjectCenteredEffect(cast_on, 0x113a, 10, 10);
+	SetObjProperty(cast_on, "poison_level", 4);
+	
+	start_script(":spells:poisondamage", cast_on);
+	 
+endprogram

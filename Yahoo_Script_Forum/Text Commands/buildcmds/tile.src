@@ -1,0 +1,47 @@
+include "include/modules";
+include "include/gumps";
+include "include/output";
+
+var objtype, res;
+
+program tiler( who )
+	var tiles := DoGump( who );
+	if( !tiles )
+		return;
+	endif
+	tiles := SplitWords( tiles[2] );
+	SendSysMessage( who, "Start selecting your locations for tiles" );
+	while( 1 )
+		var where := TargetCoordinates(who);
+		var ttile := CInt(tiles[RandomInt(len(tiles))+ 1]);
+		CreateItemAtLocation( where.x, where.y, where.z, ttile, 1 );
+		if( !where )
+			return;
+		endif
+	endwhile
+endprogram
+
+function DoGump( who )
+	GFSetRef( 50, 50 );
+	GFPage( 0 );
+	GFNoDispose();
+	GFResizePic( 0, 0, BKGND_GOLDTRIM, 300, 220 );
+	GFGumpPic( 10, 111, 0x462 );
+	GFGumpPic( 103, 111, 0x462 );
+	GFTextMid( 0, 15, 210, 4, "Enter MTile Variables" );
+	GFTextLine( 10, 50, 4, "Enter a list of Objtypes, separated by" );
+	GFTextLine( 10, 70, 4, "  spaces, to choose from as you place" );
+	GFTextLine( 10, 90, 4, "      the tiles (choosing is random)" );
+	GFTextLine( 30, 180, 4, "Or use the create menu" );
+	GFButtonID( 75, 140, 0x992, 0x993, 1 );
+	GFButtonID( 150, 140, 0x995, 0x996, 1 );
+	GFButtonID( 200, 186, 0x939, 0x938, 1 );
+	objtype := GFTextEntry( 11, 110, 275, 16, 4 );
+	res := GFSendGump( who );
+	if( res[0] == 1 )
+		return 0;
+	endif
+	objtype := GFExtractData( objtype.keyid, res );
+	var params := { CInt(res[0]-1024), objtype };
+	return params;
+endfunction

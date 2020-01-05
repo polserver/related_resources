@@ -1,0 +1,103 @@
+//////////////////////////////////
+//				//
+// Eval Int OSI - Rincewind :)  //
+// Email : rincewind@uo.co.za   //
+//				//
+//////////////////////////////////
+
+use uo;
+use os;
+
+include "include/client";
+include "include/skillpoints";
+program evalint( character )
+   
+    local thepoints := get_default_points(SKILLID_EVALINT);
+    Local Skill := GetSkill( character, SKILLID_EVALINT );
+    SendSysMessage( character, "Select a target." );
+    local subject := Target(character);
+
+    if (!subject)
+        return;
+    endif
+    
+    if (!subject.intelligence)
+        sendsysmessage(character, "That does not have a level of intelligence!");
+        return;
+    endif
+    
+    if (CheckSkill(character,SKILLID_EVALINT, -1, thepoints))
+        local intel := subject.intelligence;
+        if (intel > 0)
+            local intdesc := GetIntDesc( intel );
+            local percentmana := 100 * subject.mana / subject.maxmana;
+            local manadesc := GetManaDesc( percentmana );
+            Sendsysmessage(character, "The subject is " + intdesc +"."); 
+   	  if (skill > 76)
+            Sendsysmessage(character, "This being is at "+percentmana+" mental strength."); 
+   	   else
+            Sendsysmessage(character,  "The subject has " + manadesc +".");
+           endif
+           else
+          Sendsysmessage(character, "It looks smarter than a rock, but dumber than a piece of wood.");   
+         endif    
+        else
+       Sendsysmessage(character, "You were unable to evaluate this being.");
+    endif
+
+endprogram
+
+
+function GetIntDesc( intel )
+    if (intel >=1 and intel <= 9)
+            return "slightly less intelligent than a rock";
+
+    elseif (intel >= 10 and intel <= 19) 
+            return "fairly Stupid";
+
+    elseif (intel >= 20 and intel <= 29) 
+            return "not the brightest";
+
+    elseif (intel >= 30 and intel <= 39 )
+            return "About Average";
+
+    elseif (intel >= 40 and intel <= 49 )
+            return "Moderately intelligent";
+
+    elseif (intel >= 50 and intel <= 59 )
+            return "Very intelligent";
+
+    elseif (intel >= 60 and intel <= 69 )
+            return "Extremely intelligent";
+
+    elseif (intel >= 70 and intel <= 79 )
+            return "Extraordinarily intelligent";
+
+    elseif (intel >= 80 and intel <= 89 )
+            return "Like a formidable intellect, well beyond even the extraordinary";
+
+    elseif (intel >= 90 and intel <= 99 )
+            return "Like a definite genius";
+    else
+            return "Superhumanly intelligent in a manner you cannot comprehend";
+
+    endif
+endfunction
+
+
+function GetManaDesc( percentmana )
+    if (percentmana <= 10)
+            return "almost no mana left";
+    elseif (percentmana <= 20) 
+            return "low mana levels";
+    elseif (percentmana <= 40 )
+            return "moderate mana levels";
+    elseif (percentmana <= 60 )
+            return "good mana levels";
+    elseif (percentmana <= 80 )
+            return "high mana levels";
+    else  
+            return "notable reserves of mana";                         
+    endif     
+endfunction
+

@@ -1,0 +1,95 @@
+use uo;
+use os;
+use util;
+/*
+This is largly baised off a script that was in I belive Madmans Spellbook pkg
+*/
+
+Const UOBJ_FLUTE			:= 0x7067;
+include "include/client";
+include "include/skillpoints";
+include "include/bard";
+
+program playmez( who )
+
+	if (getobjproperty(who, "#singing") = 1)
+        	PrintTextAbovePrivate(who, "You are already playing a song",who,3,90);
+        	return;
+	endif
+
+	var x := who.x;
+	var y := who.y;
+	var cast_on := Target(who, TGTOPT_CHECK_LOS );
+
+	if ((who.x != x) or (who.y != y) or (BrokeCon(who)))
+			PlaySoundEffect(who, 0x1e2);
+		SendSysMessage(who, "You fail to play very well.");
+		CleanUp(who);
+		return;
+	endif
+
+	var newx;
+	var newy;
+	var gust_noise := 0x0015;
+
+	if (!cast_on)
+		CleanUp(who);
+		return;
+	endif
+
+	if (who.x > cast_on.x)
+		newx:=cast_on.x-1;
+	elseif (who.x < cast_on.x)
+		newx:=cast_on.x+1;
+	else
+		newx:=cast_on.x;
+	endif
+
+	if (who.y > cast_on.y)
+		newy:=cast_on.y-1;
+	elseif (who.y < cast_on.y)
+		newy:=cast_on.y+3;
+	else
+		newy:=cast_on.y;
+	endif
+
+	var newz:=cast_on.z;
+
+	PlaySoundEffect(cast_on, gust_noise);
+	PlaySoundEffect(who, 0x003e);
+	MoveCharacterToLocation(cast_on, newx, newy, newz, MOVECHAR_FORCELOCATION);
+
+	CleanUp(who);
+
+endprogram
+
+
+function BrokeCon(who)
+
+	if (who.hp < GetObjProperty(who, "#sing"))
+		return 1;
+	endif
+
+	return 0;
+
+endfunction
+
+function CleanUp(who)
+
+	EraseObjProperty(who, "#singing");
+	EraseObjProperty(who, "#sing");
+
+endfunction
+function flutemusic(who, instrument, diff)
+	
+   var inst_id := instrument.graphic;
+   var ret := 0;
+ 
+   if (inst_id = UOBJ_FLUTE)
+      ret := play(who,0x1e2,0x003e, diff);
+   else
+      PrintTextAbovePrivate( who, "That's not something you can play", who,3,90);
+   endif
+
+   return ret;
+endfunction

@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+ Remote Administrator for Win9X/WinNT
+ by Dmitry Znosko
+----------------------------------------------------------------------
+
+Version 1.11
+
+Bug fixed:
+- Multiconnection bug fixed in r_server.exe 
+   (occured very rarely in cases, when there are multiple 
+    connections to the server at one time)
+
+
+Version 1.1
+
+Bug fixed:
+- Port mapping bug has been fixed.
+
+Features:
+- Optional encryption (DES-64bit) of all data streams has been added. 
+  With encryption enabled, the perfomance will go down several times.
+  
+- IP filter has been added. 
+  This feature allows access to the Radmin server only from specified 
+  IP addresses and subnets.
+
+- Logging has been added to the Radmin server. 
+
+- Command line options for Radmin viewer has been added. 
+  With its help you can get connected with the server without using a phonebook.
+
+- Several interface changes.
+
+
+Version 1.0 
+
+ Initial release.
+

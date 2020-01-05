@@ -1,0 +1,32 @@
+///////////////////////////////////////////////////////////
+// CreatePoint.src
+//
+// Script that runs on creation of a spawn point.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+include "SpawnPoint";
+include "include/eventid";
+
+program CreateSpawnPoint(point)
+	var pid := GetGlobalProperty("#SpawnPointManagerPID");
+	var proc := GetProcess(pid);
+
+	// Store create time.
+	SetObjProperty(point, "CreateTime", ReadGameClock());
+
+	var ev := struct;
+	ev.+type := EVID_SPAWNPOINT_CREATED;
+	ev.+source := point;
+	proc.SendEvent(ev);
+
+	point.invisible := 3;
+
+	return 1;
+endprogram

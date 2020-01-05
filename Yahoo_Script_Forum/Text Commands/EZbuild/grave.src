@@ -1,0 +1,105 @@
+// Created by GMTalos. Ver .5  gmtalos@bughunt.net
+// Type .grave command - to create a random graveyard with creatures
+// Items created with this command will not decay or move.
+//
+use uo;
+use util;
+
+program textcmd_grave( who )
+
+local ttemplate;
+local objtype;
+local i;
+for ( i:=1; i <= 10; i := i + 1)
+
+local which := randomint(34) + 1;
+
+case (which)
+1: objtype:= 0x1ae1;
+2: objtype:= 0xee6;
+3: objtype:= 0x1cde;
+4: objtype:= 0xee4;
+5: objtype:= 0xf39;
+6: objtype:= 0x1171;
+7: objtype:= 0xeca;
+8: objtype:= 0xecb;
+9: objtype:= 0xecd;
+10: objtype:= 0xed5;
+11: objtype:= 0xed7;
+12: objtype:= 0xed9;
+13: objtype:= 0xedb;
+14: objtype:= 0xedd;
+15: objtype:= 0x1165;
+16: objtype:= 0x1167;
+17: objtype:= 0x1169;
+18: objtype:= 0x116b;
+19: objtype:= 0x116d;
+20: objtype:= 0x116f;
+21: objtype:= 0x1171;
+22: objtype:= 0x1173;
+23: objtype:= 0x1175;
+24: objtype:= 0x1177;
+25: objtype:= 0x1179;
+26: objtype:= 0x117b;
+27: objtype:= 0x117d;
+28: objtype:= 0x117f;
+29: objtype:= 0x1181;
+30: objtype:= 0x1183;
+31: objtype:= 0x1ae4;
+32: objtype:= 0x1b10;
+33: objtype:= 0x1cde;
+34: objtype:= 0x1cf0;
+endcase   
+
+
+local item := CreateItemAtLocation((RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z, objtype, 1);
+        item.decayat := 0;
+	item.movable := 0;
+
+endfor
+
+for ( i:=1; i <= 6; i := i + 1)
+
+local which := randomint(34) + 1;
+
+case (which)
+1 : ttemplate := "skeleton";
+2: ttemplate := "skeletonarcher";
+3: ttemplate := "boneknight";
+4: ttemplate := "zombie";
+5: ttemplate := "shade";
+6: ttemplate := "wraith";
+7: ttemplate := "bonemage";
+8: ttemplate := "headless";
+9: ttemplate := "ghost";
+10: ttemplate := "Iceskeleton";
+11: ttemplate := "darkspawn";
+12: ttemplate := "daemonspawn";
+13: ttemplate := "spectre";
+14: ttemplate := "minordaemon";
+15: ttemplate := "valkerie";
+16: ttemplate := "liche";
+17: ttemplate := "skeletalassassin";
+18: ttemplate := "skeleton";
+19: ttemplate := "skeleton";
+20: ttemplate := "skeleton";
+21: ttemplate := "bonewarlock";
+22: ttemplate := "evilmage";
+23: ttemplate := "eviladept";
+24: ttemplate := "grat";
+25: ttemplate := "grat";
+26: ttemplate := "zombie";
+27: ttemplate := "zombie";
+28: ttemplate := "zombie";
+29: ttemplate := "shade";
+30: ttemplate := "shade";
+31: ttemplate := "boneknight";
+32: ttemplate := "boneknight";
+33: ttemplate := "spider";
+34: ttemplate := "boneknight";
+endcase        
+
+local result := CreateNpcFromTemplate( ttemplate, (RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z );
+
+endfor
+endprogram

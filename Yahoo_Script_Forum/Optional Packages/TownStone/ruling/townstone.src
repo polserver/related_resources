@@ -1,0 +1,403 @@
+use uo;
+use os;
+use cfgfile;
+
+global item;
+global who;
+
+include "townstone";
+include "towngumps";
+include "townfunctions";
+include "include/checkcity";
+
+program use_town_stone(who1, item1)
+syslog("doh");
+if(!reserveitem(item1)) 
+	SendSysMessage(who1,"Stone in use, hold on");
+	return;
+endif
+
+item := item1;
+who := who1;
+
+if(!GetObjProperty(item,"town_init"));
+	if(!GetObjProperty(who,"town_id"))
+		Inittown();
+	endif
+	return;
+endif
+
+local pg := GetObjProperty(who,"town_id");
+
+//check for player status.
+if(!pg)
+	PrintTextAbovePrivate( item, "If you want to join ask the Ruler", who);
+	return;
+elseif(pg != item.serial)//serial da runa!
+	PrintTextAbovePrivate( item, "You are not member of this City", who);
+	return;
+endif
+
+
+
+//go to the menu
+Loadtowns();
+
+LoadDefaulttown();
+
+player_id := FindMemberID(who.serial);
+LoadDefaultPlayer();
+if(!player_id)
+	syslog("can't find player on memberlist");
+	EraseObjProperty(item,"#in_use");
+	return;
+endif
+syslog("pau3");
+
+local update := GetObjProperty(item,"update");
+syslog("tipo: "+update);
+if(update)
+	PerformUpdate(update);
+endif
+syslog("pau4");
+
+BuildtownMenu();
+
+endprogram
+
+
+function BuildtownMenu()
+
+LoadDefaulttown();
+LoadDefaultPlayer();
+town_id := FindtownID(item.serial);
+//valores do data sao hipoteticos, nao construi o gump ainda :-)
+//town header
+data[1] := town_struct[2] +" ("+town_struct[1][3]+" "+town_struct[1][2]+")";
+
+data[2] :="";
+if(len(data[1]) > MAX_LINE_LEN) //must break into a few lines...
+	var temp := SplitWords(data[1]);
+	data[1] := "";
+	while(1)
+		if(len(data[1])+len(temp[1]) > MAX_LINE_LEN) //break point
+			break;
+		endif
+		data[1] :=data[1]+temp[1]+" ";
+		temp.erase(1);
+	endwhile
+		
+	while(temp.size())
+		data[2] := data[2]+temp[1]+" ";
+		temp.erase(1);
+	endwhile
+endif
+
+//fealthy option
+//look on the member prop for the fealty_id them look on the memberlist for the name
+
+if(player_struct[4] = player_id)
+	data[7] := "to yourself";
+else
+	data[7] := "to " + town_struct[6][player_struct[4]][2];
+endif
+
+//show abrev data
+data[9] := " your name to untowned people. Currently ";
+//if(who.name[town_struct[3]] and len(town_struct[3]) >0)
+
+if(GetObjProperty(who,"abv") and len(town_struct[3]) >0)
+	data[9] := data[9] + "on.";
+else
+	data[9] := data[9] + "off.";
+endif
+
+//acess  gm functions
+
+data[13] :=  "Access " + town_struct[1][3] + " functions.";
+
+//war list 1
+data[14] := "View list of Cities that ";
+data[15] := "";
+data[14] := data[14] + town_struct[2] + " has declared war on.";
+if(len(data[14]) > MAX_LINE_LEN) //must break into a few lines...
+	var temp := SplitWords(data[14]);
+	data[14] := "";
+	while(1)
+		if(len(data[14])+len(temp[1]) > MAX_LINE_LEN) //break point
+			break;
+		endif
+		data[14] :=data[14]+temp[1]+" ";
+		temp.erase(1);
+	endwhile
+		
+	while(temp.size())
+		data[15] := data[15]+temp[1]+" ";
+		temp.erase(1);
+	endwhile
+endif
+
+data[17] := town_struct[2];
+local box := SendDialogGump(who, layout, data);
+
+local choose:=0;
+if(box[0] =1000) //canseled
+	SendSysMessage(who,"Canseled");
+	return;
+elseif(box[0] =2000) //continue
+	foreach k in (box.keys)
+		if(k >0 and k<1000)
+			choose :=k;
+			break;
+		endif
+	endforeach	
+else //weird stuff
+	return;
+endif
+if(!choose)
+	BuildtownMenu();
+	return;
+endif
+
+
+case(choose)
+	0: return; //canseled
+	1: Recruit();
+	2: BuildDynaGumpWithChoose(2,1,0); //see current rosters
+	3: Disabled();break;//view the charter
+	4: SetFealty();
+	5: Toggle_Showing(who, player_id,0);
+	6: Resing();return;
+	7: BuildDynaGumpWithChoose(3,2,0); //view list of candidates
+	8: gm_menu();return;
+	9: BuildDynaGumpWithChoose(10,4,0);//war list
+	10: BuildDynaGumpWithChoose(11,4,0);
+	default: syslog("nuts stuff happening");  return;
+endcase
+sleep(3);
+
+BuildtownMenu();
+
+
+endfunction
+
+
+function gm_menu()
+LoadDefaulttown();
+LoadDefaultPlayer();
+if(who.serial != town_struct[1][1]) //not a gm
+	SendSysMessage(who,"You are not the "+town_struct[1][3]);
+	return;
+endif
+
+
+otherdata[1] := town_struct[2]+", "+town_struct[1][3]+ " functions";
+otherdata[2] := "";
+
+if(len(otherdata[1]) > MAX_LINE_LEN) //must break into a few lines...
+	var temp := SplitWords(otherdata[1]);
+	otherdata[1] := "";
+	while(1)
+		if(len(otherdata[1])+len(temp[1]) > MAX_LINE_LEN) //break point
+			break;
+		endif
+		otherdata[1] :=otherdata[1]+temp[1]+" ";
+		temp.erase(1);
+	endwhile
+		
+	while(temp.size())
+		otherdata[2] := otherdata[2]+temp[1]+" ";
+		temp.erase(1);
+	endwhile
+endif
+
+
+
+
+
+case(town_struct[4])
+	1: otherdata[6] :="Lawful City.)";
+	   otherdata[5] := data[3]+"n";
+	2: otherdata[6] :="Dreaded City.)";
+endcase
+
+local box2 := SendDialogGump(who, otherlayout,otherdata);
+
+
+local choose:=0;
+if(box2[0] =1000) //canseled
+	SendSysMessage(who,"Canseled");
+	return;
+elseif(box2[0] =2000) //continue
+	foreach k in (box2.keys)
+		if(k >0 and k<1000)
+			choose :=k;
+			break;
+		endif
+	endforeach	
+else //weird stuff
+	return;
+endif
+if(!choose)
+	GM_Menu();
+	return;
+endif
+
+
+case(choose)
+	0: return; //canseled
+	1: SettownName();
+	2: SetAbrevName();
+	3: Disabled();break;//"Change the type of the town.  (Currently a",
+	4: Disabled();break;//"Set the town's charter.",
+	5: Dismiss();//"Dismiss a member.",
+	6: Declarewar();//"Declare war.",
+	7: DeclarePeace();//"Declare peace.",
+	8: AcceptCandidate();//"Accept a candidate seeking membership.",
+	9: RefuseCandidate();//"Refuse a candidate seeking membership.",
+	10: SetGMTitle();
+	11: GrantTitle();//"Grant  a title to another member.",
+	12: Teleport();return;//"Teleport this townstone.",
+	13: BuildtownMenu();return;
+	default: syslog("shit going on");return;
+endcase
+gm_menu();
+
+sleep(3);
+endfunction
+
+
+
+
+/*
+
+
+		 view the charter
+		"Change the type of the town.  (Currently a",
+		"Set the town's charter.",
+		"Teleport this townstone.",
+*/
+
+
+
+
+function Inittown()//ok no members, no nothing
+
+
+local tname := SendTextEntryGump(who,"What is the Ruling Stone name",0,1,MAX_TOWN_NAME_SIZE,"Write the name");
+if(!tname)
+	return;
+endif
+
+
+//double check the len
+if(len(tname) > MAX_TOWN_NAME_SIZE)
+	SendSysMessage(who,"Ruling Stone name can't have more than "
+			+MAX_TOWN_NAME_SIZE+" caracters");
+	return;
+endif
+
+
+//check if is unique
+if(ChecktownList(tname,2)) //have clone
+	SendSysMessage(who, "This name is allready in use");
+	return;
+endif
+
+
+
+local insert :=len(town_list)+ 1;
+set_critical(1);
+Loadtowns();
+
+SetObjProperty(item,"town_init",1);
+
+item.name := "townstone for " + tname;
+
+syslog("ate aqui nada");
+
+SetObjProperty(who,"town_id",item.serial);
+town_struct := {};
+
+town_list[insert] := {item.serial, tname,""};
+SavetownList();
+
+town_struct[1] := {who.serial,GetTrueName(who.name),"Ruler"};
+town_struct[2] := tname;
+town_struct[3] := "";
+town_struct[4] := 0;
+town_struct[5] := "";
+town_struct[6] := {{who.serial,GetTrueName(who.name),"Ruler",1}};
+town_struct[7] :=  {};
+town_struct[8] := {};
+town_struct[9] := {};
+Savetown();
+set_critical(0);
+
+endfunction
+
+
+function Destroytown()
+
+//just a clean-up routine
+
+//last member
+EraseObjProperty(who,"town_id");
+
+set_critical(1);
+LoadDefaulttown();
+town_id := FindtownID(item.serial);
+
+//not going to add aliance clean up  now
+local i,j,dummy,poz;
+for(i:=1;i<=len(town_struct[7]);i:=i+1)
+
+	dummy := LoadtownBySerial(town_struct[7][i][1]);
+	for(j:=1;j<=len(dummy[7]);j:=j+1)
+		if(dummy[7][j][1] = item.serial)
+			poz := j;
+			break;
+		endif
+	endfor
+	var temp :=dummy[7];
+	temp.erase(poz);
+	dummy[7] := temp;
+	SetGlobalProperty("town"+town_struct[7][i][1],dummy);
+endfor
+
+town_list.erase(town_id);
+EraseGlobalProperty("town"+item.serial);
+SavetownList();
+destroyitem(item);
+set_critical(0);
+endfunction
+
+
+function disabled()
+SendSysMessage(who,"Essa opcao ainda nao foi implementada");
+endfunction
+
+
+function PerformUpdate(list)
+local i;
+syslog("dd "+pack(list));
+
+for(i:=1;i<=len(list);i:=i+1)
+	syslog("ele chega a executa 1 loop");
+	if(who.serial = list[i])
+		syslog("eh na declaracao");
+		Toggle_Showing(who,player_id,1);
+		list.erase(i);
+		break;
+	endif
+endfor
+
+if(!list.size())
+	EraseObjProperty(item,"update");
+else
+	SetObjProperty(item,"update",list);
+endif
+
+endfunction
+
+

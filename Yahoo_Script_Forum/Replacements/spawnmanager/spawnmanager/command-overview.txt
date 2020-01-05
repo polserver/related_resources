@@ -1,0 +1,29 @@
+.spawnmanager
+
+  This is the way you will configure all of your groups and regions.
+  The first gump offers two options: groups and regions.
+  The groups gump show the existing spawn groups. To manage them, press the corresponding button. Also, you can add a new group.
+  The group gump shows the group actual name and templates. To remove a template from the group, press its button. To add a new template, use the add button. You can change the group name, also. To save the changes, press apply.
+  The regions gump shows the existing spawn regions, and allows the creation of a new one.
+  The region gump shows the region name and the button used to access the individual region features.
+  The Rectangles are the region boundaries, the areas in which creatures will be created.
+  The Groups define the amount of npcs from a spawn group which may exist at the region in a given time. Time respawn is defined in minutes.
+  The Specials define the max amount and respawn time of individual templates.
+  Enabled is 1/0, Yes/No. A disabled region does not respawn creatures.
+  Flash Spawn Region forces a region to spawn all its npcs instantly.
+  Restart Region removes existing region npcs.
+  Erase region erases region from regionfile. This action cannot be undone.
+
+  Spawnmanager supports concurrent managing. That means more than one person can manage groups and regions. To keep data consistent, just one person can manage a single group/region at a time. So, if you are editing Group #1, other staff can only edit Group #2 or any Region, as an example.
+
+.buildmanagers
+
+  This command creates new region managers for regions which have none at the time the command is called. Existing region managers are unaffected.
+
+.removemanagers
+
+  Removes any existing region managers, which removes their spawned npcs.
+
+.restartmanagers
+
+  Restarts any existing region managers, removing their spawned npcs.

@@ -1,0 +1,26 @@
+use uo;
+
+program guard_invul(who)
+	
+	SendSysMessage(who, "Select a NPC or staff member, to turn ON/OFF guards invulnerability.");
+	var tgt := Target(who);
+	if (tgt.cmdlevel > 1)
+		if (who.getprop("guardinvul"))
+			EraseObjProperty(who, "guardinvul");
+			SendSysMessage(who, who.name+" you ARE NOT immune to guards.");
+		else
+			who.setprop("guardinvul", 1);
+			SendSysMessage(who, who.name+" you ARE immune to guards.");
+		endif
+	elseif (tgt.isa(POLCLASS_NPC))
+		if (tgt.getprop("called"))
+			EraseObjProperty(tgt, "called");
+			SendSysMessage(who, tgt.name+" ARE NOT immune to guards.");
+		else
+			tgt.setprop("called", 1);
+			SendSysMessage(who, tgt.name+" ARE immune to guards.");
+		endif
+	else
+		SendSysMessage(who, "You can only protect you and the NPCs from guards.");
+	endif
+endprogram

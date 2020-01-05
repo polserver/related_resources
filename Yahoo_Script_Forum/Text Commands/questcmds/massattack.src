@@ -1,0 +1,30 @@
+include "include/modules";
+include "include/client";
+include "include/objtype";
+include "include/skillpoints";
+include "include/bard";
+include "include/eventid";
+
+program bard_provoke(who, range)
+	if( !range )
+		range := SendTextEntryGump( who, "What range to provoke?" );
+	endif       
+	SendSysMessage( who, "Select a creature you wish to provoke" );
+	var provoked := TargetCoordinates(who);
+	if( !provoked )
+		SendSysMessage(who, "Targetting cancelled.");
+		return;
+	endif
+	var ev := {};
+	ev.+ type;
+	ev.+ source;
+	ev.type := EVID_PEACEMADE;
+	SendSysMessage( who, "Select the victim" );
+	var victim := Target(who);
+	ev.source := victim;
+	foreach mob in  ListMobilesNearLocation(provoked.x, provoked.y, provoked.z, CInt(range))
+		SendEvent(mob, ev);
+		ev.type := EVID_ENGAGED;
+		SendEvent(mob, ev);
+	endforeach       
+endprogram

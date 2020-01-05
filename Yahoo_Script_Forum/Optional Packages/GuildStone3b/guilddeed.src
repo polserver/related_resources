@@ -1,0 +1,65 @@
+// updated November 4, 2000
+// zulu (zulu@zuluhotel.com)
+// extra code by Marquis and Bishop
+
+use uo;
+use os;
+
+const UOBJ_GUILDSTONE:=0xa390;
+Const UOBJECT_DOORS_START:=0x0675;
+Const UOBJECT_DOORS_END:=0x06f4;
+
+program use_guild_deed(who,deed)
+
+if(!ReserveItem(deed)) return; endif
+if(GetObjProperty(who,"guild_id")) SendSysMessage(who,"You are already a member of a Guild."); return; endif
+if(not Accessible(who,deed)) SendSysMessage(who,"You cannot access that item!"); return; endif
+
+//bishops add for statichouses
+
+ local signs := ListItemsNearLocationOfType(who.x, who.y, who.z, 30, 0x7060);
+  var check := 0;
+  foreach item in signs
+    var infoarr := GetObjProperty(item, "homeinfo");
+    if(infoarr)
+     if((who.x >= infoarr[2]) and (who.x <= infoarr[4]) and (GetObjProperty(item, "owneracct" ) = who.acctname) and (who.y >= infoarr[3]) and (who.y <= infoarr[5]))
+        check := 1;  
+     endif
+    endif
+  endforeach
+/*end of bishops paramsearch for staticsign*/
+/*
+below modified by Marquis to work for both static and multi
+stones cant be placed outside of houses 
+*/
+if(GetObjProperty(who.multi,"ownerserial")=who.serial)
+  check :=1; 
+endif
+if(check = 0)
+      SendSysMessage(who, "You must be in a house you own to  place this.");
+return;
+endif
+
+/*ZULUS original code*/
+foreach item in ListItemsNearLocation(who.x,who.y,who.z,2)
+If ((Item.objtype>=UOBJECT_DOORS_START) AND (Item.objtype<=UOBJECT_DOORS_END))
+SendSysMessage(who,"This is too close to the door.");
+return;
+endif
+endforeach
+
+foreach item in ListItemsNearLocation(who.x,who.y,who.z,30)
+if(item.objtype=UOBJ_GUILDSTONE and (item.multi.serial=who.multi.serial))
+SendSysMessage(who,"Only one guildstone can be placed in a house.");
+return;
+endif
+endforeach
+
+SendSysMessage(who,"Guild Masters can move the stone once a week.");
+SendSysMessage(who,"Double click the guild stone to set it up.");
+
+local pos:=GetStandingHeight(who.x,who.y,who.z);
+local item:=CreateItemAtLocation(who.x,who.y,pos.z,UOBJ_GUILDSTONE,1);
+if(item) destroyitem(deed); endif
+
+endprogram

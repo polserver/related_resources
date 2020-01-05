@@ -1,0 +1,102 @@
+/////////////////////////////////////////////
+// findGreedyScripts.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+/////////////////////////////////////////////
+//
+// Sorts the scriptprofiles by instruction,
+// invocation, instr_per_invoc or instr_percent
+// and displays the 10 largest ones.
+//
+/////////////////////////////////////////////
+
+use uo;
+use os;
+
+program find_greedy_scripts(who,parms)
+  var button;
+  var radio_options:=array;
+  var find_layout:={
+    "page 0",
+    "nodispose",
+    "resizepic 0 0 3600 400 300",
+    "text 100 20 93 0",
+    "text 60 40 66 1",
+    "text 80 90 66 2",
+    "text 80 120 66 3",                   
+    "text 80 150 66 4",
+    "text 80 180 66 5",
+    "button 120 260 2123 2122 1 0 50",    
+    "group 0",
+    "radio 40 90 2152 2154 0 51",
+    "radio 40 120 2152 2154 0 52",
+    "radio 40 150 2152 2154 0 53",
+    "radio 40 180 2152 2154 0 54" ,
+     };
+    
+  var find_data:={
+    "Find Greedy Scripts",
+    "Sort script profiles by ....",
+    "instruction",
+    "invocation" ,
+    "instr_per_invoc",
+    "instr_percent"};
+    
+  var retval:=SendDialogGump(who,find_layout,find_data);
+  
+  if (!retval[50])
+    sendsysmessage(who,"Cancelled!");
+    return;
+  endif
+  var i;
+  for (i:=1;i<=4;i:=i+1)
+    if (retval[i+50])
+      BuildGreedGump(who,(i+1),find_data[i+2]);
+    endif
+  endfor
+endprogram
+
+function BuildGreedGump(who,sort_by,sort_by_name)
+  var script_profiles:=polcore().script_profiles;
+  var greed_layout:={
+  "resizepic 0 0 3600 540 300",
+  "text 120 20 95 0",
+  "text 60 40 66 1",
+  };
+  var greed_data:={
+  "Find Greedy Scripts",
+  "Sort script profiles by "+sort_by_name,
+  };
+
+  var greediest:=array;
+  var i,j;
+  for (i:=1; i<=10; i:=i+1)
+    var check_profile:={};
+    var check_idx:=0;
+    for (j:=1; j<=len(script_profiles); j:=j+1)
+      var this_profile:=script_profiles[j];
+      if (this_profile and (!check_profile or (check_profile[sort_by]<this_profile[sort_by])))
+        check_profile:=this_profile;
+        check_idx:=j;
+      endif
+    endfor
+    if (check_idx)
+      greediest[i]:=check_profile;
+      script_profiles[check_idx]:=0;
+    else
+      break;
+    endif
+  endfor
+
+  i:=60;
+  foreach this_profile in greediest
+    greed_layout.append("text 30 "+i+" 93 "+len(greed_data));
+    greed_data.append(this_profile[1]);
+    greed_layout.append("text 460 "+i+" 93 "+len(greed_data));
+    greed_data.append(this_profile[sort_by]);
+    i:=i+20;
+  endforeach
+  var retval:=SendDialogGump(who,greed_layout,greed_data);
+endfunction

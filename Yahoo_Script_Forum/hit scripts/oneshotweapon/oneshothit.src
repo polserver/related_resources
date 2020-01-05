@@ -1,0 +1,94 @@
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
+// Author: Admin ShRuD[Dharma]  
+//      -The Dragonlance UO Shard-      www.gamearena.it/drl
+// Date: 1/dec/00
+// Version: 1.0
+// Last Update: 
+// Email: ShRuD@galactica.it    Uin: 38209689
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
+
+
+use uo;
+use os;
+use util;
+
+include "include/hitscriptinc";
+include "include/client";
+
+program MainHitScript(attacker, defender, weapon, armor, basedamage, rawdamage)
+	local WeaponHit := GetObjProperty(weapon, "OnHit");
+	local ArmorHit;
+	if (armor = 0)
+		ArmorHit := GetObjProperty(defender, "OnHit");
+	else
+		ArmorHit := GetObjProperty(armor, "OnHit");
+	endif
+
+	local x;
+
+	if (!WeaponHit)
+
+		if (!ArmorHit)
+			DealDamage(defender, attacker, rawdamage);
+			SetObjProperty(defender, "LastHit", {attacker.name, attacker.serial, weapon });
+
+                  SendSysMessage (attacker, "Special Shot!", 3, 42);
+                  SendSysMessage (defender, "Special Shot!", 3, 42);
+			PlaySoundEffect(defender, SFX_SPELL_HARM);
+			PlayObjectCenteredEffect( attacker, FX_GLOW_SPIKE, 0x0a,0x1e);
+		      DestroyItem (weapon);
+
+			AdjustNoto(attacker);
+			return;
+		else
+			SetObjProperty(defender, "TempDamage", rawdamage);
+			foreach x in ArmorHit
+				detach();
+				set_critical(0);
+				Start_Script(x, { attacker, defender, weapon, armor, basedamage, rawdamage } );
+				rawdamage := CInt(GetObjProperty(defender, "TempDamage") );
+			endforeach
+			EraseObjProperty(defender, "TempDamage");
+			if (rawdamage > 0)
+				DealDamage(defender, attacker, rawdamage);
+				SetObjProperty(defender, "LastHit", {attacker.name, attacker.serial, weapon });
+				AdjustNoto(attacker);
+
+	                  SendSysMessage (attacker, "Special Shot!", 3, 42);
+      	            SendSysMessage (defender, "Special Shot!", 3, 42);
+				PlaySoundEffect(defender, SFX_SPELL_HARM);
+				PlayObjectCenteredEffect( attacker, FX_GLOW_SPIKE, 0x0a,0x1e);
+			      DestroyItem (weapon);
+
+				return;
+			else
+				return;
+			endif
+		endif
+	else
+
+      	SetObjProperty(defender, "TempDamage", rawdamage);
+		foreach x in WeaponHit
+			detach();
+			set_critical(0);
+			Start_Script(CStr(x), { attacker, defender, weapon, armor, basedamage, rawdamage } );
+			rawdamage := GetObjProperty(defender, "TempDamage");
+		endforeach
+		EraseObjProperty(defender, "TempDamage");
+
+
+            SendSysMessage (attacker, "Special Shot!", 3, 42);
+            SendSysMessage (defender, "Special Shot!", 3, 42);
+		PlaySoundEffect(defender, SFX_SPELL_HARM);
+		PlayObjectCenteredEffect( attacker, FX_GLOW_SPIKE, 0x0a,0x1e);
+	      DestroyItem (weapon);
+                     
+		if (rawdamage > 0)
+			DealDamage(defender, attacker, rawdamage);
+			SetObjProperty(defender, "LastHit", {attacker.name, attacker.serial, weapon });
+			AdjustNoto(attacker);
+			return;
+		endif
+	endif
+endprogram
+

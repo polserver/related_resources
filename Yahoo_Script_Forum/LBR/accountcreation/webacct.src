@@ -1,0 +1,56 @@
+// For creation with normal and LBR account
+use http;
+use uo;
+
+program account_add()
+
+var acctname := QueryParam( "acctname" );
+var acctpass := QueryParam( "acctpass" );
+var acctemail := QueryParam( "acctemail" );
+var lbr := QueryParam( "LBR" );
+
+writehtml("<html><head><title>POL HTTP Account Adder</title></head><body>");
+writehtml("<FONT SIZE=4><B>POL HTTP Account Adder</B></FONT><HR>");
+
+if( !acctname or !acctpass or !acctemail)
+  writehtml("Name, Pass, or Email was empty.");
+else
+
+  while (acctname["+"])
+        acctname["+"] := " ";
+  endwhile
+  while (acctpass["+"])
+        acctpass["+"] := " ";
+  endwhile
+  while (acctemail["+"])
+  	acctemail["+"] := " ";
+  endwhile
+  
+  var ret := CreateAccount( acctname, acctpass, 1 );
+  print("LBR value was: "+lbr);
+  if(lbr)ret.setprop("LBR", 1); endif
+  
+  var account := FindAccount( acctname );
+  foreach acct in listaccounts()
+
+	var new := acct.getprop("email");
+	if(!new = acctemail)
+		account.setprop("email", acctemail);
+			
+	else
+		//writehtml("<p>Sorry, Each Person Is Only Allowed One Account [Email].</p>");
+		//account.disable(acctname);
+	endif
+	
+  endforeach
+	     
+  if( ret = error )
+    writehtml("Sorry, account creation failed.<P>");
+    writehtml("Error: " + ret.errortext );
+  else
+    writehtml("Account added successfully.");
+  endif
+endif
+
+endprogram
+

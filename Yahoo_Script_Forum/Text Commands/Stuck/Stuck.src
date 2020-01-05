@@ -1,0 +1,81 @@
+///////////////////////////////////////////////////////////
+// Stuck.src
+//
+// Attempts to get a player unstuck.
+//
+// Creator: Oroborous
+// Contact: mkow@sympatico.ca
+//
+// Created: Dec-2000
+///////////////////////////////////////////////////////////
+
+use uo;
+use math;
+
+include "include/client";
+
+program textcmd_Stuck(who)
+	var stuck := 1;
+	var x := who.x;
+	var y := who.y;
+	var z := who.z;
+	var xl, yl, zl;
+	
+	var dir;
+	for (dir := 1; dir <= 8; dir := dir + 1)
+		case (dir)
+			1:
+				xl := who.x;
+				yl := who.y - 1;
+				zl := who.z;
+			2:
+				xl := who.x + 1;
+				yl := who.y - 1;
+				zl := who.z;
+			3:
+				xl := who.x + 1;
+				yl := who.y;
+				zl := who.z;
+			4:
+				xl := who.x + 1;
+				yl := who.y + 1;
+				zl := who.z;
+			5:
+				xl := who.x;
+				yl := who.y + 1;
+				zl := who.z;
+			6:
+				xl := who.x - 1;
+				yl := who.y + 1;
+				zl := who.z;
+			7:
+				xl := who.x - 1;
+				yl := who.y;
+				zl := who.z;
+			8:
+				xl := who.x - 1;
+				yl := who.y - 1;
+				zl := who.z;
+		endcase
+
+		var map := GetMapInfo(xl, yl);
+		if (map[1] <= who.z)
+			stuck := 0;
+			break;		
+		endif
+	endfor
+	
+	if (stuck)
+		SendSysMessage(who, "Select a location no further than 2 squares to move you to.", FONT_NORMAL, COLOR_GREEN);
+		var loc := TargetCoordinates(who);
+		var dx := Abs(loc.x - who.x);
+		var dy := Abs(loc.y - who.y);
+		if (dx <= 2 and dy <= 2)
+			MoveCharacterToLocation(who, loc.x, loc.y, loc.z);
+		else
+			SendSysMessage(who, "You can only be unstuck up to 2 squares away.", FONT_NORMAL, COLOR_GREEN);
+		endif
+	else
+		SendSysMessage(who, "You are not stuck!", FONT_NORMAL, COLOR_GREEN);
+	endif
+endprogram

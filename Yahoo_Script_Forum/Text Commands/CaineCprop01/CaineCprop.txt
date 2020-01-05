@@ -1,0 +1,34 @@
+Caine Cprop text command v0.1
+-----------------------------
+
+I wanted a .<txtcmd> to change the cprops on some of my items and players (hehehe, this is to save you/me time in debugging and player fixing *smile*)
+
+there are 2 cmds available now :
+
+1) .setcprop [i/s] [propname] [amount]
+	i/s	: is a required argument : donates if amount is of str type or int
+	propname: is a required argument : donates what cprop to be added
+	amount	: is a required argument : donates the value of the cprop
+
+	ie. 
+	--------------------
+	.setcprop i #flee 1
+
+this will set the #flee cprop on an item/mobile to an int value of 1.
+
+
+
+2) .delcprop [propname] ([propname2]...)
+	propname: is a required argument : donates what cprop to be erased
+       propname2: is an optional argument : dontes what other cprop to be erased (more than one allowed)
+
+	ie. 
+	---------------------
+	.delcprop frozen is_poisoned #flee lasthit
+	
+this will erase the frozen, is_posioned #flee and lasthit cprops from an item or moblile.
+
+
+have fun ;)
+
+Caine

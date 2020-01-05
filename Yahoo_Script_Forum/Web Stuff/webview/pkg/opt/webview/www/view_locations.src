@@ -1,0 +1,29 @@
+/* view_locations.src
+ * Last Modified: 06/28/04
+ * 
+ * Show the in-game location of things
+ *
+*/
+
+use http;
+use uo;
+use os;
+use basic;
+
+include ":webview:webLocation";
+
+program ViewLocation()
+
+  if (QueryParam("players"))
+    ViewPlayerLocations();
+    exit;
+  elseif (QueryParam("guilds"))
+    ViewGuildLocations();
+  elseif (QueryParam("regions"))
+    // Not finished
+    return 1;
+  elseif (QueryParam("spawnregions"))
+    ViewSpawnRegionLocations();
+  endif
+
+endprogram

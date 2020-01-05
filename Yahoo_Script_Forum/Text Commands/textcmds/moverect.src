@@ -1,0 +1,103 @@
+////////////////////////////////////////////////////////////////////////////////////////
+//  MOVERECT.SRC - ingame command
+//  This is a "fastbuild" command you supply direction and distance to move as
+//  arguments. If dist is left out it uses a default of 1.
+//  This command is great for moving a large number of things within a rectanglar area.
+//  Todo://   Clean up the code when abs() is avail. and C-style for loops
+//   don't require initialization.
+//  Author: ens 1999/01/02
+//  Recent Modifications:]
+//      1999/01/25 Ignatius Created the command TILE.
+//      2000/02/26 Angreal modified into moverect.
+/////////////////////////////////////////////////////////////////////////////////////////
+use uo;
+use util;
+use os;
+
+program textcmd_moverect( who, text )    
+    
+    local params := SplitWords( text );
+    local dir := params[1];
+    local dist := params[2];
+
+    if ( !dir )
+       SendSysMessage( who, "Missing direction parameter. Usage is: .moverect [direction] [how far]. Direction is px, py, pz, mx, my or mz.");
+       return;
+    endif
+
+    if ( dist = "" )        
+	dist := 1;
+    else
+        dist := cint(dist);       
+    endif
+    
+    SendSysmessage( who, "Select coordinate #1" );
+    local coordStructOne := TargetCoordinates( who );
+    sleep(1);
+        SendSysmessage( who, "Select coordinate #2" );
+    local coordStructTwo := TargetCoordinates( who );
+    sleep(1);
+    if ( ( ! coordStructOne ) OR ( ! coordStructTwo ) ) // check that we got two valid coordstructs.
+        SendSysmessage( who, "Missing coordinate. Aborting." );
+        return;
+    endif
+    
+    local startX;
+    local startY;
+    local endX;
+    local endY;
+    if ( coordStructOne.x <= coordStructTwo.x )
+        startX  := coordStructOne.x;
+        endX    := coordStructTwo.x;
+    else
+        startX  := coordStructTwo.x;
+        endX    := coordStructOne.x;
+    endif
+    if ( coordStructOne.y <= coordStructTwo.y )
+        startY  := coordStructOne.y;
+        endY    := coordStructTwo.y;
+    else
+        startY  := coordStructTwo.y;
+        endY    := coordStructOne.y;
+    endif
+    
+    local rangex := cint(endX - startX);
+    local rangey := cint(endY - StartY);
+    local midx   := cint((endX + startX)/2);
+    local midy   := cint((endY + startY)/2);
+    local zspot  := coordStructOne.z;
+    local rad;
+
+    if (rangex >= rangey)
+         rad := rangex;
+    else
+         rad := rangey;
+    endif
+
+    local things := ListItemsNearLocation(midx, midy, zspot, rad);
+    local item; 
+ 
+    foreach item in things
+       if ( dir = "px" )
+           MoveItemToLocation( item, item.x + dist , item.y , item.z, MOVEITEM_FORCELOCATION );
+           sleepms(2);
+       elseif ( dir = "py" )
+           MoveItemToLocation( item, item.x , item.y + dist, item.z, MOVEITEM_FORCELOCATION );
+           sleepms(2);
+       elseif ( dir = "pz" )
+           MoveItemToLocation( item, item.x , item.y , item.z + dist, MOVEITEM_FORCELOCATION );
+           sleepms(2);
+       elseif ( dir = "mx" )
+           MoveItemToLocation( item, item.x - dist, item.y , item.z, MOVEITEM_FORCELOCATION );
+           sleepms(2);
+       elseif ( dir = "my" )
+           MoveItemToLocation( item, item.x , item.y - dist, item.z, MOVEITEM_FORCELOCATION );
+           sleepms(2);
+       else
+           MoveItemToLocation( item, item.x , item.y , item.z - dist, MOVEITEM_FORCELOCATION );
+           sleepms(2);
+       endif
+    endforeach
+    SendSysmessage( who, "Command completed." );
+    sleep(1);
+endprogram

@@ -1,0 +1,28 @@
+use uo;
+use cfgfile;
+
+include "include/attributes";
+include "druid";
+
+program cast_insect(caster)
+
+	if(!checkstaff(caster))
+		return;
+	endif
+	
+  checkdruidopts(caster, 3);	
+
+  SendSysMessage(caster, "Select target.");
+  local target1 := target(caster);
+  usemana(caster, 1);
+  PlayMovingEffect(caster, target1, 0x091b, 5, 1);
+  PlaySoundEffect(target1, 0x224);
+  var dmg := RandomDiceRoll("3d10");
+  SetObjProperty(target1, "LastHit", {caster.name, caster.serial, "insect"});
+  if(GetHp(target1) > 1)
+    if(target1.npctemplate)
+      dmg := dmg * 2;
+    endif
+    ApplyRawDamage(target1, dmg);
+  endif
+endprogram

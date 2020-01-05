@@ -1,0 +1,16 @@
+//
+// Destroy all items within a radius
+//
+
+use uo;
+
+program textcmd_destroyradius( who, text )
+
+    local params := SplitWords( text );
+    local radius := CInt( params[1]);
+
+    SendSysMessage( who, "Destroying items in a radius of "+ radius);
+        foreach item in ListItemsNearLocation( who.x, who.y, who.z, radius )
+            DestroyItem( item );
+       endforeach
+endprogram

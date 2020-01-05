@@ -1,0 +1,2121 @@
+// updated November 9, 2000
+// zulu (zulu@zuluhotel.com)
+
+// modified by -=Magic=- on 17/12/2000
+// - added the bilateral request of ally and declare of war
+//   On the Declare Ally/Declare War, now we can see all the guild
+//   included the guild that are allyed (marked with (*) simbol).
+//   From here is possible to made or remove a request....
+// - moved the GUILD abbreviation, from Name to .title_suffix 
+//   (so that the ABR appear only on paperdoll, and the
+//   name of the player is less confused)
+// - added on the menu, the entry: View request/declare of ally/war
+//   so that is possible to view the various request/declare that
+//   has been recived from the other guild
+
+
+use uo;
+use os;
+
+include "include/yesno";
+
+const MAX_GUILD_NAME_SIZE:=30;
+const MAX_GUILD_ABREV_SIZE:=5;
+const UOBJ_PACKED_GUIDSTONE_GRAPHIC:=0x1172;
+const MAX_GM_TITLE_SIZE:=30;
+const MAX_GUILD_TITLE_SIZE:=20;
+
+global guild_id;
+
+// Definition of Guild Status Array
+// Array of array, each subarray is composed by 3 parts
+// First part: GUILDID
+// Second part: GUILDID of the Source Declare/Request
+// Third part: Action
+// 	RA : request Ally
+// 	RE : request Enemy
+// 	BA : broke Ally
+// 	BE : broke Enemy
+
+program use_guild_stone(who, stone)
+// check to see if someone is using the stone.
+if(!reserveitem(stone)) 
+	SendSysMessage(who,"Guild Stone in use.",3,34);
+	return;
+endif
+
+guild_id:=getobjproperty(stone,"guild_id");
+local guild_pl:=getobjproperty(who,"guild_id");
+
+if(guild_id=0 && !guild_pl.errortext) 
+	PrintTextAbovePrivate(stone,"You are already member of "+FindGuild(guild_pl).getprop("guildname"),who);
+	return;
+endif
+
+// check to see if the stone has been setup.
+if(guild_id=0 && guild_pl.errortext)
+	if (setupguild(who,stone))
+		guild_pl:=guild_id;
+	else
+		SendSysMessage(who,"Canceled.",3,34);
+		return;
+	endif
+endif
+
+local guild:=FindGuild(guild_id);
+local count:=guild.members;
+
+if (guild.errortext) 
+	destroyitem(stone); 
+	return; 
+endif
+
+// player is has a guild or no guild.
+if (guild_pl<>guild_id or !guild.ismember(who)) 
+	local gm:=findgm(guild);
+	if(guild.getprop("guildabv")<>"NONE") 
+		viewdata[1]:="["+guild.getprop("guildabv")+"]"; 
+	endif
+	viewdata[2]:=guild.getprop("guildname");
+	viewdata[3]:="Members: "+count.size();
+	viewdata[4]:="GM: "+gm[1];
+	viewlayout[10]:="gumppic 420 65 "+guild.getprop("guildicon");
+	if (!guild_pl.errortext)
+		local guild2:=FindGuild(guild_pl);
+		if (guild2.isallyguild(guild))
+			viewdata[5]:="Ally Guild";
+			viewlayout[11]:="text 270 40 70 4";
+		elseif (guild2.isenemyguild(guild))
+			viewdata[5]:="Enemy Guild";
+			viewlayout[11]:="text 270 40 34 4";
+		endif
+	endif
+	SendDialogGump(who, viewlayout, viewdata);
+	return;
+endif
+
+local gm:=findgm(guild);
+count:=0;
+
+if (gm[1]="In Vote")
+	if (SetFealty(guild,who)=0) SendSysMessage(who,"You have to set your fealty.",3,70); 
+  		return; 
+	endif
+  	findnewgm(guild);
+endif
+
+buildgump(guild,who,stone);
+
+endprogram
+
+function findnewgm(guild)
+
+local i,vote,all:=guild.members,count;
+var dict := dictionary;
+
+for(i:=1;i<=all.size();i:=i+1)
+	vote:=getobjproperty(all[i],"fealty");
+
+	if (dict.exists(vote))
+		count:=dict[vote]+1;
+		dict[vote]:=count;
+	else
+		dict.insert(vote,1);
+	endif
+endfor
+
+local winner:=0,votes:=dict.keys(),tie:=0;
+count:=0;
+
+for(i:=1;i<=dict.size();i:=i+1)
+	vote:=dict[votes[i]];
+
+	if (vote>count)
+		count:=vote;
+		winner:=votes[i];
+		tie:=0;
+	elseif (vote=count)
+		tie:=1;
+	endif
+endfor
+
+print ("Guild Vote: "+votes+" winner "+winner+" tie "+tie);
+
+if(!tie) 
+	guild.setprop("gm",winner); 
+endif
+
+endfunction
+
+
+function buildgump(guild,who,stone)
+
+local gm:=findgm(guild);
+
+if(guild.getprop("guildabv")="NONE")
+	data[1]:=guild.getprop("guildname");
+else
+	data[1]:=guild.getprop("guildname")+" ["+guild.getprop("guildabv")+"]";
+endif
+data[2]:="GM: "+gm[1];
+
+local icon:=guild.getprop("guildicon");
+
+if (gm[2]<>who.serial)
+	layout[34]:="";
+	layout[36]:="";
+//	layout[30]:="";
+//	layout[31]:="";
+endif
+
+layout[35]:=("gumppic 440 50 "+icon);
+
+local fealty:=getobjproperty(who,"fealty"),i,all:=guild.members;
+
+if (fealty=who.serial)
+  	data[7]:="Yourself.";
+else
+  	for(i:=1;i<=all.size();i:=i+1)
+  	  	if (all[i].serial=fealty) data[7]:=all[i].name+"."; endif
+  	endfor
+endif
+
+if (guild.getprop("guildabv")="NONE")
+	layout[32]:="text 318 212 0 15";
+	data[16]:="not defined.";
+else
+	if (getobjproperty(who,"abv")="0")
+		layout[32]:="text 318 212 34 15";
+		data[16]:="Off.";
+	else
+		layout[32]:="text 318 212 70 15";
+		data[16]:="On.";
+	endif
+endif
+
+local box:=SendDialogGump(who,layout,data);
+
+local choose:=0;
+if(box[0]=1000)
+  	return;
+elseif(box[0]=2000)
+	foreach k in (box.keys)
+    		if(k>0 and k<1000)
+      			choose:=k;
+      			break;
+    		endif
+  	endforeach
+else
+  	return;
+endif
+
+if(!choose or choose=0) 
+	buildgump(guild,who,stone); 
+	return; 
+endif
+
+case(choose)
+  0: return;
+  1: recruit(guild,who);
+  2: viewmembers(guild,who);
+  3: viewcharter(guild,who);
+  4: SetFealty(guild,who);
+  5: Toggle_Showing(guild,who);
+  6: resign(guild,who,stone);return;
+  7: viewrecruits(guild,who);
+  8: yourallies(guild,who);
+  9: yourenemies(guild,who);
+  10: viewstatus(guild,who);
+  11: gm_menu(guild,who,stone);return;
+  default: return;
+endcase
+
+buildgump(guild,who,stone);
+
+endfunction
+
+
+function setupguild(who, stone)
+
+local tname:=SendTextEntryGump(who,"What is the guild name?",0,1,MAX_GUILD_NAME_SIZE,"Type the name.");
+if(!tname) return 0; endif
+
+// check the len of guild name.
+if(len(tname)>MAX_GUILD_NAME_SIZE)
+	SendSysMessage(who,"Guild name can't have more than "+MAX_GUILD_NAME_SIZE+" characters.",3,34);
+	return 0;
+endif
+
+local i,dupe:=0,guild,allguilds:=ListGuilds();
+
+// check for dupe name
+for(i:=1;i<=allguilds.size();i:=i+1)
+	if (lower(allguilds[i].getprop("guildname"))=lower(tname)) dupe:=1; endif
+endfor
+
+// if dupe, error and exit
+if (dupe=1) 
+	PrintTextAbovePrivate(stone,"That guild name is already taken.",who); 
+	return 0; 
+endif
+
+if(!NameValidation(tname)) 
+	SendSysMessage(who,"You are using invalid characters",3,34); 
+	return 0; 
+endif
+
+// if no dupe, create guild
+guild:=CreateGuild();
+
+guild_id:=guild.guildid;
+guild.setprop("guildname",tname);
+guild.setprop("guildabv","NONE");
+guild.setprop("guildicon",5545);
+guild.setprop("gm",who.serial);
+dupe:={"NONE"};
+guild.setprop("gc",dupe);
+guild.setprop("recruits",dupe);
+guild.setprop("movetime",ReadGameClock()+(7*24*3600));
+guild.setprop("nametime",ReadGameClock()+(7*24*3600));
+guild.setprop("abrvtime",1);
+stone.name:="Guildstone for "+tname;
+setobjproperty(stone,"guild_id",guild_id);
+guild.addmember(who);
+setobjproperty(who,"guild_id",guild_id);
+setobjproperty(who,"fealty",who.serial);
+setobjproperty(who,"abv","0");
+who.title_guild:=tname;
+return 1;
+
+endfunction
+
+
+function recruit(guild,who)
+
+SendSysMessage(who,"Select the player to recruit.");
+
+local targ:=Target(who,TGTOPT_CHECK_LOS+TGTOPT_NEUTRAL);
+if(!targ.acctname) 
+	SendSysMessage(who,"You can only target players.",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+if(GetObjProperty(targ,"guild_id")) 
+	SendSysMessage(who,"They are already in a guild.",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+SendSysMessage(targ,"Would you like to join the guild "+guild.getprop("guildname")+".",3,70);
+local answer:=YesNo(targ,"Join Guild?");
+
+if (!answer)
+	SendSysMessage(targ,"You have not joined.",3,34);
+	SendSysMessage(who,targ.name+" has decided not to join.",3,34);
+	sleep(3);
+	return;
+endif
+
+// check to see if players is already recruited
+local i,recruits:=guild.getprop("recruits"),rsize:=recruits.size();
+
+if (recruits[1]<>"NONE")
+	for(i:=1;i<=rsize;i:=i+1)
+		if (cint(recruits[i])=targ.serial) 
+			SendSysMessage(who,targ.name+" has already recruited.",3,34); 
+			sleep(3); 
+			return; 
+		endif
+	endfor
+else
+	rsize:=0;
+endif
+
+// display info
+recruits[rsize+1]:=targ.serial;
+guild.setprop("recruits",recruits);
+SendSysMessage(who,targ.name+" has been recruited.",3,70);
+SendSysMessage(targ,"You have been recruited to "+guild.getprop("guildname")+".",3,70);
+sleep(3);
+endfunction
+
+
+function viewmembers(guild,who)
+
+FillInArrays(guild,guild.members,"Member Listing");
+SendDialogGump(who,filllayout,filldata );
+
+endfunction
+
+
+function NameValidation(theString)
+local i, validstr:={"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","k","r","s","t","u","v","w","x","y","z"," ",};
+theString:=lower(theString);
+
+for(i:=1;i<=len(theString);i:=i+1)
+	if(!(theString[i] in validstr)) return 0; endif
+endfor
+return 1;
+
+endfunction
+
+function viewcharter(guild,who)
+local line:=3,i,message:=guild.getprop("gc"),gm:=findgm(guild);
+
+if (message[1]="NONE") 
+	message:={"","No Charter has been set up yet.",""}; 
+endif
+
+For (i:=4;i<=15;i:=i+1)
+	if (message[i-3]<>error)
+		chartviewdata[line-1]:=message[i-3];
+		chartviewlayout[line+3]:="text 100 "+(82+((line-2)*20))+" 300 "+(line -2);
+		line:=line+1;
+	endif
+endfor
+
+chartviewdata[line-1]:="Guild Master "+gm[1];
+chartviewlayout[line+3]:="text 160 "+(82 + ((line-2)*22))+" 600 "+(line -2);
+chartviewdata[1]:="Charter for "+guild.getprop("guildname");
+
+SendDialogGump(who,chartviewlayout,chartviewdata);
+
+endfunction
+
+
+function SetFealty(guild,who)
+
+local choose:=0,box,k,all:=guild.members;
+
+if (all.size()=1) 
+	SendSysMessage(who,"You only have one guild member.",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+FillInArrays(guild,all,"Declare Fealty");
+box:=SendDialogGump(who,filllayout,filldata);
+
+if(box[0]=1000)
+	return 0;
+elseif(box[0]=1)
+	foreach k in (box.keys)
+		if(k>1)
+			choose:=k;
+			break;
+		endif
+	endforeach
+endif
+
+if(!choose or choose=0) 
+	return 0; 
+endif
+setobjproperty(who,"fealty",choose);
+
+return 1;
+endfunction
+
+
+function Toggle_Showing(guild,who)
+local abv:=guild.getprop("guildabv");
+
+if (abv="NONE") 
+	SendSysMessage(who,"There is no guild abbreviation.",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+if (getobjproperty(who,"abv")="0")
+	setobjproperty(who,"abv",abv);
+//	who.name:=who.name+" ["+abv+"]";
+	local tname:=GetObjProperty(who,"GuildMemberTitle");
+	if (tname="" or !tname)
+		who.title_suffix := ", ["+abv+"]";
+	else
+		who.title_suffix := ", " + tname + " ["+abv+"]";
+	endif
+else
+	who.title_suffix := "";
+//	fixname(who);
+	setobjproperty(who,"abv","0");
+endif
+endfunction
+
+function fixname(who)
+local abv:=getobjproperty(who,"abv"),result:=find(who.name," ["+abv+"]",1),name:=who.name;
+
+result:=result-1;
+name:=name[1,result];
+who.name:=name;
+endfunction
+
+
+function resign(guild,who,stone)
+
+SendSysMessage(who,"Are you sure you want to resign?",3,34);
+
+local answer:=YesNo(who,"Quit Guild?");
+
+if (!answer) 
+	SendSysMessage(who,"Canceled.",3,34); 
+	return; 
+endif
+
+local gm:=findgm(guild);
+
+if (who.serial=gm[2]) 
+	guild.setprop("gm",0); 
+endif
+guild.removemember(who);
+eraseobjproperty(who,"guild_id");
+eraseobjproperty(who,"fealty");
+//fixname(who);
+who.title_suffix:="";
+who.title_guild:="";
+eraseobjproperty(who,"abv");
+eraseobjproperty(who,"talkchat");
+eraseobjproperty(who,"hearchat");
+eraseobjproperty(who,"GuildMemberTitle");
+
+SendSysMessage(who,"You are no longer a member of "+guild.getprop("guildname")+".",3,70);
+
+local i,all:=guild.members;
+
+if (all.size()=0)
+all:=guild.allyguilds;
+
+if (all.size()<>0)
+	for(i:=1;i<=all.size();i:=i+1)
+		guild.removeallyguild(all[i]);
+	endfor
+endif
+
+all:=guild.enemyguilds;
+
+if (all.size()<>0)
+	for(i:=1;i<=all.size();i:=i+1)
+		guild.removeenemyguild(all[i]);
+	endfor
+endif
+
+DestroyGuild(guild);
+destroyitem(stone);
+CreateItemInBackpack(who,0xa391,1);
+endif
+
+endfunction
+
+
+function viewrecruits(guild,who)
+local recruits:=guild.getprop("recruits");
+
+if (recruits[1]="NONE")
+	SendSysMessage(who,"There are no recruits.",3,34);
+	sleep(3);
+else
+	FillInArrays(guild,recruits,"Recruit Listing");
+	SendDialogGump(who,filllayout,filldata);
+endif
+
+endfunction
+
+
+function gm_menu(guild,who,stone)
+
+local gm:=findgm(guild);
+if (!(gm[2]=who.serial))
+	SendSysMessage(who,"Only the GuildMaster may access on this menu.");
+	return;
+endif
+
+if(guild.getprop("guildabv")="NONE")
+	gmdata[1]:=guild.getprop("guildname");
+else
+	gmdata[1]:=guild.getprop("guildname")+" ["+guild.getprop("guildabv")+"]";
+endif
+gmdata[2]:="GM: "+gm[1];
+
+gmlayout.append("gumppic 440 50 "+guild.getprop("guildicon"));
+
+local box:=SendDialogGump(who,gmlayout,gmdata);
+
+local choose:=0;
+if(box[0]=1000)
+  	return;
+elseif(box[0]=2000)
+  	foreach k in (box.keys)
+    		if(k>0 and k<1000)
+      			choose:=k;
+      			break;
+    		endif
+  	endforeach
+else
+	return;
+endif
+
+if(!choose) 
+	gm_menu(guild,who,stone); 
+	return; 
+endif
+
+case(choose)
+	0: return;
+	1: SetGuildName(guild,who,stone);
+	2: SetAbrevName(guild,who,stone);
+	3: seticontype(guild,who);
+	4: setcharter(guild,who);
+	5: Dismiss(guild,who);
+	6: setenemies(guild,who);
+	7: setallies(guild,who);
+	8: AcceptCandidate(guild,who);
+	9: RefuseCandidate(guild,who);
+	10: SetGMTitle(guild,who);
+	11: GrantTitle(guild,who);
+	12: Teleport(guild,who,stone);return;
+	13: buildgump(guild,who,stone);return;
+	14: setstonecolor(guild,who,stone);return;
+	default: return;
+endcase
+
+gm_menu(guild,who,stone);
+
+endfunction
+
+function seticontype(guild,who)
+
+local i,box,counter:=cint((guild.getprop("guildicon")-5545)/2)+1;
+icondata[1]:=guild.getprop("guildname");
+
+for(i:=guild.getprop("guildicon");i<5588;i:=i+2)
+	iconlayout[11]:= "gumppic 390 60 "+i;
+	icondata[2]:=iconname[counter];
+	counter:=counter+1;
+
+	box:=SendDialogGump(who,iconlayout,icondata);
+
+	if(box[0]=1000)
+		return;
+	elseif(box[0]=2000)
+		guild.setprop("guildicon",i);
+		SendSysMessage(who,"Your icon is now: "+iconname[counter-1]+".",3,70);
+		sleep(3);
+		return;
+	elseif(box[0]=3000)
+		if (i=5587) i:=5543; counter:=1; endif
+	endif
+
+endfor
+
+endfunction
+
+global iconname :=
+{
+"Advanced",
+"Adventurer",
+"Animal Tamer",
+"Archer",
+"Bard",
+"Blacksmith",
+"Battlefield Mage",
+"Carpenter",
+"Fencer",
+"Field Medic",
+"Fisherman",
+"Mace Fighter",
+"Magician",
+"Merchant",
+"Prospector",
+"Ranger",
+"Swordman",
+"Tailor",
+"Tinker",
+"Tradesman",
+"Warlock",
+"Warrior"
+};
+
+
+global iconlayout :=
+{
+"nomove",
+"nodispose",
+"page 0",
+"resizepic 160 35 5054 320 145",
+"resizepic 210 140 5100 200 25",
+"text 180 65 5 0",
+"text 180 85 300 1",
+"button 350 141 4023 4024 1 0 2000",
+"button 240 141 4017 4018 1 0 1000",
+"button 315 141 5540 5541 1 0 3000",
+""
+};
+global icondata :={"",""};
+
+
+function Dismiss(guild,who)
+
+local all:=guild.members;
+
+if (all.size()=1) 
+	SendSysMessage(who,"You only have one guild member.",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+FillInArrays(guild,all,"Dismiss Member");
+local choose:=0,box:=SendDialogGump(who,filllayout,filldata);
+
+if(box[0]=1000)
+  	return;
+elseif(box[0]=1)
+  	foreach k in (box.keys)
+    		if(k>1)
+      			choose:=k;
+      			break;
+    		endif
+  	endforeach
+else
+	return;
+endif
+
+if(!choose or choose=0) 
+	return; 
+endif
+if(choose=who.serial) 
+	SendSysMessage(who,"You can't dismiss yourself.",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+local i,gm:=findgm(guild);
+
+if (choose=gm[2]) 
+	guild.setprop("gm",0); 
+endif
+
+for(i:=1;i<all.size();i:=i+1)
+	if (all[i].serial=choose) 
+		break; 
+	endif
+endfor
+
+guild.removemember(all[i]);
+eraseobjproperty(all[i],"guild_id");
+eraseobjproperty(all[i],"fealty");
+//fixname(all[i]);
+eraseobjproperty(all[i],"abv");
+eraseobjproperty(all[i],"talkchat");
+eraseobjproperty(all[i],"hearchat");
+all[i].title_guild:="";
+all[i].title_suffix := "";
+
+SendSysMessage(all[i],"You are no longer a member of "+guild.getprop("guildname"),3,34);
+SendSysMessage(who,"Player has been dismissed.",3,70);
+sleep(3);
+
+endfunction
+
+
+function setallies(guild,who)
+
+FillInArrays(guild,ListGuilds(),"Set Allies");
+local choose:=0,box:=SendDialogGump(who,filllayout,filldata);
+
+if(box[0]=1000)
+  	return;
+elseif(box[0]=1)
+  	foreach k in (box.keys)
+    		if(k>1)
+      			choose:=k;
+      			break;
+    		endif
+  	endforeach	
+else
+	return;
+endif
+
+if(!choose or choose=0) 
+	return; 
+endif
+box:=FindGuild(choose);
+
+if (guild.isenemyguild(box))
+	SendSysMessage(who,"You have to broken the previous Enemy Status with this Guild, before made an alliance with it.",0x03,90);
+	return;
+endif
+
+// Code added by -=Magic=-
+
+if (guild.isallyguild(box))
+	// Broken Alliance
+	local guildarray:=guild.getprop("GuildDeclareStatus");
+	if (!guildarray)
+		guildarray:={};
+	endif
+	local alreadypresent:=0;
+
+	foreach gstatus in guildarray
+		if (box.guildid=gstatus[2] and guild.guildid=gstatus[1])
+			if (gstatus[3]="BA")
+				//The other guild as previously broken the alliance
+				alreadypresent:=1;
+				break;
+			endif
+		endif
+	endforeach
+	if (alreadypresent)
+	//	It's not possible that the guild is an enemy guild
+		SendSysMessage(who,"Your alliance have been broken.",0x03,90);
+		guild.removeallyguild(box);
+	
+		// remove request from the guild
+		local newArray:={};
+		foreach gstatus in guildarray
+			if (box.guildid=gstatus[2] and guild.guildid=gstatus[1])
+				if (!(gstatus[3]="BA"))
+					newArray.append(gstatus);
+				endif
+			else
+				newArray.append(gstatus);
+			endif
+		endforeach
+		guild.setprop("GuildDeclareStatus",newarray);
+	else
+	// Add the request or Retire the previous one
+		local newArray:={};
+		guildarray:=box.getprop("GuildDeclareStatus");
+		if (!guildarray)
+			guildarray:={};
+		endif
+		local alreadyMade:=0;
+		foreach gstatus in guildarray
+			if (guild.guildid=gstatus[2] and box.guildid=gstatus[1])
+				if (gstatus[3]="BA")
+					alreadyMade:=1;
+				else
+					newArray.append(gstatus);
+				endif
+			else
+				newArray.append(gstatus);
+			endif
+		endforeach
+		
+		if (alreadyMade)
+			SendSysMessage(who,"Your request to broke the alliance has been retired.",0x03,90);
+			box.setprop("GuildDeclareStatus",newarray);
+		else
+			SendSysMessage(who,"You have request to broken the alliance.",0x03,90);
+			local request:={};
+			request[1]:=box.guildid;
+			request[2]:=guild.guildid;
+			request[3]:="BA";
+			guildarray.append(request);
+			box.setprop("GuildDeclareStatus",guildarray);
+		endif		
+	endif
+else
+	// Request Alliance
+	local guildarray:=guild.getprop("GuildDeclareStatus");
+	if (!guildarray)
+		guildarray:={};
+	endif
+	local alreadypresent:=0;
+
+	foreach gstatus in guildarray
+		if (box.guildid=gstatus[2] and guild.guildid=gstatus[1])
+			if (gstatus[3]="RA")
+				//The other guild as previously request alliance
+				alreadypresent:=1;
+				break;
+			endif
+		endif
+	endforeach
+	if (alreadypresent)
+	//	It's not possible that the guild is an enemy guild
+		SendSysMessage(who,"Your alliance have been made.",0x03,90);
+		guild.addallyguild(box);
+	
+		// remove request from the guild
+		local newArray:={};
+		foreach gstatus in guildarray
+			if (box.guildid=gstatus[2] and guild.guildid=gstatus[1])
+				if (!(gstatus[3]="RA"))
+					newArray.append(gstatus);
+				endif
+			else
+				newArray.append(gstatus);
+			endif
+		endforeach
+		guild.setprop("GuildDeclareStatus",newarray);
+	else
+	// Add the request
+		local newArray:={};
+		guildarray:=box.getprop("GuildDeclareStatus");
+		if (!guildarray)
+			guildarray:={};
+		endif
+		local alreadyMade:=0;
+		foreach gstatus in guildarray
+			if (guild.guildid=gstatus[2] and box.guildid=gstatus[1])
+				if (gstatus[3]="RA")
+					alreadyMade:=1;
+				else
+					newArray.append(gstatus);
+				endif
+			else
+				newArray.append(gstatus);
+			endif
+		endforeach
+		
+		if (alreadyMade)
+			SendSysMessage(who,"Your request to made the alliance has been retired.",0x03,90);
+			box.setprop("GuildDeclareStatus",newarray);
+		else
+			SendSysMessage(who,"You have request to made the alliance.",0x03,90);
+			local request:={};
+			request[1]:=box.guildid;
+			request[2]:=guild.guildid;
+			request[3]:="RA";
+			guildarray.append(request);
+			box.setprop("GuildDeclareStatus",guildarray);
+		endif		
+	endif
+endif
+
+// End of Code added by -=Magic=-
+
+endfunction
+
+function setenemies(guild,who)
+
+FillInArrays(guild,ListGuilds(),"Set Enemies");
+local choose:=0,box:=SendDialogGump(who,filllayout,filldata);
+
+if(box[0]=1000)
+  	return;
+elseif(box[0]=1)
+  	foreach k in (box.keys)
+    		if(k>1)
+      			choose:=k;
+      			break;
+    		endif
+  	endforeach
+else
+	return;
+endif
+
+if(!choose or choose=0) 
+	return; 
+endif
+box:=FindGuild(choose);
+
+// Code added by -=Magic=-
+
+if (guild.isallyguild(box))
+	SendSysMessage(who,"You have to broken the previous Ally Status with this Guild, before made a war with it.",0x03,90);
+	return;
+endif
+
+if (guild.isenemyguild(box))
+	// Stop War
+	local guildarray:=guild.getprop("GuildDeclareStatus");
+	if (!guildarray)
+		guildarray:={};
+	endif
+	local alreadypresent:=0;
+
+	foreach gstatus in guildarray
+		if (box.guildid=gstatus[2] and guild.guildid=gstatus[1])
+			if (gstatus[3]="BE")
+				//The other guild as previously stop the war
+				alreadypresent:=1;
+				break;
+			endif
+		endif
+	endforeach
+	if (alreadypresent)
+	//	It's not possible that the guild is an ally guild
+		SendSysMessage(who,"Your war has been stopped.",0x03,90);
+		guild.removeenemyguild(box);
+	
+		// remove request from the guild
+		local newArray:={};
+		foreach gstatus in guildarray
+			if (box.guildid=gstatus[2] and guild.guildid=gstatus[1])
+				if (!(gstatus[3]="BE"))
+					newArray.append(gstatus);
+				endif
+			else
+				newArray.append(gstatus);
+			endif
+		endforeach
+		guild.setprop("GuildDeclareStatus",newarray);
+	else
+	// Add the request or Retire the previous one
+		local newArray:={};
+		guildarray:=box.getprop("GuildDeclareStatus");
+		if (!guildarray)
+			guildarray:={};
+		endif
+		local alreadyMade:=0;
+		foreach gstatus in guildarray
+			if (guild.guildid=gstatus[2] and box.guildid=gstatus[1])
+				if (gstatus[3]="BE")
+					alreadyMade:=1;
+				else
+					newArray.append(gstatus);
+				endif
+			else
+				newArray.append(gstatus);
+			endif
+		endforeach
+		
+		if (alreadyMade)
+			SendSysMessage(who,"Your request to stop the war has been retired.",0x03,90);
+			box.setprop("GuildDeclareStatus",newarray);
+		else
+			SendSysMessage(who,"You have request to stop the war.",0x03,90);
+			local request:={};
+			request[1]:=box.guildid;
+			request[2]:=guild.guildid;
+			request[3]:="BE";
+			guildarray.append(request);
+			box.setprop("GuildDeclareStatus",guildarray);
+		endif		
+	endif
+else
+	// Declare War
+	local guildarray:=guild.getprop("GuildDeclareStatus");
+	if (!guildarray)
+		guildarray:={};
+	endif
+	local alreadypresent:=0;
+
+	foreach gstatus in guildarray
+		if (box.guildid=gstatus[2] and guild.guildid=gstatus[1])
+			if (gstatus[3]="RE")
+				//The other guild as previously declare war
+				alreadypresent:=1;
+				break;
+			endif
+		endif
+	endforeach
+	if (alreadypresent)
+	//	It's not possible that the guild is an ally guild
+		SendSysMessage(who,"Your declaration of war has been made.",0x03,90);
+		guild.addenemyguild(box);
+	
+		// remove request from the guild
+		local newArray:={};
+		foreach gstatus in guildarray
+			if (box.guildid=gstatus[2] and guild.guildid=gstatus[1])
+				if (!(gstatus[3]="RE"))
+					newArray.append(gstatus);
+				endif
+			else
+				newArray.append(gstatus);
+			endif
+		endforeach
+		guild.setprop("GuildDeclareStatus",newarray);
+	else
+	// Add the request or remove the previos one
+		local newArray:={};
+		guildarray:=box.getprop("GuildDeclareStatus");
+		if (!guildarray)
+			guildarray:={};
+		endif
+		local alreadyMade:=0;
+		foreach gstatus in guildarray
+			if (guild.guildid=gstatus[2] and box.guildid=gstatus[1])
+				if (gstatus[3]="RE")
+					alreadyMade:=1;
+				else
+					newArray.append(gstatus);
+				endif
+			else
+				newArray.append(gstatus);
+			endif
+		endforeach
+		
+		if (alreadyMade)
+			SendSysMessage(who,"Your declaration of war has been retired.",0x03,90);
+			box.setprop("GuildDeclareStatus",newarray);
+		else
+			SendSysMessage(who,"Your declaration of war has been made.",0x03,90);
+			local request:={};
+			request[1]:=box.guildid;
+			request[2]:=guild.guildid;
+			request[3]:="RE";
+			guildarray.append(request);
+			box.setprop("GuildDeclareStatus",guildarray);
+		endif		
+	endif
+endif
+
+// End of Code added by -=Magic=-
+
+endfunction
+
+function yourallies(guild,who)
+
+local all:=guild.allyguilds;
+
+if (all.size()=0)
+	SendSysMessage(who,"There are no ally guilds.",3,70);
+	sleep(3);
+else
+	FillInArrays(guild,all,"Ally Listing");
+	SendDialogGump(who,filllayout,filldata);
+endif
+
+endfunction
+
+
+function yourenemies(guild,who)
+
+local all:=guild.enemyguilds;
+
+if (all.size()=0)
+	SendSysMessage(who,"There are no enemy guilds.",3,34);
+	sleep(3);
+else
+	FillInArrays(guild,all,"Enemy Listing");
+	SendDialogGump(who,filllayout,filldata);
+endif
+
+endfunction
+
+function viewstatus(guild,who)
+	FillInArrays(guild,ListGuilds(),"View Status");
+	if (filldata[1]="Request/Declare - 0")
+		SendSysMessage(who,"There are no request/declare of ally/war.",3,90);
+		sleep(3);
+		return;
+	endif
+	SendDialogGump(who,filllayout,filldata);
+endfunction
+
+function findgm(guild)
+
+local returninfo:={"In Vote","0"},i,all:=guild.members,gm:=guild.getprop("gm");
+
+for(i:=1;i<=all.size();i:=i+1)
+	if (all[i].serial=gm) 
+		returninfo[1]:=all[i].name; 
+		returninfo[2]:=all[i].serial; 
+		returninfo[3]:=all[i]; 
+	endif
+endfor
+
+return returninfo;
+
+endfunction
+
+global gmlayout := {
+"nomove",
+"nodispose",
+"page 0",
+"resizepic 120 35 5054 400 420",
+"resizepic 210 395 5100 200 25",
+"text 140 45 5 0",
+"text 140 65 300 1",
+"button 350 396 4023 4024 1 0 2000",
+"button 240 396 4017 4018 1 0 1000",
+"radio 140 95 210 211 0 1",
+"text 165 95 0 2",
+"radio 140 115 210 211 0 2",
+"text 165 115 0 3",
+"radio 140 135 210 211 0 3",
+"text 165 135 0 4",
+"radio 140 155 210 211 0 14",
+"text 165 155 0 5",
+"radio 140 175 210 211 0 4",
+"text 165 175 0 6",
+"radio 140 195 210 211 0 5",
+"text 165 195 0 7",
+"radio 140 215 210 211 0 6",
+"text 165 215 0 8",
+"radio 140 235 210 211 0 7",
+"text 165 235 0 9",
+"radio 140 255 210 211 0 8",
+"text 165 255 0 10",
+"radio 140 275 210 211 0 9",
+"text 165 275 0 11",
+"radio 140 295 210 211 0 10",
+"text 165 295 0 12",
+"radio 140 315 210 211 0 11",
+"text 165 315 0 13",
+"radio 140 335 210 211 0 12",
+"text 165 335 0 14",
+"radio 140 355 210 211 0 13",
+"text 165 355 0 15"
+};
+
+global gmdata := {
+"",
+"",
+"Set the guild name.",
+"Set the guild's abbreviation.",
+"Change the icon of the guild.",
+"Change the color of the guild stone.",
+"Set the guild charter.",
+"Dismiss a member.",
+"Declare war (enemy).",
+"Declare peace (ally).",
+"Accept a recruit seeking membership.",
+"Refuse a recruit seeking membership.",
+"Set the guild master title.",
+"Grant a title to another member.",
+"Teleport this guildstone.",
+"Return to the main menu."
+};
+
+global layout:={
+"nodispose",
+"page 0",
+"resizepic 120 35 5054 400 420",
+"resizepic 210 395 5100 200 25",
+"text 140 45 5 0",
+"text 140 65 300 1",
+"button 350 396 4023 4024 1 0 2000",
+"button 240 396 4017 4018 1 0 1000",
+"radio 140 95 210 211 0 1",
+"text 165 95 0 2",
+"radio 140 115 210 211 0 2",
+"text 165 115 0 3",
+"radio 140 135 210 211 0 3",
+"text 165 135 0 4",
+"radio 140 155 210 211 0 4",
+"text 165 155 0 5",
+"text 165 172 0 6",
+"radio 140 195 210 211 0 5",
+"text 165 195 0 7",
+"text 165 212 0 8",
+"radio 140 235 210 211 0 6",
+"text 165 235 0 9",
+"radio 140 255 210 211 0 7",
+"text 165 255 0 10",
+"text 165 272 0 11",
+"radio 140 295 210 211 0 8",
+"text 165 295 0 12",
+"radio 140 315 210 211 0 9",
+"text 165 315 0 13",
+"text 165 335 0 14",
+"radio 140 335 210 211 0 10",
+"",
+"nomove",
+"text 165 355 0 16",
+"",
+"radio 140 355 210 211 0 11"
+};
+
+global data:={
+"",
+"",
+"Recruit someone into the guild.",
+"View the current members.",
+"View the charter.",
+"Declare your fealty. You are loyal to",
+"",
+"Toggle the guild's abbreviation in",
+"your name. Currently",
+"Resign from the guild.",
+"View list of recruits who have been",
+"sponsored to the guild.",
+"View list of your ally guilds.",
+"View list of your enemy guilds.",
+"View request/declare of ally/war",
+"",
+"Guild Master functions."
+};
+
+global viewlayout:={
+"nomove",
+"nodispose",
+"page 0",
+"resizepic 160 35 5054 340 120",
+"button 165 40 4017 4018 1 0 2000",
+"text 205 40  5 0",
+"text 170 65  5 1",
+"text 170 90  300 2",
+"text 170 115 300 3",
+"",
+""
+};
+
+global viewdata:={
+"",
+"",
+"",
+"",
+""
+};
+
+global chartviewlayout:={
+"page 0",
+"nodispose",
+"nomove",
+"resizepic 50 50 5054 540 380",
+"text 160 80 5 0"
+};
+
+global chartviewdata:={ "" };
+
+global chartsetdata:={
+"Input your Guild Charter:",
+"Save Charter:",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+};
+
+global chartsetlayout:={
+"page 0",
+"nodispose",
+"nomove",
+"resizepic 20 20 2620 517 260",
+"text 30 0 910 0",
+"text 400 0 910 1",
+"button 508 0 4011 4013 1 0 2",
+"textentry 30 30 500 20 910 2 2",
+"textentry 30 50 500 20 910 3 3",
+"textentry 30 70 500 20 910 4 4",
+"textentry 30 90 500 20 910 5 5",
+"textentry 30 110 500 20 910 6 6",
+"textentry 30 130 500 20 910 7 7",
+"textentry 30 150 500 20 910 8 8",
+"textentry 30 170 500 20 910 9 9",
+"textentry 30 190 500 20 910 10 10",
+"textentry 30 210 500 20 910 11 11",
+"textentry 30 230 500 20 910 12 12",
+"textentry 30 250 500 20 910 13 13"
+};
+
+global filllayout:={};
+global filldata:={};
+
+function FillInArrays(guild,alldata,heading)
+
+local chr,doit,num:=alldata.size(),i,j,locationscount:=3,rowcount:=120,pagecount:=2,count:=0,gm:=findgm(guild),col:=150;
+
+if (heading="Declare Fealty" or heading="Set Allies" or heading="Set Enemies" or heading="Dismiss Member" or heading="Grant Member Title" or heading="Refuse Recruit" or heading="Accept Recruit" or heading="View Status") 
+	col:=175; 
+endif
+
+filllayout:={};
+filldata:={};
+filldata:={"","","Name"};
+filllayout:={"page 0","nomove","nodispose","resizepic 120 35 5054 400 420","resizepic 210 395 5100 200 25","text 240 55 5 0","text 240 75 5 1","text "+col+" 100 0 2","page 1"};
+
+local StatusArray:={};
+local CurrentStatus:="";
+local totRequestDeclare:=0;
+if (heading="View Status")
+	StatusArray:=guild.getprop("GuildDeclareStatus");
+	if (!StatusArray)
+		StatusArray:={};
+	endif
+endif
+
+for (i:=1;i<=num;i:=i+1)
+	doit:=1;
+
+	if (heading="Set Allies")
+//		if (guild.isallyguild(alldata[i])=1 or guild.guildid=alldata[i].guildid)
+		if (guild.isenemyguild(alldata[i])=1 or guild.guildid=alldata[i].guildid)
+			doit:=0;
+		endif
+	endif
+
+	if (heading="Set Enemies")
+//		if (guild.isenemyguild(alldata[i])=1 or guild.guildid=alldata[i].guildid)
+		if (guild.isallyguild(alldata[i])=1 or guild.guildid=alldata[i].guildid)
+			doit:=0;
+		endif
+	endif
+	
+	if (heading="View Status")
+		doit:=0;
+		foreach gstatus in StatusArray
+			if (alldata[i].guildid=gstatus[2])
+				doit:=1;
+				CurrentStatus:=gstatus[3];
+				totRequestDeclare:=totRequestDeclare+1;
+				break;
+			endif
+		endforeach
+	endif
+
+	if (doit=1)
+		count:=count+1;
+
+		if (count>13)
+  			count:=1;
+  			rowcount:=120;
+  			filllayout.append("button 315 396 5540 5541 0 "+pagecount);
+  			if (pagecount>2) 
+  				filllayout.append("button 275 396 5537 5538 0 "+(pagecount-2)); 
+  			endif
+  			filllayout.append("page "+pagecount);
+  			pagecount:=pagecount+1;
+		endif
+
+		filllayout.append("text "+col+" "+rowcount+" 300 "+locationscount);
+
+		if (heading="Declare Fealty" or heading="Dismiss Member" or heading="Grant Member Title") 
+			filllayout.append("radio 150 "+rowcount+" 210 211 0 "+alldata[i].serial); 
+		endif
+		if (heading="Set Allies" or heading="Set Enemies")
+			filllayout.append("radio 150 "+rowcount+" 210 211 0 "+alldata[i].guildid); 
+		endif
+
+		if (heading="Member Listing" or heading="Declare Fealty" or heading="Dismiss Member" or heading="Grant Member Title")
+  			if (gm[2]=alldata[i].serial)
+    				filldata.append("GM: "+alldata[i].name);
+  			else
+    				filldata.append(alldata[i].name);
+  			endif
+		elseif (heading="Ally Listing" or heading="Enemy Listing")
+  			filldata.append(alldata[i].getprop("guildname"));
+		elseif (heading="View Status")
+			if (CurrentStatus="RA")
+	  			filldata.append((alldata[i].getprop("guildname") + " (request Ally)"));
+			elseif (CurrentStatus="BA")
+	  			filldata.append((alldata[i].getprop("guildname") + " (broken Ally)"));
+			elseif (CurrentStatus="RE")
+	  			filldata.append((alldata[i].getprop("guildname") + " (declare War)"));
+			elseif (CurrentStatus="BE")
+	  			filldata.append((alldata[i].getprop("guildname") + " (stop War)"));
+			endif		
+		elseif (heading="Set Enemies")
+			if (guild.isenemyguild(alldata[i])=1)
+  				filldata.append((alldata[i].getprop("guildname")+ " (*)"));
+			else
+	  			filldata.append(alldata[i].getprop("guildname"));
+			endif		
+		elseif (heading="Set Allies")
+			if (guild.isallyguild(alldata[i])=1)
+  				filldata.append((alldata[i].getprop("guildname")+ " (*)"));
+			else
+	  			filldata.append(alldata[i].getprop("guildname"));
+			endif		
+		elseif (heading="Recruit Listing")
+			chr:=SystemFindObjectBySerial(alldata[i]);
+			if(!chr) 
+				chr:=SystemFindObjectBySerial(alldata[i],SYSFIND_SEARCH_OFFLINE_MOBILES); 
+			endif
+			filldata.append(chr.name);
+		elseif (heading="Refuse Recruit" or heading="Accept Recruit")
+			chr:=SystemFindObjectBySerial(alldata[i]);
+			if(!chr) 
+				chr:=SystemFindObjectBySerial(alldata[i],SYSFIND_SEARCH_OFFLINE_MOBILES); 
+			endif
+			filldata.append(chr.name);
+			filllayout.append("radio 150 "+rowcount+" 210 211 0 "+chr.serial);
+		endif
+
+		locationscount:=locationscount+1;
+		rowcount:=rowcount+20;
+	endif
+
+endfor
+
+if (heading="Member Listing")
+  	filldata[1]:=(i-1)+" - "+heading;
+elseif (heading="Dismiss Member" or heading="Grant Member Title" or heading="Refuse Recruit" or heading="Accept Recruit")
+  	filldata[1]:=(i-1)+" - "+heading;
+  	filllayout.append("button 350 396 4023 4024 1 0 1");
+  	filllayout.append("button 240 396 4017 4018 1 0 1000");
+elseif (heading="View Status")
+  	filldata[1]:="Request/Declare - "+(totRequestDeclare);
+elseif (heading="Ally Listing")
+  	filldata[1]:="Ally Guilds - "+(i-1);
+elseif (heading="Enemy Listing")
+  	filldata[1]:="Enemy Guilds - "+(i-1);
+elseif (heading="Recruit Listing")
+  	filldata[1]:="Current Recruits - "+(i-1);
+elseif (heading="Set Allies")
+  	if (count=0) 
+  		filldata[3]:=""; 
+  		filllayout.append("text "+col+" "+rowcount+" 300 "+locationscount); 
+  		filldata.append("There are no guilds to choose from."); 
+  	endif
+  	filldata[1]:="Delcare Peace (Ally)";
+  	filllayout.append("button 350 396 4023 4024 1 0 1");
+  	filllayout.append("button 240 396 4017 4018 1 0 1000");
+elseif (heading="Set Enemies")
+  	if (count=0) 
+  		filldata[3]:=""; 
+  		filllayout.append("text "+col+" "+rowcount+" 300 "+locationscount); 
+  		filldata.append("There are no guilds to choose from."); 
+  	endif
+  	filldata[1]:="Delcare War (Enemies)";
+  	filllayout.append("button 350 396 4023 4024 1 0 1");
+  	filllayout.append("button 240 396 4017 4018 1 0 1000");
+elseif (heading="Declare Fealty")
+  	filldata[1]:=heading;
+  	filllayout.append("button 350 396 4023 4024 1 0 1");
+  	filllayout.append("button 240 396 4017 4018 1 0 1000");
+endif
+
+if (pagecount>2) 
+	filllayout.append("button 275 396 5537 5538 0 "+(pagecount-2)); 
+endif
+
+endfunction
+
+function SetGuildName(guild,who,stone)
+local changetime:=guild.getprop("nametime");
+
+if(ReadGameClock()<changetime)
+	SendSysMessage(who,"You can only change the guild name once a week.",3,34);
+	sleep(3);
+	return;
+endif
+
+local tname:=SendTextEntryGump(who,"What is the guild name?",0,1,MAX_GUILD_NAME_SIZE,"Type the name.");
+if(!tname) 
+	sleep(3); 
+	return; 
+endif
+
+// check the len of guild name.
+if(len(tname)>MAX_GUILD_NAME_SIZE)
+	SendSysMessage(who,"Guild name can't have more than "+MAX_GUILD_NAME_SIZE+" characters.",3,34);
+	sleep(3);
+	return;
+endif
+
+local i,dupe:=0,allguilds:=ListGuilds();
+
+// check for dupe name
+for(i:=1;i<=allguilds.size();i:=i+1)
+	if (lower(allguilds[i].getprop("guildname"))=lower(tname)) 
+		dupe:=1; 
+	endif
+endfor
+
+// if dupe, error and exit
+if (dupe=1) 
+	PrintTextAbovePrivate(stone,"That guild name is already taken.",who); 
+	sleep(3); 
+	return; 
+endif
+
+if(!NameValidation(tname)) 
+	SendSysMessage(who,"You are using invalid characters",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+stone.name:="Guildstone for "+tname;
+guild.setprop("guildname",tname);
+guild.setprop("nametime",ReadGameClock()+(7*24*3600));
+
+allguilds:=guild.members;
+
+// change all players
+for(i:=1;i<=allguilds.size();i:=i+1)
+	allguilds[i].title_guild:=tname;
+endfor
+
+endfunction
+
+
+function SetAbrevName(guild,who,stone)
+
+local changetime:=guild.getprop("abrvtime");
+
+if(ReadGameClock()<changetime)
+	SendSysMessage(who,"You can only change the guild abbreviation once a week.",3,34);
+	sleep(3);
+	return;
+endif
+
+local tname:=SendTextEntryGump(who,"What's the new guild's abbreviation?",0,1,MAX_GUILD_ABREV_SIZE,"Type the abrev");
+if(!tname) 
+	return; 
+endif
+
+if(len(tname)>MAX_GUILD_ABREV_SIZE)
+	SendSysMessage(who,"Abbreviation can't have more than "+MAX_GUILD_ABREV_SIZE+" characters.",3,34);
+	sleep(3);
+	return;
+endif
+
+local abv,name,result,i,dupe:=0,allguilds:=ListGuilds();
+
+// check for dupe name
+for(i:=1;i<=allguilds.size();i:=i+1)
+	if (lower(allguilds[i].getprop("guildabv"))=lower(tname)) 
+		dupe:=1; 
+	endif
+endfor
+
+// if dupe, error and exit
+if (dupe=1) 
+	PrintTextAbovePrivate(stone,"That abbreviation is already taken.",who); 
+	sleep(3); 
+	return; 
+endif
+
+if(!NameValidation(tname))
+	SendSysMessage(who,"You are using invalid characters.",3,34);
+	sleep(3);
+	return;
+endif
+
+allguilds:=guild.members;
+
+// change all players
+for(i:=1;i<=allguilds.size();i:=i+1)
+
+	if (getobjproperty(allguilds[i].serial,"abv")<>"0")
+		abv:=getobjproperty(allguilds[i].serial,"abv");
+		result:=find(allguilds[i].name," ["+abv+"]",1);
+		name:=allguilds[i].name;
+		result:=result-1;
+		name:=name[1,result];
+		allguilds[i].name:=name+" ["+tname+"]";
+		setobjproperty(allguilds[i].serial,"abv",tname);
+	endif
+endfor
+
+guild.setprop("guildabv",tname);
+guild.setprop("abrvtime",ReadGameClock()+(7*24*3600));
+
+endfunction
+
+// get new charter from gm
+function setcharter(guild,who)
+
+SetNotes(guild);
+
+local box:=SendDialogGump(who,chartsetlayout,chartsetdata );
+
+if (box[0]<>2) 
+	SendSysMessage(who,"Canceled.",3,34); 
+	sleep(1); 
+	return; 
+endif
+
+Local subnote,i,message:={};
+
+// get message
+for (i:=2;i<=13;i:=i+1)
+	subnote:=box[i];
+	subnote[1,Find(subnote, ": ", 1)+1]:="";
+	if (subnote<>"")
+		message[i-1]:=subnote;
+	endif
+endfor
+
+guild.setprop("gc",message);
+SendSysMessage(who,"Charter saved.",3,70);
+
+endfunction
+
+
+function SetNotes(guild)
+
+Local i,message:=guild.getprop("gc");
+
+if (message[1]="NONE") 
+	return; 
+endif
+
+for (i:=3; i<=14; i:=i+1)
+	if (message[i-2]<>error)
+		chartsetdata[i]:=message[i-2];
+	else
+		chartsetdata[i]:="";
+	endif
+endfor
+
+endfunction
+
+
+function setstonecolor(guild,who,stone)
+
+local i,textline,maxcolor:=52,firstrow:=20,secondrow:=40,newcolor:=0;
+
+local res:=SendDialogGump(who,dyelayout,dyedata);
+local basecolor:=res[0];
+
+if (!basecolor)
+  	SendSysMessage(who,"Canceled.",3,34);
+  	return;
+elseif (basecolor=1101)
+  	maxcolor:=47;
+elseif (basecolor=2000)
+  	maxcolor:=18;
+  	firstrow:=18;
+  	secondrow:=18;
+endif
+
+if (basecolor=1)
+  	newcolor:=0;
+else
+
+  for (i:=1;i<=firstrow;i:=i+1)
+    	textline:="button 20 "+cstr(65+(20*i))+" 2104 2103 1 0 "+cstr(basecolor+i);
+    	dyelayout2[cint(len(dyelayout2)+1)]:=textline;
+  endfor
+
+  for (i:=21;i<=secondrow;i:=i+1)
+    	textline:="button 100 "+cstr(65+(20*(i-20)))+" 2104 2103 1 0 "+cstr(basecolor+i);
+    	dyelayout2[cint(len(dyelayout2)+1)]:=textline;
+  endfor
+
+  for (i:=41;i<=maxcolor;i:=i+1)
+    	textline:="button 180 "+cstr(65+(20*(i-40)))+" 2104 2103 1 0 "+cstr(basecolor+i);
+    	dyelayout2[cint(len(dyelayout2)+1)]:=textline;
+  endfor
+
+  basecolor:=basecolor-1;
+
+  for (i:=1;i<=firstrow;i:=i+1)
+    	textline:="text 40 "+cstr(60+(20*i))+" "+cstr(basecolor+i)+" "+cstr(i);
+    	dyelayout2[cint(len(dyelayout2)+1)]:=textline;
+  endfor
+
+  for (i:=21;i<= secondrow;i:=i+1)
+    	textline:="text 120 "+cstr(60+(20*(i-20)))+" "+cstr(basecolor+i)+" "+cstr(i);
+    	dyelayout2[cint(len(dyelayout2)+1)]:=textline;
+  endfor
+
+  for (i:=41;i<= maxcolor;i:=i+1)
+	textline:="text 200 "+cstr(60+(20*(i-40)))+" "+cstr(basecolor + i)+" "+cstr(i);
+    	dyelayout2[cint(len(dyelayout2)+1)]:=textline;
+  endfor
+
+  dyelayout2[len(dyelayout2)+1]:="button 220 440 2119 2120 1 0 0";
+
+  res:=SendDialogGump(who,dyelayout2,dyedata2);
+  newcolor:=res[0];
+
+  if (!newcolor)
+    	SendSysMessage(who,"Canceled.",3,34);
+    	return;
+  endif
+
+endif
+
+stone.color:=newcolor;
+    
+endfunction
+
+
+function Teleport(guild,who,stone)
+
+if(ReadGameClock()<guild.getprop("movetime"))
+	SendSysMessage(who,"The guild stone can only be moved once a week.",3,34);
+	return;
+endif
+
+guild.setprop("movetime",ReadGameClock()+(7*24*3600));
+
+stone.movable:=1;
+stone.newbie:=1;
+MoveItemToContainer(stone,who.backpack);
+stone.graphic:=UOBJ_PACKED_GUIDSTONE_GRAPHIC;
+stone.movable:=0;
+stone.usescript:=":guildstone:guildmove";
+
+SendSysMessage(who,"Double click on the stone in your backpack to place the stone.",3,70);
+
+endfunction
+
+
+Global dyelayout := {
+"nodispose",
+"page 0",
+"resizepic 30 30 2620 280 200",
+"button 50 70 2104 2103 1 0 1101",
+"button 50 90 2104 2103 1 0 1201",
+"button 50 110 2104 2103 1 0 1301",
+"button 50 130 2104 2103 1 0 1401",
+"button 50 150 2104 2103 1 0 1501",
+"button 50 170 2104 2103 1 0 1601",
+"button 130 70 2104 2103 1 0 1701",
+"button 130 90 2104 2103 1 0 1801",
+"button 130 110 2104 2103 1 0 1001",
+"button 130 130 2104 2103 1 0 901",
+"button 130 150 2104 2103 1 0 801",
+"button 130 170 2104 2103 1 0 701",
+"button 210 70 2104 2103 1 0 601",
+"button 210 90 2104 2103 1 0 752",
+"button 210 110 2104 2103 1 0 852",
+"button 210 130 2104 2103 1 0 252",
+"button 210 150 2104 2103 1 0 152",
+"button 210 170 2104 2103 1 0 2000",
+"button 130 194 2104 2103 1 0 1",
+"text 50 42 1000 0",
+"text 70 65 1121 1",
+"text 70 85 1221 2",
+"text 70 105 1321 3",
+"text 70 125 1421 4",
+"text 70 145 1521 5",
+"text 70 165 1621 6",
+"text 150 65 1721 7",
+"text 150 85 1821 8",
+"text 150 105 1021 9",
+"text 150 125 921 10",
+"text 150 145 821 11",
+"text 150 165 721 12",
+"text 230 65 621 13",
+"text 230 85 752 14",
+"text 230 105 852 15",
+"text 230 125 272 16",
+"text 230 145 152 17",
+"text 230 165 2000 18",
+"button 50 195 2122 2123 1 0 99",
+"text 150 190 1000 19"
+};
+
+Global dyedata := {
+"Select a color range:",
+"One",
+"Two",
+"Three",
+"Four",
+"Five",
+"Six",
+"Seven",
+"Eight",
+"Nine",
+"Ten",
+"Eleven",
+"Twelve",
+"Thirteen",
+"Fourteen",
+"Fifteen",
+"Sixteen",
+"Seventeen",
+"Eighteen",
+"Remove Color"
+};
+
+Global dyelayout2 := {
+"nodispose",
+"page 0",
+"gumppic 0 50 2620",
+"gumppic 20 50 2621",
+"gumppic 290 50 2622",
+"gumppic 0 68 2623",
+"gumppic 22 68 2624",
+"gumppic 288 68 2625",
+"gumppic 0 272 2623",
+"gumppic 22 272 2624",
+"gumppic 288 272 2625",
+"gumppic 0 476 2626",
+"gumppic 20 476 2627",
+"gumppic 290 476 2628",
+"text 20 62 1102 0"
+};
+
+Global dyedata2 := {
+"Select a color:",
+"Color1",
+"Color2",
+"Color3",
+"Color4",
+"Color5",
+"Color6",
+"Color7",
+"Color8",
+"Color9",
+"Color10",
+"Color11",
+"Color12",
+"Color13",
+"Color14",
+"Color15",
+"Color16",
+"Color17",
+"Color18",
+"Color19",
+"Color20",
+"Color21",
+"Color22",
+"Color23",
+"Color24",
+"Color25",
+"Color26",
+"Color27",
+"Color28",
+"Color29",
+"Color30",
+"Color31",
+"Color32",
+"Color33",
+"Color34",
+"Color35",
+"Color36",
+"Color37",
+"Color38",
+"Color39",
+"Color40",
+"Color41",
+"Color42",
+"Color43",
+"Color44",
+"Color45",
+"Color46",
+"Color47",
+"Color48",
+"Color49",
+"Color50",
+"Color51",
+"Color52"
+};
+
+
+function AcceptCandidate(guild,who)
+
+local recruits:=guild.getprop("recruits");
+
+if (recruits[1]="NONE")
+	SendSysMessage(who,"There are no recruits.",3,34);
+	sleep(3);
+	return;
+endif
+
+FillInArrays(guild,recruits,"Accept Recruit");
+
+local i,choose:=0,box:=SendDialogGump(who,filllayout,filldata);
+
+if(box[0]=1000)
+  	return;
+elseif(box[0]=1)
+  	foreach k in (box.keys)
+    		if(k>1)
+      			choose:=k;
+      			break;
+    		endif
+  	endforeach
+else
+	return;
+endif
+
+if(!choose or choose=0) 
+	return; 
+endif
+
+local guildname,chr:=SystemFindObjectBySerial(choose);
+
+if(!chr)
+	chr:=SystemFindObjectBySerial(choose,SYSFIND_SEARCH_OFFLINE_MOBILES);
+else
+	if(guild.getprop("guildabv")="NONE")
+		guildname:=guild.getprop("guildname");
+	else
+//		guildname:=guild.getprop("guildname")+" ["+guild.getprop("guildabv")+"]";
+		guildname:=guild.getprop("guildname");
+	endif
+	SendSysMessage(chr,"You have been accepted to the guild "+guildname+".",3,70);
+endif
+
+if(GetObjProperty(chr,"guild_id"))
+	SendSysMessage(who,chr.name+" is already in a guild.",3,34);
+	sleep(3);
+else
+	guild.addmember(chr);
+	setobjproperty(chr,"guild_id",guild_id);
+	setobjproperty(chr,"fealty",chr.serial);
+	setobjproperty(chr,"abv","0");
+	chr.title_guild:=guildname;
+	chr.title_suffix := "";
+endif
+
+recruits:=guild.getprop("recruits");
+
+if (recruits.size()=1)
+	recruits:={"NONE"};
+else
+	for(i:=1;i<=recruits.size();i:=i+1)
+		if (recruits[i]=choose) 
+			recruits.erase(i); 
+			break; 
+		endif
+	endfor
+endif
+
+guild.setprop("recruits",recruits);
+
+endfunction
+
+
+function RefuseCandidate(guild,who)
+
+local recruits:=guild.getprop("recruits");
+
+if (recruits[1]="NONE")
+	SendSysMessage(who,"There are no recruits.",3,34);
+	sleep(3);
+	return;
+endif
+
+FillInArrays(guild,recruits,"Refuse Recruit");
+
+local i,choose:=0,box:=SendDialogGump(who,filllayout,filldata);
+
+if(box[0]=1000)
+  	return;
+elseif(box[0]=1)
+  	foreach k in (box.keys)
+    		if(k>1)
+      			choose:=k;
+      			break;
+    		endif
+  	endforeach
+else
+	return;
+endif
+
+if(!choose or choose=0) 
+	return; 
+endif
+
+local guildname,chr:=SystemFindObjectBySerial(choose);
+
+if(!chr)
+	chr:=SystemFindObjectBySerial(choose,SYSFIND_SEARCH_OFFLINE_MOBILES);
+else
+	if(guild.getprop("guildabv")="NONE")
+		guildname:=guild.getprop("guildname");
+	else
+		guildname:=guild.getprop("guildname")+" ["+guild.getprop("guildabv")+"]";
+	endif
+	SendSysMessage(chr,"You have NOT been accepted to the guild "+guildname+".",3,34);
+endif
+
+recruits:=guild.getprop("recruits");
+
+if (recruits.size()=1)
+	recruits:={"NONE"};
+else
+	for(i:=1;i<=recruits.size();i:=i+1)
+		if (recruits[i]=choose) 
+			recruits.erase(i); 
+			break; 
+		endif
+	endfor
+endif
+
+guild.setprop("recruits",recruits);
+
+endfunction
+
+
+function SetGMTitle(guild,who)
+
+local tname:=SendTextEntryGump(who,"What's the new guildmaster title name?",0,1,MAX_GM_TITLE_SIZE,"Type the name");
+
+local gm:=findgm(guild);
+
+if(!tname) 
+	SetObjProperty(gm[3],"GuildMemberTitle","");
+//	all[i].title_guild:="";
+	return; 
+endif
+if(len(tname)>MAX_GM_TITLE_SIZE) 
+	SendSysMessage(who,"Your title can't have more than "+MAX_GM_TITLE_SIZE+" characters.",3,34); 
+	sleep(3); 
+	return; 
+endif
+if(!NameValidation(tname)) 
+	SendSysMessage(who,"You are using invalid characters.",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+SetObjProperty(gm[3],"GuildMemberTitle",tname);
+
+if (!(getobjproperty(gm[3],"abv")="0"))
+	gm[3].title_suffix := ", " + tname + " ["+guild.getprop("guildabv")+"]";
+endif
+
+//gm[3].title_guild:=tname;
+
+endfunction
+
+
+function GrantTitle(guild,who)
+
+local all:=guild.members;
+
+if (all.size()=1) 
+	SendSysMessage(who,"You only have one guild member.",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+FillInArrays(guild,all,"Grant Member Title");
+local i,choose:=0,box:=SendDialogGump(who,filllayout,filldata);
+
+if(box[0]=1000)
+  	return;
+elseif(box[0]=1)
+  	foreach k in (box.keys)
+    		if(k>1)
+      			choose:=k;
+      			break;
+    		endif
+  	endforeach
+else
+	return;
+endif
+
+if(!choose or choose=0) 
+	return; 
+endif
+local gm:=findgm(guild);
+
+if(choose=gm[2]) 
+	SendSysMessage(who,"You cannot give the GM a title.",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+local tname:=SendTextEntryGump(who,"What's the new member title?",0,1,MAX_GUILD_TITLE_SIZE,"Type the title");
+
+if(!tname) 
+	SetObjProperty(all[i],"GuildMemberTitle","");
+//	all[i].title_guild:="";
+	return; 
+endif
+if(len(tname)>MAX_GUILD_TITLE_SIZE) 
+	SendSysMessage(who,"Your title can't have more than "+MAX_GUILD_TITLE_SIZE+" characters.",3,34); 
+	sleep(3); 
+	return; 
+endif
+if(!NameValidation(tname)) 
+	SendSysMessage(who,"You are using invalid characters",3,34); 
+	sleep(3); 
+	return; 
+endif
+
+for(i:=1;i<all.size();i:=i+1)
+	if (all[i].serial=choose) 
+		break; 
+	endif
+endfor
+
+SetObjProperty(all[i],"GuildMemberTitle",tname);
+
+if (!(getobjproperty(all[i],"abv")="0"))
+	all[i].title_suffix := ", " + tname + " ["+guild.getprop("guildabv")+"]";
+endif
+//all[i].title_guild:=tname;
+endfunction

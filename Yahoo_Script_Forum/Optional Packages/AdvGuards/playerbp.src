@@ -1,0 +1,46 @@
+use uo;
+use os;
+use basic;
+
+include "include/eventid";
+
+var GuardsNerve := GetProcess(GetGlobalProperty("#pid_guardsnerve"));
+
+program Player_Backpack (backpack)
+	var NPCDesc := ReadConfigFile("::npcdesc");
+	var ev, text, lastcry := 0, player;
+	//lastcry holds the time someone last called guards, it's used for an anti-spam code.
+
+	RegisterForSpeechEvents(backpack, 0);
+
+	while (1)
+		ev := Wait_For_Event(120);
+		if (ev.type=EVID_SPEECH)
+			text := lower(ev.text);
+			player := ev.source;
+			if (text["guards"] and !ev.source.criminal and lastcry<ReadGameClock())//Did I hear guards?
+				foreach mobile in ListMobilesNearLocationEx(player.x, player.y, player.z, 12, 0x03)//List NORMAL+HIDDEN.
+															//Sorry Syz, but the constants wouldn't fit in one line :P
+					//Again the criminal-checking code I've talked about
+					if ((mobile.script["hostile"] and !mobile.master) or mobile.criminal)
+						CallGuardsOn(mobile);
+					endif
+				endforeach
+				lastcry := ReadGameClock()+3;
+			//Pretty useful thingie huh?
+			elseif (text["i must consider my sins"])
+				SendSysMessage(player, "Sorry, the murder system has not been implemented, yet.");
+			elseif (text["i resign from my guild"])
+				SendSysMessage(player, "Sorry, the guildsystem has not been implemented, yet.");
+			endif
+		endif
+	endwhile
+endprogram
+
+//This will handle guard-calling
+function CallGuardsOn (mobile)
+	var event := struct;
+	event.+type := EVID_GUARD_CALL;
+	event.+criminal := mobile;
+	GuardsNerve.SendEvent(event);
+endfunction

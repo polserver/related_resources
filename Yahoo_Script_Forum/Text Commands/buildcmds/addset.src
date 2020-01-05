@@ -1,0 +1,91 @@
+////////////////////////
+//  2/20/00  fixed problem with things getting placed opposite
+////////////////////////
+include "include/modules";
+include "include/output";
+
+var sets_cfg := ReadConfigFile( "sets" );
+
+program makeset( who )
+      var prop2 := {}, props2 := {}, things := {}, theitem := {}, ttype;
+      var numprops2 := 1, numthings := 0, range, center := {};
+      prop2.+ name;
+      prop2.+ value;
+      theitem.+ objtype;
+      theitem.+ x;
+      theitem.+ y;
+      theitem.+ z;
+      theitem.+ color;
+      theitem.+ key;
+	center.+ x;
+	center.+ y;
+	center.+ z;
+      SendSysMessage( who, "Select the left most spot of your group" );
+      var whereleft := TargetCoordinates( who );
+      SendSysMessage( who, "Select the right most spot of your group" );
+	var whereright := TargetCoordinates( who );
+	var thesetname := RequestInput( who, who.backpack, "What would you like to call this set?" );
+	if (sets_cfg[thesetname])
+		SendSysMessage( who, "That set name is already taken!" );
+		return;
+	endif
+	if( CInt( Abs(whereleft.x - whereright.x) ) > CInt( Abs(whereleft.y - whereright.y) ) )
+		range := CInt( Abs(whereleft.x - whereright.x)/2 );
+	else
+		range := CInt( Abs(whereleft.y - whereright.y)/2 );
+	endif
+	output( who, "Range is: " + range );
+	center.x := CInt( (whereleft.x + whereright.x) / 2 );
+	center.y := CInt( (whereleft.y + whereright.y) / 2 );
+	center.z := CInt( (whereleft.z + whereright.z) / 2 );
+	output( who, "Center is: " + center );
+      var stuff := ListItemsNearLocation( center.x, center.y, center.z, range );
+      foreach thing in stuff
+		theitem.objtype := thing.objtype;
+		output( who, "The item is: " + theitem.objtype );
+            numthings := numthings + 1;
+            theitem.x := thing.x - whereright.x;
+            theitem.y := thing.y - whereleft.y;
+            theitem.z := thing.z - center.z;
+            theitem.color := thing.color;
+            things[numthings] := theitem;
+   	endforeach
+      var intkey := GetConfigMaxIntKey( sets_cfg);
+      intkey := intkey + 1;
+      foreach item in things
+        	var prop := {}, props := {};
+        	prop.+ name;
+        	prop.+ value;
+        	var num_props := 1;
+            prop.name := "objtype";
+            prop.value := item.objtype;
+            props[num_props] := prop;
+            num_props := num_props + 1;
+            prop.name := "x";
+            prop.value := item.x;
+            props[num_props] := prop;
+            num_props := num_props + 1;
+            prop.name := "y";
+            prop.value := item.y;
+            props[num_props] := prop;
+            num_props := num_props + 1;
+            prop.name := "z";
+            prop.value := item.z;
+            props[num_props] := prop;
+            num_props := num_props + 1;
+            prop.name := "color";
+            prop.value := item.color;
+            props[num_props] := prop;
+            num_props := num_props + 1;
+            ttype := "setitem";
+            AppendConfigFileElem( "sets", ttype, intkey, props );
+            item.key := intkey;
+            prop2.name := "item";
+            prop2.value := intkey;
+            intkey := intkey + 1;
+            props2[numprops2] := prop2;
+            numprops2 := numprops2 + 1;
+	endforeach
+      AppendConfigFileElem( "sets", "set", thesetname, props2 );
+      UnloadConfigFile("sets");
+endprogram

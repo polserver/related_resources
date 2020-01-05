@@ -1,0 +1,119 @@
+This step describes how to modify the functions that make loot on monsters and treasure chests, so that the magic items made will be enchanted with your enchantments, instead of the old magic item setup...
+
+Ok, first, open the file "starteqp.inc", its in your pol\scripts\include directory.
+Now, at the top of the include, add this line:
+
+
+include "../../pkg/systems/sithmagicitems/sench";
+
+
+Now scroll down a while until you find the function "CreateFromItemString( who, str )"
+Change that function to this one:
+
+function CreateFromItemString(who, str)
+  var params := SplitWords(str);
+  var count, objname, color, chance;
+  var couleurs := ReadConfigFile("::colors");
+  count := RandomDiceRoll(CStr(params[1]));
+  params[1] := params[2];
+  params[2] := params[3];
+  params[3] := params[4];
+  if (!count)
+    count := 1;
+  endif
+  objname := params[1];
+  if(CInt(params[2]))
+    color := CInt(params[2]);
+  elseif (params[2])
+    color := 0;
+    var colorg := FindConfigElem(couleurs, params[2]);
+    if(colorg)
+      var str := GetConfigStringArray(colorg, "color");
+      var ar := {};
+      var rndint := RandomInt(len(str)) + 1;
+      ar := SplitWords(str[rndint]);
+      if(len(ar) > 1)
+        if(CInt(ar[2]) > 0)
+          color := RandomInt(CInt(ar[2]) - CInt(ar[1]))+1;
+        else
+          color := CInt(str[RandomInt(len(str))+1]);
+        endif
+      else
+        color := CInt(str[RandomInt(len(str))+1]);
+      endif
+      if(color == 1)
+        color := 0;
+      endif
+    endif
+  endif
+  if (!color)
+    color := 0;
+  endif
+  if(CInt(params[3]))
+    chance := CInt(params[3]);
+  else
+    chance := 100;
+  endif
+  if(CInt(RandomInt(100)+1) <= CInt(chance))
+    var i, canbemagic;
+    var maxlvl := cInt(magicadjustment / SMIS_MAXLVL_DIVIDER);
+    if( maxlvl > magicadjustment )
+      maxlvl := magicadjustment;
+    elseif( maxlvl < 1 )
+      maxlvl := 1;
+    endif
+    for(i:=1; i<=CInt(count); i:=i+1)
+      if (CInt(objname))
+        objname := CInt(objname);
+      endif
+      var item := CreateItemInContainer(who, objname);
+      item.color := color;
+      if(making_starting_equipment)
+        item.newbie := 1;
+        continue;
+      endif
+      if( (item.graphic in array( 0xdf2, 0xdf3, 0xdf4, 0xdf5, 0x13f9 )) && (magicspawnchance))
+        ProcessWand(item);
+      else
+        if(magicspawnchance)
+          canbemagic := getGroupByObjtype(item.objtype);
+          if( !RandomInt(SMIS_SCROLL_CHANCE) || !canbemagic )
+            makeMagicScroll( who, magicadjustment * 5, maxlvl );
+          else
+            var z, t;
+            for( z := 1; z <= RandomInt(SMIS_MAX_ENCHANTMENTS_PER_ITEM)+1; z := z + 1 )
+              for( t := 1; t <= 5; t := t + 1 )
+                if( addEnch(item,getRandomEnchantment(GetLevelForEnchantment(maxlvl),canbemagic)) )
+                  break;
+                endif
+              endfor
+            endfor
+            if( RandomInt(SMIS_NOSOCKET_CHANCE) && isSocketable(item.objtype) )
+              setSlots( item, RandomInt(SMIS_MAXSOCKET) + 1 );
+            endif
+          endif
+        endif
+      endif
+    endfor
+  endif
+endfunction
+
+
+
+And add this function below it:
+
+
+
+function GetLevelForEnchantment(maxLevel)
+  var x;
+  for( x := maxLevel; x > 1; x := x - 1 )
+    if( !RandomInt(x) )
+      if( x > 5 )
+        return 5;
+      else
+        return x;
+      endif
+    endif
+  endfor
+  return 1;
+endfunction

@@ -1,0 +1,58 @@
+use datafile;
+use uo;
+use os;
+use util;
+
+include "specialeventid";
+include "./inc/datatypes";
+
+var groups := array;
+var ev;
+
+program groupmanager()
+   
+   SetGlobalProperty("#groupmanagerpid", getpid());
+   load_groups();
+   
+   Syslog("[Group manager] Listening for events...");
+   
+   while (1)
+      ev := wait_for_event(15000);
+      if(ev)
+         case(ev.type)
+         EV_REQUEST_TEMPLATE: answer_request();
+         EV_GROUPS_UPDATED: load_groups();
+         endcase
+      endif 
+   endwhile
+
+endprogram
+
+function load_groups()
+
+   Syslog("[Group Manager] Reading data base.");
+   set_critical(1);
+   
+   var groupfile := OpenDataFile(GROUPS_DATAFILE);
+   var keys := groupfile.Keys();
+   var group := struct;
+   group.+entries;
+   
+   foreach key in keys
+      group.entries := groupfile.FindElement(key).GetProp("entries");
+      groups[key] := group;
+   endforeach
+   
+   set_critical(0);
+
+endfunction
+
+function answer_request()
+
+   var pos := CInt(RandomInt(groups[ev.groupid].entries.size()))+1;
+   
+   var process := GetProcess(Cint(ev.source));
+   ev.template := groups[ev.groupid].entries[pos];
+   process.SendEvent(ev);
+
+endfunction

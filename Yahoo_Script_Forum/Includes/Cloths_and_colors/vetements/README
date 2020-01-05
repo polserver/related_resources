@@ -1,0 +1,25 @@
+Random clothing
+===============
+
+---
+v 0.2 : Jan 20 (Boum)
+
+Added range of colors, gender-specialized equipement (thanks to Derek)
+
+
+---
+First release : Nov 29 (Boum)
+
+This package allows you to cloth your NPC (especially merchants). Useful for creating new shards.
+The 3 config files (equip2.cfg, colors.cfg & cloths.cfg) must go in the config directory (I didn't want to make a package, these enhancements can be made without restarting the server).
+The include file (vetement.inc) goes in the script/include directory.
+
+You may then change your AI scripts, for example merchant.src (in script/ai dir), or copy the script in the package if you have your own scripts that uses EquipFromTemplate core function.
+
+To do this, add an include line with vetement and replace the EquipeFromTemplate with Habille (this function uses the same parameters).
+
+Once all is done, recompile, and '.unload merchant' you may restart your NPC merchants.
+
+To change equipment list edit the config files (explained enough in them). equip2 may be a copy from equip.cfg, it has been created just not to crush the original file. 
+
+

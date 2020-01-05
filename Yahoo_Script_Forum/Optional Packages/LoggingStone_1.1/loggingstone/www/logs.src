@@ -1,0 +1,39 @@
+use uo;
+use http;
+
+include "include/datafile";
+var LoggerDataFile := DFOpenDataFile("Logger", DF_CREATE);
+var LoggerElem := QueryParam("StoneSerial");
+LoggerElem := DFFindElement(LoggerDataFile, LoggerElem, DF_NO_CREATE);
+
+program Logger()
+	if (!LoggerElem)
+		foreach serial in (LoggerDataFile.keys())
+			WriteHTML("<a href=/pkg/loggingstone/logs.ecl?StoneSerial=" + serial + ">" + serial + "</a><br>");
+		endforeach
+	else
+		ShowLog();
+	endif
+endprogram
+
+Function ShowLog()
+	var PropList := {};
+	foreach propname in (LoggerElem.PropNames())
+		if (propname != "LineNum")
+			proplist.append(cint(propname));
+		endif
+		sleepms(2);
+	endforeach
+	
+	proplist.sort();
+	
+	foreach propname in PropList		
+			var prop := LoggerElem.GetProp(hex(propname));
+			var name := prop[1];
+			var text := prop[2];
+			
+			WriteHTML("Line:" + propname + "&lt;" + name + "> " + text + "<br>");
+			
+			sleepms(2);
+	endforeach
+endfunction

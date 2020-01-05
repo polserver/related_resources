@@ -1,0 +1,6 @@
+use uo;
+
+program blah(who)
+	var tgt := Target( who );
+	tgt.usescript := "";
+endprogram

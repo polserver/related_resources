@@ -1,0 +1,54 @@
+///////////////////////////////////////////////////////////////////////////////////////
+//	delcprop.src
+//	
+//	author :	Caine
+//	date :		2/10/2000
+//
+//	Description :	This command gives the GM the power to erase the cprops 
+//			of any item/mobile realtime, this leads to the erasing of 
+//			cprops on the fly.
+//
+//	notes :		Careful, the shyte can hit the fan if you change settings that 
+//			shouldn't be messed with ;)
+//
+//			i use a loop for multiple arguments... ie. more than one propname
+//			can be specified, for ease of erasing
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+use uo;
+use basic;
+use os;
+
+program textcmd_delcprop( who, text )
+
+	local props := SplitWords( text );
+	
+	if( !(props[1]) ) // if there isn't at least one argument -> message and return
+		SendSysmessage( who , "Syntax: .delcprop [propname] ([propname]...) " );
+		return;
+	endif
+	
+	SendSysmessage ( who, "Removing " + len(props) + " cprop(s)" ); // more for debug... but it looked cool so i left it in
+	
+	local obj := Target( who );
+	
+	local i := 1;
+	if ( obj )
+		for ( i := 1; i <= len( props ); i := i + 1 )
+			if ( GetobjProperty( obj, props[i] ) ) // if property exists
+				if ( EraseobjProperty( obj, props[i] ) ) // if it can be removed... i think its possible to remove all the cprops, but just incase! :) 
+					SendSysmessage( who, "Removing Cprop : " + props[i] + " : Sucess!" );
+				else
+					SendSysmessage( who, "Removing Cprop : " + props[i] + " : Failed!" );
+				endif
+			else
+				SendSysmessage( who, "Removing Cprop : " + props[i] + " : Not Found!" ); // message if there was no cprop by that name
+			endif
+		endfor
+	else
+		SendSysmessage( who, "Cancelled!" );
+		return;
+	endif
+
+endprogram

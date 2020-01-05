@@ -1,0 +1,35 @@
+use uo;
+use util;
+
+include "include/client";
+
+program use_enchantedbone(who, bone)
+
+	SendSysMessage(who, "Where do you wish to drop the bone?");
+	local casttarg := targetcoordinates (who);
+
+	if (!casttarg)
+		SendSysMessage(who, "Cancelled.");
+		return;
+	endif
+
+	local parms := {};
+	parms .+ script := "tamed";
+	
+	local thecritter := CreateNPCfromTemplate("skeleton", casttarg.x, casttarg.y, casttarg.z, parms);
+	SetObjProperty(thecritter,"master", who.serial);
+	PlaySoundEffect(thecritter, 0x022b);
+
+	if (!thecritter.backpack)
+		local hispack := createitematlocation(thecritter.x, thecritter.y, thecritter.z - 25, 0xe75, 1);
+		equipitem(thecritter, hispack);
+	endif
+
+
+	if ( RandomInt(5) > 0 )
+		CreateItemInBackpack(thecritter, bone.objtype);
+	endif
+
+	destroyitem(bone);
+
+endprogram

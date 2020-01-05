@@ -1,0 +1,42 @@
+EZbuild commands ver. .5
+Created by GMTalos. gmtalos@bughunt.net  Updated 12/15/00 
+******************************************************
+
+What is EZbuild?
+
+EZbuild a group of commands that create a small graveyard, random camp, or Spider lair all with monsters.
+
+___
+
+CAMP:
+
+Type .camp # to create a random 10 item camp.  
+
+Usage is: .Camp [#]
+Current camps are:
+1=Orc
+2=Lizard
+3=Troll
+4=Etten/Ogre
+5=Ratmen
+6=Empty camp
+
+Sometimes items are placed on top of eachother or in bad positions. So some .destroy might be needed. 
+
+___
+
+GRAVE:
+
+Type .grave to create a random 10 item graveyard with random undead creatures. Same as above with using .destroy. Most of the time it works just fine and saves a lot of time.
+
+___
+
+Web:
+
+Type .web to create a random 10 item Spider Lair with random spiders. Same as above with using .destroy. Most of the time it works just fine and saves a lot of time. This works great in caves and dungeons.
+
+___
+
+Installing:
+
+Drop the camp.src and grave.src into your Pol\scripts\textcmd\seer directory. Compile and enjoy.

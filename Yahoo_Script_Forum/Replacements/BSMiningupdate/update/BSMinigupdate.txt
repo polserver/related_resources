@@ -1,0 +1,18 @@
+This is the updates for the ore colors that are currently in Athlore Sphere right now. Also, armor creation from the new ingots is included in the blacksmith update. For backwards compatablility the Base colors from POL-DISTRO are still in the game I just added to them. 
+
+Exceptional Armor was made a little easier to make, there is a 30% chance to create exeptional armor, this can easly be changed in the make_blacksmith_items.src
+Search for:if (CheckSkill( character, SKILLID_BLACKSMITHY, 90, points ) and randomint(100) < 30)  //check2 
+This does a random# from 1-100 and if its below 30 and the person smithing is 90 it will create an exceptional piece. 
+
+Also, all armor crafted will be named the name of the ore, IE Bloodrock Ingots will make "a bloodrock plate arms" ect... I switched all item names to lower case to keep with OSI's standard.
+
+To add ores, you must add the ingots in the objtype.inc in order for it to work. then to the mining, and finally crafting scripts. If you look at how I did the scripts, its pretty self explanitory.
+
+Please note, Onyx was renamed to "Blackrock" but the ingots name, and def names remain Onyx for backwards compatibility with the POL-DISTRO.
+
+If you runing the POL-Distro you can simply overwrite what you have with this package, it has been tested and works 100% with the 92Distro.
+
+Any questions, suggestions or concerns you may contact me at ICQ#4826924
+or astreb@scecnet.net
+Valcor of Athlore
+www.athlore.com/ar

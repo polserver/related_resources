@@ -1,0 +1,13 @@
+include "include/modules";
+
+program snowstorm( who )
+	var res :=	SetRegionWeatherLevel( "Background",  // region name
+                                		2,            // weather type = snow
+                               		10,           // severity
+                                		0,            // aux
+                                		6 );          // lightoverride
+	Broadcast( "A snowstorm moves into Sosaria" );
+	if (!res)
+		SendSysMessage( who, "Error: " + res.errortext );
+	endif
+endprogram

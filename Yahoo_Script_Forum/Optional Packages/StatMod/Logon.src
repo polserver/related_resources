@@ -1,0 +1,47 @@
+///////////////////////////////////////////////////////////
+// Logon.src
+//
+// Login script to handle statmods.
+//
+// Creator: Oroborous
+// Contact: mkow@sympatico.ca
+//
+// Created: Dec-2000
+///////////////////////////////////////////////////////////
+
+use cfgfile;
+
+include "include/client";
+include "StatMod";
+
+program Logon(who)
+	ResetAllStatMods(who);
+	EraseObjProperty(who, "#StatModPID");
+
+	ApplyArmourPenalties(who);		
+	start_script(":statmod:statmod", who);
+endprogram
+
+///////////////////////////////////////////////////////////
+// Purpose:	Applies DEX penalties from any amrour worn.
+// Params:	who			Ref to mobile.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function ApplyArmourPenalties(byref who)
+	var itemcfg := ReadConfigFile(":*:itemdesc");
+	
+	var penalty;
+	foreach itm in ListEquippedItems(who) 
+		if (itm.isa(POLCLASS_ARMOR))
+			penalty := itemcfg[itm.objtype].DexPenalty;
+			if (!penalty)
+				continue;
+			endif
+			
+			//print(itm.desc + " penalty = " + penalty);
+			who.dexterity_mod := who.dexterity_mod - penalty;
+		endif			
+	endforeach
+	
+	return 1;
+endfunction

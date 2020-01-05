@@ -1,0 +1,22 @@
+////////////////////////////////////////////////
+//returns t_r_amt % dmg
+////////////////////////////////////////////////
+
+use uo;
+use util;
+
+include "include/client";
+
+program five_pc_fs_a( parms )
+
+	var attacker := parms[1];
+	var wep := parms[7];
+	var amt := GetObjProperty( wep, "t_r_amt" );
+
+	if( amt )
+	  ApplyDamage( attacker, parms[6] * amt / 100 );
+	endif
+
+	return;
+
+endprogram

@@ -1,0 +1,23 @@
+use uo;
+use os;
+
+include "../../foundations/gumps/gumps";
+include "include/canAccess";
+include "travelitems";
+
+program ItemStone(who,itemstone)
+  EraseObjProperty(who, "IsMeditating");
+  EraseObjProperty(who, "HealTimer");
+  if(!can_access(who, itemstone))
+    return;
+  endif
+  if(!ReserveItem(itemstone))
+    return;
+  endif
+if(Distance(who,itemstone) > 2)
+ SendSysMessage(who,"Stone is Too Far Away!");
+ return;
+endif
+DisplayMenu(who,itemstone);
+detach();
+endprogram

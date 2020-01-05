@@ -1,0 +1,6 @@
+use uo;
+use os;
+
+//This script sets a global variable with the GuardsNerve PID.
+//Without this global property THE SYSTEM WONT WORK as the scripts wont communicate with each other.
+SetGlobalProperty("#pid_guardsnerve", Start_Script("guardsnerve").pid);

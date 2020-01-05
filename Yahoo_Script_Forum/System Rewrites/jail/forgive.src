@@ -1,0 +1,28 @@
+/*
+*****************************************************************
+*			   Forgive.src			 	*
+*      		     Simple Jail System 1.1			*
+*			   by bzagh				*
+*			 bzagh@bzagh.de				*
+*								*
+*****************************************************************
+*/
+
+use uo;
+
+
+program forgive( who )
+ 
+ SendSysMessage( who, "Whom should be forgiven?");
+ local player :=  Target( who , TGTOPT_NOCHECK_LOS );
+ 
+ if(!player.acctname)
+  SendSysMessage( who, "You can only forgive players");
+  return;
+ endif
+ 
+ local account := player.acct;
+ 
+ account.EraseProp( "Jail" );
+
+endprogram

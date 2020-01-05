@@ -1,0 +1,47 @@
+use uo;
+use os;
+use util;
+
+include "../../cleric";
+include "include/unmount";
+
+program earthquake(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif
+	
+	ReleaseScript(info.pid);
+	
+	var i;
+	for (i:=0;i<=piety+3;i:=i+1)
+		PlaySoundEffect(who, 544);
+		foreach mobile in ListMobilesNearLocationEX(who.x, who.y, who.z, piety*2, 3)
+			if (mobile != who)
+				PlaySoundEffect(mobile, 526);
+				performaction(mobile, 32);
+				mobile.facing := RandomDiceRoll("1d8");
+				PlayObjectCenteredEffect(mobile, 0x3728, 7, 7);
+				var hand1 := getequipmentbylayer(mobile, 1);
+				var hand2 := getequipmentbylayer(mobile, 2);
+				if (hand1 && mobile.ip)
+					MoveItemToLocation(hand1, mobile.x, mobile.y, mobile.z);
+					SendSysMessage(mobile, "You drop " + hand1.desc);
+				endif
+				if (hand2 && mobile.ip)
+					MoveItemToLocation(hand2, mobile.x, mobile.y, mobile.z);
+					SendSysMessage(mobile, "You drop " + hand2.desc);
+				endif
+				unmount(mobile);
+				ApplyRawDamage(mobile, piety+3);
+			endif
+		endforeach
+		sleepms(900);
+		PlaySoundEffect(who,547);
+	endfor
+endprogram	

@@ -1,0 +1,20 @@
+use uo;
+
+program textcmd_ident( who, text )
+	SendSysMessage( who, "Assign a keyword to whom?" );
+    	var whom := Target( who );
+    	if (!whom)
+		SendSysMessage( who, "Cancelled" );
+    	endif
+    	if (!text)
+		SendSysMessage( who, "Cancelled" );
+    	endif
+    	var keyword := lower("keyword"+text);
+	if (!GetObjProperty(whom, keyword ) )
+		var response := RequestInput( who, who.backpack, "whom should their response be?");
+		SetObjProperty( whom, keyword, response );
+		SendSysMessage( who, "npc will respond to "+ text + " by saying: "+ response );
+	else
+		EraseObjProperty( whom, keyword );
+	endif
+endprogram

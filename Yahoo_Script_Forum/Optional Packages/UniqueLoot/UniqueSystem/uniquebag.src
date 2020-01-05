@@ -1,0 +1,21 @@
+use uo;
+use os;
+use util;
+include "include/canAccess";
+include "include/unique";
+include "include/eventID";
+
+
+program dblclick_uniquebag( player, bag )
+	var temp := getItemUniqueBox();
+	MoveItemToContainer(temp, player.backpack);
+	DestroyItem( bag );
+	if (temp)
+		SendSysMessage(player, "It seems you have found something very rare !");
+		SendSysMessage(player, "You take an item out of the bag and place it in your backpack");
+		SendSysMessage(player, "The Strange bag vanishes");
+	endif
+	if (!temp)
+		SendSysMessage(player, "Hmm, the bag was empty.");
+	endif
+endprogram

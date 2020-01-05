@@ -1,0 +1,229 @@
+///////////////////////////////////////////////////
+// createitem.src - create items using a gump
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+///////////////////////////////////////////////////
+// Notes:
+//
+// - This script uses a datafile( generated on startup 
+//   by the script gmstaff\updateRootItems.src) to
+//   identify the objtypes of all non-pkg items in
+//   the root config/itemdesc....
+//   ( See notes at top of updateRootItems.src if you
+//   want to know why! )
+//  
+///////////////////////////////////////////////////
+// TODO:
+//
+//    - tidy up layout and optimize gump code (once
+//      basic alterations are completed)
+//    - add amount entry.
+//
+///////////////////////////////////////////////////
+
+use uo;
+use os;
+use cfgfile;
+use datafile;
+
+include "include/client";
+include "../pkg/foundations/gumps/gumps";
+
+const MAX_NUM_ITEMS:=200;
+const NON_PKG_ITEMS:="<non_package items>";
+
+var composite_itemdesc:=ReadConfigFile(":*:itemdesc");
+
+var df_rootitems;
+var finished:=0;
+var finished2;
+
+///////////////////////////////////////////////////
+
+program create_an_item(who,parms)
+  var rootitemsdf:=OpenDataFile("GmStaff");
+  if (rootitemsdf)
+    var df_rootitemselem:=rootitemsdf.findElement("RootItems");
+    df_rootitems:=df_rootitemselem.getprop("Itemtypes");
+    if (!len(df_rootitems))
+      df_rootitems:=0;
+    endif
+  endif
+  var package_names:=EnumerateItemPackages();
+  package_names.sort();
+  var package_buttons:=array;
+  var main_button;
+  var package_gump:=BuildPackageGump(package_names,package_buttons,main_button);
+  while (!finished)
+    finished2:=0;
+    var choose_pkg:=SendPackageGump(who,package_gump,package_names,package_buttons,main_button);
+    if (!finished)
+      while (!finished2)
+        var choose_item:=SendItemGump(who,choose_pkg);
+        if (choose_item)
+          var trgt:=TargetCoordinates(who);
+          var z:=(GetMapInfo(trgt.x,trgt.y).z);
+          var new_item:=CreateItemAtLocation(trgt.x,trgt.y,z,choose_item,1);
+          if (new_item.errortext)
+            sendsysmessage(who,"Can't create item : "+new_item.errortext);
+          else
+            setobjproperty(new_item,"Created",who.name);
+          endif
+        endif
+      endwhile  
+    endif
+  endwhile  
+endprogram
+
+///////////////////////////////////////////////////
+
+function EnumerateItemPackages()
+  var package_names:=array;
+  foreach package_name in (polcore().packages)
+    var package_cfg:=ReadConfigFile(":"+package_name+":itemdesc");
+    if ( (package_cfg) and (len(GetConfigStringKeys(package_cfg))) )
+      package_names.append(package_name);
+    endif
+  endforeach
+  return package_names;
+endfunction
+
+///////////////////////////////////////////////////
+
+function BuildPackageGump(byref package_names,byref package_buttons,byref main_button)
+  GFInitGump(0,0);
+  GFResizePic(0,0,BKGND_BLACKSLAB,400,500);
+  GFTextLine(160,20,COLOR_RED,"Create Item");
+  GFTextLine(163,22,COLOR_GREEN,"Create Item");
+  if (df_rootitems)
+    GFTextLine(60,50,COLOR_GREEN,"Select from items not in pkgs");
+    main_button:=GFButtonID(40,50,0x04ba,0x04b9,1);
+  endif
+  var page:=1;
+  while (BuildPackagePage(page,package_names,package_buttons))
+    page:=page+1;
+  endwhile
+  return (GFStoreGump());
+endfunction
+
+///////////////////////////////////////////////////
+
+function BuildPackagePage(page,byref package_names,byref package_button)
+  var start_i:=(page-1)*20+1;
+  var end_i:=(page*20);
+  if (start_i>len(package_names))
+    return 0;
+  endif
+  GFPage(page);
+  GFTextLine(360,20,COLOR_RED,page);
+  if (end_i>len(package_names))
+    end_i:=len(package_names);
+  else
+    GFButtonPage(360,400,0x0fc, 0x0fd,page+1);
+  endif
+  if (page>1)
+    GFButtonPage(360,100,0x0fa , 0x0fb,page-1);
+  endif
+  var i,y,button;
+  for (i:=start_i;i<=end_i;i:=i+1)  
+    y:=((i-start_i)*20+80);
+    GFTextLine(60,y,COLOR_GREEN,package_names[i]);
+    button:=GFButtonID(40,y,0x04ba,0x04b9,1);
+    package_button.append(button.keyid);
+  endfor
+  return 1;
+endfunction  
+
+///////////////////////////////////////////////////
+
+function SendPackageGump(who,byref package_gump,byref package_names,byref package_buttons,byref main_button)
+  var retval:=GFSendGumpV(who,package_gump);
+  if (retval[main_button.keyid])
+    return NON_PKG_ITEMS;
+  endif
+  var i;
+  for (i:=1;i<=len(package_buttons);i:=i+1)
+    if (retval[package_buttons[i]])
+      return (package_names[i]);
+    endif
+  endfor
+  finished:=1;
+  return 0;
+endfunction
+
+///////////////////////////////////////////////////
+   
+function SendItemGump(who,package_name)
+  var item_buttons:=array;
+  var items:=array;
+
+  GFInitGump(0,0);
+  GFResizePic(0,0,BKGND_BLACKSLAB,400,500);
+  if (package_name=NON_PKG_ITEMS)
+    GFTextLine(60,20,COLOR_GREEN,"Create Item not from pkg");
+    items:=df_rootitems;
+  else
+    var item_cfg:=ReadConfigFile(":"+package_name+":itemdesc");
+    items:=GetConfigIntKeys(item_cfg);
+    GFTextLine(60,20,COLOR_GREEN,"Create Item from pkg: "+package_name);
+  endif
+
+  var page:=1;
+  while (BuildItemPage(page,items,item_buttons))
+    page:=page+1;
+  endwhile
+    
+  var retval:=GFSendGump(who);
+  var i;
+  for (i:=1; i<=len(item_buttons); i:=i+1)
+    if (retval[item_buttons[i]])
+      return (items[i]);
+    endif
+  endfor
+  finished2:=1;
+  return 0;
+endfunction
+
+///////////////////////////////////////////////////
+
+function BuildItemPage(page,byref items,byref item_buttons)
+  var finished_build:=0;
+  var start_i:=(page-1)*20+1;
+  var end_i:=(page*20);
+  if ((start_i>len(items)) or (start_i>=MAX_NUM_ITEMS))
+    return 0;
+  endif
+  GFPage(page);
+  GFTextLine(360,20,COLOR_RED,page);
+  if (end_i>=MAX_NUM_ITEMS)
+    end_i:=MAX_NUM_ITEMS;
+  elseif (end_i>len(items))
+    end_i:=len(items);
+  elseif (end_i<len(items))
+    GFButtonPage(360,400,0x0fc, 0x0fd,page+1);  
+  endif
+  if (page>1)
+    GFButtonPage(360,100,0x0fa , 0x0fb,page-1);
+  endif
+  var i,y,button,elem,item_name;
+  for (i:=start_i;i<=end_i;i:=i+1)
+    elem:=FindConfigElem(composite_itemdesc,items[i]);
+    item_name:=GetConfigString(elem,"Name");
+    if (!item_name)
+      item_name:=GetConfigString(elem,"Desc");
+      if (!item_name)
+        item_name:="Unnamed Item";
+      else
+        item_name:="'"+item_name+"'";
+      endif
+    endif
+    y:=((i-start_i)*20+80);
+    GFTextLine(150,y,COLOR_GREEN,item_name);
+    GFTextLine(60,y,COLOR_GREEN,("["+Hex(items[i])+"]"));
+    button:=GFButtonID(40,y,0x04ba,0x04b9,1);
+    item_buttons.append(button.keyid);
+  endfor
+  return 1;
+endfunction

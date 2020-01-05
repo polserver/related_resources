@@ -1,0 +1,648 @@
+//////////////////////////////////////////////////
+//
+//   Shinigami's Book-Package v1.01 (2000/02/26)
+//
+//   Usage: DoubleClick a Book (0xff0)
+//
+//   Author: Shinigami
+//   eMail : Shinigami@gmx.net
+//
+//   Dependencies: gumputil.inc
+//
+//////////////////////////////////////////////////
+
+/////////
+// ToDo
+/////////
+//
+// Fuer die 3 Fonts... alle breiten raussuchen und dann beim buch quasi
+//   'n konfigbutton als globalprop setzenbar, welcherdann immer von der
+//   include genommen wird, ganz egal wofuer
+// New gump's for the new Books (0xfef..0xff4)
+//   (only normal and golden book's are implemented yet)
+// Non-Writing-Books enable
+// Lesezeichen
+// Seitenzahlen
+// Zu lange Woerter verkuerzen ?
+// Transform to Myrahti's Gump-Include...
+// Optimization
+// Documentation
+
+/////////////////
+// Bibliotheken
+/////////////////
+
+Use uo;
+Use os;
+
+////////////
+// Include
+////////////
+
+Include "include/gumputil";
+
+////////////////////////
+// Klassendefinitionen
+////////////////////////
+
+Global book:={ };            // Buch
+       book.+gump:=0;        //   Nummer des Gumps
+       book.+edge_l_gump:=0; //   Ecke links  -> Nummer des Gumps
+       book.+edge_r_gump:=0; //   Ecke rechts -> Nummer des Gumps
+       book.+edge_l_x:=0;    //   Ecke links  -> X-Koordinate
+       book.+edge_r_x:=0;    //   Ecke rechts -> X-Koordinate
+       book.+edge_y:=0;      //   Ecken       -> Y-Koordinate
+       book.+line_l_x:=0;    //   Zeile links  -> Basis X-Koordinate
+       book.+line_r_x:=0;    //   Zeile rechts -> Basis X-Koordinate
+       book.+line_y:=0;      //   Zeilen       -> Basis Y-Koordinate
+       book.+width:=0;       //   Zeilen       -> Laenge einer Zeile
+       book.+lines:=0;       //   Zeilen       -> Anzahl pro Seite
+       book.+textcolor:=0;   //   Textfarbe
+       book.+showtitle:=0;   //   Titel anzeigen ?
+       book.+title_x:=0;     //   Titel -> X-Koordinate
+       book.+title_y:=0;     //   Titel -> Y-Koordinate
+       book.+wrbl:={ };      //   Button fuer Schreibmodus
+       book.+pgnr:={ };      //   Seitennummern
+       book.+sign:={ };      //   Lesezeichen
+
+Global wrbl:={ };            // Button fuer Schreibmodus
+       wrbl.+writeable:=0;   //   Beschreibar ?
+       wrbl.+gump:=0;        //   Nummer des Gumps
+       wrbl.+edge_l_x:=0;    //   Ecke links  -> X-Koordinate
+       wrbl.+edge_r_x:=0;    //   Ecke rechts -> X-Koordinate
+       wrbl.+edge_y:=0;      //   Ecken       -> Y-Koordinate
+
+Global pgnr:={ };            // Seitennummern
+       pgnr.+enabled:=0;     //   Nummer anzeigen ?
+       pgnr.+gumpbase:=0;    //   Nummer des ersten Gumps
+       pgnr.+edge_l_x:=0;    //   Ecke links  -> X-Koordinate
+       pgnr.+edge_r_x:=0;    //   Ecke rechts -> X-Koordinate
+       pgnr.+edge_y:=0;      //   Ecken       -> Y-Koordinate
+       pgnr.+textcolor:=0;   //   Textfarbe
+       pgnr.+texture:=0;     //   Texture zum Uebermalen
+       pgnr.+nice:=0;        //   Nummer mit Rand drumrum ?
+
+Global sign:={ };            // Lesezeichen
+       sign.+gump:=0;        //   Nummer des Gumps
+       sign.+x:=0;           //   X-Koordinate
+       sign.+y:=0;           //   Y-Koordinate
+       sign.+page:=0;        //   Seite            (0=wird nicht angezeigt)
+
+Global content:={ };              // Buchinhalt
+       content.+titleauthor:={ }; //   Titel und Autor
+       content.+story:="";        //   Inhalt
+
+///////////////////////
+// Objektdefinitionen
+///////////////////////
+
+Global book_wrbl:=wrbl;              // Button fuer Schreibmodus
+       book_wrbl.writeable:=1;       //   Beschreibar ?
+       book_wrbl.edge_l_x:=177;      //   Ecke links  -> X-Koordinate
+       book_wrbl.edge_r_x:=230;      //   Ecke rechts -> X-Koordinate
+       book_wrbl.edge_y:=10;         //   Ecken       -> Y-Koordinate
+
+Global golden_book:=book;            // Goldenes Buch
+       golden_book.gump:=500;        //   Nummer des Gumps
+       golden_book.edge_l_gump:=501; //   Ecke links  -> Nummer des Gumps
+       golden_book.edge_r_gump:=502; //   Ecke rechts -> Nummer des Gumps
+       golden_book.edge_l_x:=0;      //   Ecke links  -> X-Koordinate
+       golden_book.edge_r_x:=356;    //   Ecke rechts -> X-Koordinate
+       golden_book.edge_y:=0;        //   Ecken       -> Y-Koordinate
+       golden_book.line_l_x:=40;     //   Zeile links  -> Basis X-Koordinate
+       golden_book.line_r_x:=230;    //   Zeile rechts -> Basis X-Koordinate
+       golden_book.line_y:=30;       //   Zeilen       -> Basis Y-Koordinate
+       golden_book.width:=150;       //   Zeilen       -> Laenge einer Zeile
+       golden_book.lines:=9;         //   Zeilen       -> Anzahl pro Seite
+       golden_book.showtitle:=1;     //   Titel anzeigen ?
+       golden_book.title_x:=-125;    //   Titel -> X-Koordinate
+       golden_book.title_y:=-120;    //   Titel -> Y-Koordinate
+       golden_book.wrbl:=book_wrbl;  //   Button fuer Schreibmodus
+
+Global normal_book:=golden_book;     // Normales Buch
+       normal_book.gump:=510;        //   Nummer des Gumps
+       normal_book.edge_l_gump:=511; //   Ecke links  -> Nummer des Gumps
+       normal_book.edge_r_gump:=512; //   Ecke rechts -> Nummer des Gumps
+
+Global roll:={ };                   // Schriftrolle
+       roll.+gumpbase:=2520;        //   Nummer des ersten Gumps
+       roll.+gump_width:=600;       //   Gump -> Breite
+       roll.+gump_height:=400;      //   Gump -> Hoehe
+       roll.+bttn_x:=40;            //   Buttons -> X-Koordinate
+       roll.+bttn_y_refresh:=13;    //   Buttons -> Y-Koordinaten
+       roll.+bttn_y_morelines:=roll.gump_height-29;
+       roll.+title_x:=-135;         //   Titel -> X-Koordinate
+       roll.+title_y:=-95;          //   Titel -> Y-Koordinate
+       roll.+line_gumpbase:=3000;   //   Zeilen -> Nummer des ersten Gumps
+       roll.+line_x:=37;            //   Zeilen -> Basis X-Koordinate
+       roll.+line_y:=39;            //   Zeilen -> Basis Y-Koordinate
+       roll.+textcolor:=0;          //   Textfarbe
+
+///////////////
+// Konstanten
+///////////////
+
+Const bttn_write:=1;     // Button fuer Schreibmodus gedrueckt
+Const bttn_refresh:=2;   // Button fuer Neuaufbau gedrueckt
+Const bttn_morelines:=3; // Button fuer mehr Zeilen gedrueckt
+
+/////////////////////
+// Buchdefinitionen
+/////////////////////
+
+Global empty:=content;
+       empty.titleauthor:={"", "", "", "", "", ""};
+       empty.story:="";
+
+/////////////
+// Programm
+/////////////
+
+Program Book(who, book)
+  Local cont:=content;
+
+  Set_Script_Option(SCRIPTOPT_NO_RUNAWAY, 1);
+
+  Local bookcont:=GetObjProperty(book, "bookcontent");
+  If (bookcont)
+    cont.titleauthor:=bookcont[1];
+    cont.story:=bookcont[2];
+  Else
+    cont:=empty;
+    cont.titleauthor[6]:=who.name;
+
+    // Import the Content of Dundee's Books
+    Local booktext:=GetObjProperty(book, "booktext");
+    If (booktext)
+      cont.story:=booktext[1];
+
+      Local opt:=Len(booktext);
+      Local i;
+      For (i:=2; i<=opt; i:=i+1);
+        cont.story:=cont.story+" "+booktext[i];
+      EndFor
+
+      EraseObjProperty(book, "booktext");
+    EndIf
+  EndIf
+
+  Local bookstyle;
+  If ((book.objtype=4079) Or (book.objtype=4081))
+    bookstyle:=golden_book;
+  Else
+    bookstyle:=normal_book;
+  EndIf
+
+  If (GetObjProperty(book, "writeable")=0)
+    bookstyle.wrbl.writeable:=0;
+  Else
+    bookstyle.wrbl.writeable:=1;
+  EndIf
+
+  cont:=Show_Book(who, bookstyle, cont, 10, 10);
+
+  book.name:=Get_Bookname(cont.titleauthor);
+  SetObjProperty(book, "bookcontent", cont);
+EndProgram
+
+//////////////////////
+// Ein Buch anzeigen
+//////////////////////
+
+Function Show_Book(who, book, content, x, y)
+  Local bttn;
+
+  Local cont;
+  Local layout;
+  Repeat
+    cont:=Create_BookContent(book, content);
+    layout:=Create_BookLayout(book, cont.data, x, y, cont.pages);
+
+    bttn:=CInt(SendDialogGump(who, layout, cont.data)[0]);
+    If (bttn=bttn_write)
+      content:=Show_Roll(who, roll, content, x, y);
+    EndIf
+  Until (bttn<>bttn_write);
+
+  Return (content);
+EndFunction
+
+//////////////////////////////////////
+// Inhalt des Buches zusammenbasteln
+//////////////////////////////////////
+
+Function Create_BookContent(book, content)
+  Local cont:={ };
+  Local width:=0;
+  Local index:=1;
+
+  cont.+words:=SplitWords(content.story);
+  cont.+data:=content.titleauthor;
+  cont.+lines:=0;
+
+  While (index<=Len(cont.words))
+    If (width=0)
+      Local testword:=cont.words[index];
+
+      cont.lines:=cont.lines+1;
+      cont.data[cont.lines+6]:=testword;
+      width:=GumpTextWidthFast(testword);
+      index:=index+1;
+    Else
+      Local testword:=" "+cont.words[index];
+      Local testwidth:=GumpTextWidthFast(testword);
+
+      If (width+testwidth<book.width)
+        cont.data[cont.lines+6]:=cont.data[cont.lines+6]+testword;
+        width:=width+testwidth;
+        index:=index+1;
+      Else
+        width:=0;
+      EndIf
+    EndIf
+  EndWhile
+
+  cont.+pages:=CInt(cont.lines/book.lines);
+  If (cont.pages*book.lines<cont.lines)
+    cont.pages:=cont.pages+1;
+  EndIf
+
+  If (cont.pages=0)
+    cont.pages:=1;
+  EndIf
+
+  Local maxlines:=cont.pages*book.lines+6;
+  Local line:=cont.lines+7;
+  While (line<=maxlines)
+    cont.data[line]:="";
+    line:=line+1;
+  EndWhile
+
+  Return (cont);
+EndFunction
+
+//////////////////////////////////////
+// Layout des Buches zusammenbasteln
+//////////////////////////////////////
+
+Function Create_BookLayout(book, data, x, y, pages)
+  Local layout:={"page 0", "nodispose"};
+  Local realpages;
+  Local dblpages;
+  Local odd:=0;
+
+  layout.append("gumppic "+CStr(x)+" "+CStr(y)+" "+CStr(book.gump));
+
+  If (book.showtitle=1)
+    realpages:=pages+1;
+  Else
+    realpages:=pages;
+  EndIf
+  dblpages:=CInt(realpages/2);
+  If (dblpages*2<realpages)
+    dblpages:=dblpages+1;
+    odd:=1;
+  EndIf
+
+  Local i;
+  For (i:=1; i<=dblpages; i:=i+1)
+    layout:=Create_Layout_Page(book, data, x, y, dblpages, i, odd, layout);
+  EndFor
+
+  Return (layout);
+EndFunction
+
+Function Create_Layout_Page(book, data, x, y, pages, page, odd, layout)
+  Local edge_l_gump:=CStr(book.edge_l_gump)+" ";
+  Local edge_r_gump:=CStr(book.edge_r_gump)+" ";
+  Local index:=(page-1)*2*book.lines+6;
+
+  layout.append("page "+CStr(page));
+
+  If (pages>1)
+    If (page=1)
+      layout.append("button "+CStr(x+book.edge_r_x)+" "+
+        CStr(y+book.edge_y)+" "+edge_r_gump+edge_r_gump+"0 2");
+    ElseIf (page=pages)
+      layout.append("button "+CStr(x+book.edge_l_x)+" "+
+        CStr(y+book.edge_y)+" "+edge_l_gump+edge_l_gump+"0 "+CStr(page-1));
+    Else
+      layout.append("button "+CStr(x+book.edge_r_x)+" "+
+        CStr(y+book.edge_y)+" "+edge_r_gump+edge_r_gump+"0 "+CStr(page+1));
+      layout.append("button "+CStr(x+book.edge_l_x)+" "+
+        CStr(y+book.edge_y)+" "+edge_l_gump+edge_l_gump+"0 "+CStr(page-1));
+    EndIf
+  EndIf
+
+  If (book.showtitle=1)
+    index:=index-book.lines;
+  EndIf
+
+  If ((page=1) And (book.showtitle=1))
+    layout.append("gumppic "+CStr(x+book.title_x)+" "+
+      CStr(y+book.title_y)+" 2204");
+
+    Local i;
+    For (i:=1; i<=3; i:=i+1)
+      layout.append("text "+CStr(GumpTextMid(data[i+1], x+book.title_x+197,
+        90))+" "+CStr(y+book.title_y+158+i*20)+" 50 "+CStr(i));
+    EndFor
+    For (i:=4; i<=5; i:=i+1)
+      layout.append("text "+CStr(GumpTextMid(data[i+1], x+book.title_x+197,
+        90))+" "+CStr(y+book.title_y+163+i*20)+" 50 "+CStr(i));
+    EndFor
+  Else
+    Local i;
+    For (i:=0; i<book.lines; i:=i+1)
+      layout.append("text "+CStr(x+book.line_l_x)+" "+
+        CStr(y+book.line_y+i*20)+" "+CStr(book.textcolor)+" "+CStr(index+i));
+    EndFor
+    If (book.wrbl.writeable=1)
+      layout.append("button "+CStr(x+book.wrbl.edge_l_x)+" "+
+        CStr(y+book.wrbl.edge_y)+" 4033 4033 1 0 "+CStr(bttn_write));
+    EndIf
+  EndIf
+  If ((page<pages) Or (odd=0))
+    Local i;
+    For (i:=0; i<book.lines; i:=i+1)
+      layout.append("text "+CStr(x+book.line_r_x)+" "+
+        CStr(y+book.line_y+i*20)+" "+CStr(book.textcolor)+" "+
+        CStr(index+i+book.lines));
+    EndFor
+    If (book.wrbl.writeable=1)
+      layout.append("button "+CStr(x+book.wrbl.edge_r_x)+" "+
+        CStr(y+book.wrbl.edge_y)+" 4033 4033 1 0 "+CStr(bttn_write));
+    EndIf
+  EndIf
+
+  Return (layout);
+EndFunction
+
+//////////////////////////
+// Buchname zurueckgeben
+//////////////////////////
+
+Function Get_Bookname(titleauthor);
+  Local words:=SplitWords(titleauthor[2]+" "+titleauthor[3]+" "+titleauthor[4]);
+  Local bookname;
+
+  If (Len(words)>0)
+    bookname:=words[1];
+
+    Local opt:=Len(words);
+    Local i;
+    For (i:=2; i<=opt; i:=i+1);
+      bookname:=bookname+" "+words[i];
+    EndFor
+  Else
+    bookname:="ein Buch";
+  EndIf
+
+  Return (bookname);
+EndFunction
+
+///////////////////////////////
+// Eine Schriftrolle anzeigen
+///////////////////////////////
+
+Function Show_Roll(who, roll, content, x, y)
+  Local newlines:=10;
+  Local buttons:=2;
+  Local bttn;
+
+  roll.+width:=roll.gump_width-2*roll.line_x-12-16;
+  roll.+lines:=CInt((roll.gump_height-2*roll.line_y)/20);
+
+  Local cont;
+  Local layout;
+  Local result;
+  Repeat
+    cont:=Create_RollContent(roll, content, newlines, buttons);
+    layout:=Create_RollLayout(roll, cont.data, x, y, cont.pages, buttons);
+
+    result:=SendDialogGump(who, layout, cont.data);
+
+    content:=Get_Content(result, cont.lines, buttons);
+
+    bttn:=CInt(result[0]);
+    If (bttn=bttn_morelines)
+      newlines:=newlines+10;
+    EndIf
+  Until ((bttn<>bttn_refresh) And (bttn<>bttn_morelines));
+
+  Return (content);
+EndFunction
+
+////////////////////////////////////////////
+// Inhalt der Schriftrolle zusammenbasteln
+////////////////////////////////////////////
+
+Function Create_RollContent(roll, content, newlines, buttons)
+  Local inputwidth:=CInt(roll.width/1.5);
+  Local cont:={ };
+  Local width:=0;
+  Local index:=1;
+  Local i;
+
+  cont.+words:=SplitWords(content.story);
+  cont.+data:={"", "Refresh Content", "Add 10 Lines"};
+  For (i:=2; i<=6; i:=i+1)
+    cont.data[i+buttons]:=content.titleauthor[i];
+  EndFor
+  cont.+lines:=0;
+
+  While (index<=Len(cont.words))
+    If (width=0)
+      Local testword:=cont.words[index];
+
+      cont.lines:=cont.lines+1;
+      cont.data[cont.lines+6+buttons]:=testword;
+      width:=GumpTextWidthFast(testword);
+      index:=index+1;
+    Else
+      Local testword:=" "+cont.words[index];
+      Local testwidth:=GumpTextWidthFast(testword);
+
+      Local testrollwidth:=inputwidth;
+      If (cont.lines<11)
+        testrollwidth:=testrollwidth-144;
+      EndIf
+
+      If (width+testwidth<testrollwidth)
+        cont.data[cont.lines+6+buttons]:=cont.data[cont.lines+6+buttons]+testword;
+        width:=width+testwidth;
+        index:=index+1;
+      Else
+        width:=0;
+      EndIf
+    EndIf
+  EndWhile
+
+  Local newline;
+  For (newline:=1; newline<=newlines; newline:=newline+1);
+    cont.lines:=cont.lines+1;
+    cont.data[cont.lines+6+buttons]:="";
+  EndFor
+
+  cont.+pages:=CInt(cont.lines/roll.lines);
+  If (cont.pages*roll.lines<cont.lines)
+    cont.pages:=cont.pages+1;
+  EndIf
+
+  Return (cont);
+EndFunction
+
+// ToDo: Alles was drueber ist, noch optimieren...
+
+////////////////////////////////////////////
+// Layout der Schriftrolle zusammenbasteln
+////////////////////////////////////////////
+
+Function Create_RollLayout(roll, data, x, y, pages, buttons)
+  Local layout:={"page 0", "nodispose"};
+
+  layout.append("resizepic "+CStr(x)+" "+CStr(y)+" "+CStr(roll.gumpbase)+
+    " "+CStr(roll.gump_width)+" "+CStr(roll.gump_height));
+
+  Local button_x:=CStr(x+roll.bttn_x)+" ";
+  Local text_x:=CStr(x+roll.bttn_x+19)+" ";
+  Local refresh_y:=y+roll.bttn_y_refresh;
+  Local morelines_y:=y+roll.bttn_y_morelines;
+
+  layout.append("button "+button_x+CStr(refresh_y)+
+    " 2117 2118 1 0 "+CStr(bttn_refresh));
+  layout.append("text "+text_x+CStr(refresh_y-3)+" 50 1");
+  layout.append("button "+button_x+CStr(morelines_y)+
+    " 2117 2118 1 0 "+CStr(bttn_morelines));
+  layout.append("text "+text_x+CStr(morelines_y-3)+" 50 2");
+
+  Local i;
+  For (i:=1; i<=pages; i:=i+1)
+    layout:=Create_RollLayout_Page(roll, data, x, y, pages, i, buttons, layout);
+  EndFor
+
+  Return (layout);
+EndFunction
+
+Function Create_RollLayout_Page(roll, data, x, y, pages, page, buttons, layout)
+  Local gumpbase:=CStr(roll.line_gumpbase)+" ";
+
+  layout.append("page "+CStr(page));
+
+  If (page=1)
+    Local x_base:=x+roll.title_x;
+    Local y_base:=y+roll.title_y;
+
+    layout.append("gumppic "+CStr(x_base)+" "+CStr(y_base)+" 2204");
+
+    Local x_str1;
+    Local x_str2;
+    Local y_str;
+    Local i_str;
+    Local i;
+
+    x_str1:=CStr(x_base+193);
+    x_str2:=CStr(x_base+197);
+    y_base:=y_base+158;
+    For (i:=1; i<=3; i:=i+1)
+      y_str:=" "+CStr(y_base+i*20)+" ";
+      i_str:=" "+CStr(i+buttons);
+      layout.append("resizepic "+x_str1+y_str+gumpbase+"96 20");
+      layout.append("textentry "+x_str2+y_str+"88 20 50"+i_str+i_str);
+    EndFor
+    y_base:=y_base+5;
+    For (i:=4; i<=5; i:=i+1)
+      y_str:=" "+CStr(y_base+i*20)+" ";
+      i_str:=" "+CStr(i+buttons);
+      layout.append("resizepic "+x_str1+y_str+gumpbase+"96 20");
+      layout.append("textentry "+x_str2+y_str+"88 20 50"+i_str+i_str);
+    EndFor
+
+    Local opt1:=Len(data)-buttons;
+    Local opt2:=roll.lines+6;
+    Local color:=CStr(roll.textcolor);
+
+    Local width1:=CStr(roll.width-132);
+    Local width2:=CStr(roll.width-144);
+    x_base:=x+roll.line_x;
+    x_str1:=CStr(x_base+144);
+    x_str2:=CStr(x_base+148);
+    y_base:=y+roll.line_y;
+    While ((i<opt1) And (i<16))
+      y_str:=" "+CStr(y_base+(i-6)*20)+" ";
+      i_str:=" "+CStr(i+buttons);
+      layout.append("resizepic "+x_str1+y_str+gumpbase+width1+" 20");
+      layout.append("textentry "+x_str2+y_str+width2+" 20 "+color+i_str+i_str);
+      i:=i+1;
+    EndWhile
+    width1:=CStr(roll.width+12);
+    width2:=CStr(roll.width);
+    x_str1:=CStr(x_base);
+    x_str2:=CStr(x_base+4);
+    While ((i<opt1) And (i<opt2))
+      y_str:=" "+CStr(y_base+(i-6)*20)+" ";
+      i_str:=" "+CStr(i+buttons);
+      layout.append("resizepic "+x_str1+y_str+gumpbase+width1+" 20");
+      layout.append("textentry "+x_str2+y_str+width2+" 20 "+color+i_str+i_str);
+      i:=i+1;
+    EndWhile
+  Else
+    Local x_str1:=CStr(x+roll.line_x);
+    Local x_str2:=CStr(x+roll.line_x+4);
+    Local y_base:=y+roll.line_y;
+    Local y_str;
+    Local width1:=CStr(roll.width+12);
+    Local width2:=CStr(roll.width);
+    Local color:=CStr(roll.textcolor);
+    Local i_str;
+
+    Local line_base:=(page-1)*roll.lines+6;
+    Local opt1:=Len(data)-buttons;
+    Local opt2:=line_base+roll.lines;
+    Local i:=line_base;
+    While ((i<opt1) And (i<opt2))
+      y_str:=" "+CStr(y_base+(i-line_base)*20)+" ";
+      i_str:=" "+CStr(i+buttons);
+      layout.append("resizepic "+x_str1+y_str+gumpbase+width1+" 20");
+      layout.append("textentry "+x_str2+y_str+width2+" 20 "+color+i_str+i_str);
+      i:=i+1;
+    EndWhile
+  EndIf
+
+  layout:=Create_ScrollBar(x+roll.line_x+roll.width+16, y+roll.line_y,
+    roll.lines*20, pages, page, layout);
+
+  Return (layout);
+EndFunction
+
+////////////////////////
+// Inhalt zurueckgeben
+////////////////////////
+
+Function Get_Content(result, lines, buttons);
+  Local cont:=content;
+  Local opt:=lines+6;
+  Local elem;
+  Local i;
+
+  Local titleauthor:={""};
+  For (i:=1; i<=5; i:=i+1)
+    elem:=result[i+buttons];
+    elem[1, Find(elem, ": ", 1)+1]:="";
+    titleauthor.append(Elem);
+  EndFor
+  cont.titleauthor:=titleauthor;
+
+  Local story:=result[6+buttons];
+  story[1, Find(story, ": ", 1)+1]:="";
+  For (i:=7; i<opt; i:=i+1)
+    elem:=result[i+buttons];
+    elem[1, Find(elem, ": ", 1)+1]:="";
+    If (elem<>"")
+      story:=story+" "+elem;
+    EndIf
+  EndFor
+  cont.story:=story;
+
+  Return (cont);
+EndFunction

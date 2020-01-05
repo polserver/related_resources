@@ -1,0 +1,53 @@
+/* webguilds.src
+ * Last Modified: 06/24/04
+ *
+ * This command makes it easier to do dev functions while in game.
+ * The only useful one is resetwebprop. The rest are kind of dangerous.
+ * By dangerous, of course, I mean it would only mess up the webprofile
+ * stuff and not anything else. These have not been heavily tested.
+ *
+*/
+
+use uo;
+use os;
+
+include ":webview:webGuilds";
+
+program webview(who, text) 
+
+  var props := SplitWords(text); 
+
+  if (props[1] == "setlocation")
+    var obj := Target(who);
+
+    if (!obj)
+      return 0;
+    elseif (obj.graphic != 0x0ed4)
+      SendSysMessage(who, "That is not a guildstone (0x0ed4)!");
+      return 0;
+    endif
+
+    SendSysMessage(who, "Setting new cords for guildstone.");
+    SetLocation(obj);
+
+  elseif (props[1] == "rebuildlocs")
+
+    SendSysMessage(who, "Manually rebuilding cords for all guildstones. This'll take a while.");
+    RebuildLocs();
+    SendSysMessage(who, "Finished rebuilding guild information!");
+
+  elseif (props[1] == "help" || props[1] == "usage" || !props[1])
+    usage(who);
+    return 0;
+  endif
+
+endprogram
+
+
+function usage(who, text := "")
+
+  SendSysMessage(who, "Possible usages:");
+  SendSysMessage(who, ".webguilds setlocation <target guildstone>");
+  SendSysMessage(who, ".webguilds rebuldlocs");
+
+endfunction

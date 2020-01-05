@@ -1,0 +1,29 @@
+
+use uo;
+use os;
+include "nature";
+
+program setup()
+
+var wstuff := GetGlobalProperty("Nature");
+var calendar := GetGlobalProperty("Calendar");
+
+if (!wstuff)
+      var newstuff := array;
+      newstuff[FELUCCA] := 0;
+      newstuff[TRAMMEL] := 0;
+      newstuff[DAY] := 0;
+      newstuff[NIGHTLEVEL] := NIGHTLIGHT;
+      newstuff[CURRENTLIGHT] := 0;
+      newstuff[CURRENTWEATHER] := 0;
+      SetGlobalProperty("Nature", newstuff);
+endif
+if (!calendar)
+      var newcalendar := array;
+      newcalendar[YEAR] := 1;
+      newcalendar[MONTH] := 1;
+      newcalendar[DAY] := 0;
+      SetGlobalProperty("Calendar", newcalendar);
+endif
+
+endprogram

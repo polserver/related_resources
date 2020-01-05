@@ -1,0 +1,25 @@
+/////////////////////////////////////////////
+//
+//   Initialize SpellBook v1.0 (2001/12/09)
+//
+//     Author: Shinigami
+//     eMail : Shinigami@gmx.net
+//
+//   Modifications:
+//     2001/12/09 Shinigami: First Write
+//
+/////////////////////////////////////////////
+
+/////////////
+// Includes
+/////////////
+
+Include "spellbook";
+
+//////////////////
+// Hauptprogramm
+//////////////////
+
+Program Start_SpellBook()
+  InitSpellBook();
+EndProgram

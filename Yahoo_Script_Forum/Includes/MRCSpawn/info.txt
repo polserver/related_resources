@@ -1,0 +1,75 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+//  MRCSpawn.cfg - Merchant Spawn Definitions
+//
+//    Used by: MRCSpawn.inc
+//
+//    Changed by Shinigami
+//    eMail: Shinigami@gmx.net
+//
+///////////////////////////////////////////////////////////////////////////////
+//
+//  MerchantType [CProp-MerchantType]
+//    Sells  [ProductGroup]   // Group of Items an NPC can sell to Player
+//    Buys   [ProductGroup]   // Group of Items an NPC can buy by Player, _OR_
+//    NoBuys [ProductGroup]   // Group of Items an NPC can't buy by Player
+//
+//  ProductGroup
+//    Item [objtype] [count]   // objtype = Item-Number or Item-Name
+//                             // count     (only usable with "Sells")
+//
+//  Samples:
+//    MerchantType baker
+//    {
+//        Sells Food_S
+//    }
+//
+//    MerchantType baker
+//    {
+//        Sells Food_S
+//        Buys  Food_B
+//    }
+//
+//    MerchantType baker
+//    {
+//        Sells  Food_S
+//        NoBuys Armor
+//    }
+//
+//    MerchantType baker
+//    {
+//        Buys  Food_B
+//    }
+//
+//    MerchantType baker
+//    {
+//        NoBuys Armor
+//    }
+
+///////////////////
+// MerchantType's
+///////////////////
+
+MerchantType Alchemist
+{
+    Sells Potions
+    Buys  Potions
+}
+
+///////////////////
+// ProductGroup's
+///////////////////
+
+ProductGroup Potions
+{
+    Item 0xdc01 10  // Lesser Heal
+    Item 0xdc0e 10  // Refresh
+    Item 0xdc14 10  // Lesser Cure
+    Item 0xdc04 10  // Lesser Poison
+    Item 0xdc08 10  // Lesser Explosion
+    Item 0xdc10 10  // Lesser Strength
+    Item 0xdc0b 10  // Lesser Agil
+    Item 0xdce6 10  // Nightsight
+    Item 0x0F0E 50 // Empty Bottles
+    Item 0x0e9b 2  // Mortar
+}

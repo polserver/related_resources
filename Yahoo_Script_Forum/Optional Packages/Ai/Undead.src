@@ -1,0 +1,50 @@
+///////////////////////////////////////////////////////////
+// Undead.src
+//
+// Undead AI script.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+include "include/AiMain";
+include "speech/DefaultSpeech";
+include "combat/DefaultCombat";
+include "noncombat/DefaultNonCombat";
+include "consider/DefaultConsider";
+
+///////////////////////////////////////////////////////////
+// AI CONFIG
+///////////////////////////////////////////////////////////
+ai.Bravery 		:= -1;
+ai.MakePeace	:= 0;
+ai.AttackNpc	:= 1;
+ai.FleePoint	:= 0;		// Never flee.
+ai.MoveDelay 	:= 500;
+ai.Bravery		:= 1000; 	// Attack anything!
+ai.dstart		:= 5;		// DOn't wander much.
+ai.psub			:= 20;
+
+
+if (mydesc.undead = "Mindless")
+	// Use defaults.
+elseif (mydesc.undead = "Lesser")
+	ai.MoveDelay 	:= 200;
+	ai.FleePoint	:= 10;
+	ai.Bravery		:= 100; 	// Twice as strong as me.
+
+elseif (mydesc.undead = "Greater")
+	ai.FleePoint 	:= 20;
+	ai.Bravery		:= 20; 		// Not nostupid
+	ai.GrabLoot		:= 1;		// Loot my kills, and use the gear!
+	ai.LootCorpses	:= 1;
+	ai.EquipLoot	:= 1;
+endif
+
+program Orc()
+	MainAILoop();
+endprogram

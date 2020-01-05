@@ -1,0 +1,34 @@
+use uo;
+
+program use_sigilviewer(who, sigilviewer)
+
+	SendSysMessage(who, "Select item.");
+	local TargetObj := target(who);
+
+	if (TargetObj.serial = sigilviewer.serial)
+		local x, y;
+		SendSysMessage(who, "Scanning...");
+		foreach x in ListItemsNearLocation(who.x, who.y, who.z, 8)
+			y := GetObjProperty(x, "burin");
+			if ( (!y) or (y = "") )
+				y :="";
+			else
+				SendSysMessage(who, x.desc + ": " + y);
+			endif
+		endforeach
+		return;
+	endif
+	
+	if (!TargetObj)
+		SendSysMessage(who, "Aborted.");
+		return;
+	endif
+
+	local sigils := GetObjProperty(TargetObj, "burin");
+
+	if ( (!sigils) or (sigils = "") )
+		SendSysMessage(who, "There are no sigils there.");
+	else
+		SendSysMessage(who, "You see: *" + sigils + "*");
+	endif
+endprogram

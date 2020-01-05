@@ -1,0 +1,16 @@
+use uo;
+use os;
+
+program mildtoxin(parms)
+	syslog("Hey, I'm in medium toxin!");
+	local who := parms[1];
+	syslog("Who is " + who.name);
+	while(1)
+		sendsysmessage(who, "You're taking poison damage!");
+		print ("Mildtoxin running on " + who.name);
+		print ("parms are " + parms);
+		applyrawdamage(who,3);
+		sleep(1);
+	endwhile
+endprogram
+		

@@ -1,0 +1,69 @@
+//--> control <--
+//
+// CONTROL:TEXTCMD/GM/CONTROL.SRC
+//
+// Displays a 640x480 GUMP colour-chart :)
+//
+// Creator: TJ Houston (Myrathi)
+// Contact: myrathi@templar.dhs.org
+//
+// Created: 05-Apr-2000
+// Updated: 24-Apr-2000
+//
+include "include/modules";
+include "include/gumps";
+
+const WINX_MAX := 640;
+const WINY_MAX := 480;
+
+var i, j, k, pm, button, buttonopen := 4005, buttonclose := 4007;
+
+program textcmd_gfchart( who, params )
+	if( !params )
+		pm := SendTextEntryGump( who, "Enter starting value (must be less than or equal to 6899)" );
+		pm := CInt( pm );
+		if( !pm )
+			pm := 0;
+		endif
+	else
+		pm := CInt(params);
+	endif
+	if( pm > 6899 )
+		pm := 6899;
+	endif
+	GFInitGump(5,5);
+	GFNoClose();
+	GFNoMove();
+	GFResizePic(0, 0, BKGND_STONE, WINX_MAX+3, WINY_MAX+4);
+	GFPage(0);
+	GFTextMid(0, 6, WINX_MAX, 67, "Gump Color Chart B" );
+	GFTextLine(465, 260, 90, "Choose a page" );
+	GFButtonID(WINX_MAX - 53, 6, 0x849, 0x848, 1); // Cancel
+	for( i := 1; i <= 4; i := i + 1 )
+		button := GFButtonPage(470, i*23+260, buttonopen, buttonclose, i );
+		GFTextLine(510, i*23+260, 90, CStr(i) );
+	endfor
+	for( k := 1; k <= 4; k := k + 1 )
+		GFPage(k);
+		var page_mod := CInt((k-1)*100);
+		GFTextLine(10, 10, 90, "Page " + CStr(k) );
+		for( j := 1; j <= 40; j := j + 1 )
+			GFTextLine(10, j*11+15, j+page_mod+pm, "aeiouAEIOU12345-#" + CStr(j+page_mod+pm) );
+			GFTextLine(215, j*11+15, j+40+page_mod+pm, "aeiouAEIOU12345-#" + CStr(j+40+page_mod+pm) );
+			if( j < 21 )
+				GFTextLine(420, j*11+15, j+80+page_mod+pm, "aeiouAEIOU12345-#" + CStr(j+80+page_mod+pm) );
+			endif
+		endfor
+	endfor
+	var retv := GFSendGump( who );
+	if( !retv && retv != 0 )
+		SendSysMessage( who, "Please close any other user-gumps and try again." );
+		return;
+	endif
+endprogram
+
+function output( who, msg )
+	if( who.cmdlevel )
+		SendSysMessage( who, msg );
+	endif
+endfunction

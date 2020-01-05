@@ -1,0 +1,25 @@
+include "include/modules";
+include "include/clock";
+
+program thunderstorm( who, params )
+    	var i := 5;
+	var timeoday := gettime();
+	Broadcast( "A thunderstorm moves into Sosaria" );
+	while ( i >= 1 )
+    		var rand := RandomInt( 30 );
+    		var res :=
+      	SetRegionWeatherLevel( "Background",// region name
+                                	1,   		// weather type = rain
+                               	50,   	// severity
+                                	0,   		// aux
+                             		rand ); 	// lightoverride
+    		foreach item in EnumerateOnlineCharacters()
+         		PlayLightningBoltEffect(item);
+    		endforeach
+    		if (!res)
+        		SendSysMessage( who, "Error: " + res.errortext );
+    		endif
+    		i := i - 1;
+    		sleep(60);
+	endwhile
+endprogram

@@ -1,0 +1,14 @@
+use uo;
+use os;
+
+include "/include/objtype";
+
+program can_insert( who, book, item )
+  if( !ReserveItem( book ) )
+    return 0;
+  endif
+  
+  SendSysMessage( who, "You cant put anything in the book." );
+  return 0;
+endprogram
+

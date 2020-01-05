@@ -1,0 +1,47 @@
+//////////////////////////////////////////////////////////////
+// .storm command - Creates a thunderstorm and rain-
+//	fall somewhat synchronized.  Also gradually darkens
+//	the light region until the summit of the storm, then
+//	begins to fade light back in.
+//////////////////////////////////////////////////////////////
+include "include/modules";
+include "include/client";
+
+var i, j, windval, thunderval;
+
+program storm( who )
+	for( j := 1; j <= 8; j := j + 1 )
+		for( i := 1; i <= 3; i := i + 1 )
+			var randi := RandomInt( i ) + 1;
+			var randj := RandomInt( j ) + 1;
+			if( randj <= i )
+				case( i )
+					1: thunderval := SFX_29;
+					2: thunderval := SFX_2A;
+					3: thunderval := SFX_207;
+				endcase
+				PlaySoundEffect( who, thunderval );
+				SetRegionLightLevel( "Background", 5 );
+				sleepms(200);
+				SetRegionLightLevel( "Background", CInt(10 + 20*Sin( ConstPi()*7.5*3*j/180 )) );
+			endif
+			if( randi == i )
+				case( i )
+					1: windval := SFX_15;
+					2: windval := SFX_16;
+					3: windval := SFX_17;
+				endcase
+				PlaySoundEffect( who, windval );
+			endif
+			sleep(5*i);
+		endfor
+		SetRegionWeatherLevel( "Background", 1, CInt(10 + 40*Sin( ConstPi()*7.5*3*j/180 )), 0, -1);
+		sleep(10);
+	endfor
+	j := RandomInt(5) + 1;
+	Detach();
+	for (i:= 1; i <= j; i := i + 1)
+		sleep(60);
+	endfor
+	SetRegionWeatherLevel( "Background", 0, 15);
+endprogram

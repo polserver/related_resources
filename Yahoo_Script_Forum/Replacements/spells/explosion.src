@@ -1,0 +1,41 @@
+use os;
+use uo;
+use util;
+
+include "include/client";
+include "include/spellattack";
+include "include/spellrestrictions";
+
+program cast_explosion( parms )
+
+	local circle := 6;
+	local caster;
+	local cast_on;
+
+	if (parms[1] = "#MOB")
+		caster := parms[2];
+		cast_on := parms[3];
+	else
+		caster := parms;
+		cast_on := CanTargetArea(caster, circle);
+		if (!cast_on)
+			return;
+		endif
+	endif
+
+	local dmg;
+	local victims := ListMobilesNearLocationEx( cast_on.x , cast_on.y , cast_on.z , 3 , 0x03);
+	foreach mobile in victims
+	    SetObjProperty(mobile, "LastHit", {caster.name, caster.serial, caster });
+
+		if( (CheckLosAt( mobile, cast_on.x , cast_on.y , cast_on.z ) ) )
+			dmg := CalcSpellDamage(circle,caster,mobile);
+			send_attack(mobile,caster, 43);
+			PlaySoundEffect( mobile , SFX_SPELL_EXPLOSION );
+			PlayStationaryEffect( mobile.x,mobile.y,mobile.z , FX_EXPLODE_3 , 7 , 0x10 );
+			ApplyRawDamage( mobile , Resisted(circle,caster,mobile,dmg) );
+		endif
+
+    	endforeach
+
+endprogram

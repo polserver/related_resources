@@ -1,0 +1,22 @@
+use uo;
+
+const UOBJ_GUARD_NODE := 0xa340;
+
+
+program textcmd_globalhide(who)
+
+
+SendSysMessage(who, "Starting guards wipe, hold on");
+
+local counter :=0;
+foreach obj in ListObjectsInBox(0,0,-127,10000,10000,127)
+	if ((obj.amount) and (obj.objtype =UOBJ_GUARD_NODE ))
+		counter:=counter+1;
+		destroyitem(obj);
+	endif
+endforeach
+
+
+SendSysMessage(who, "All " +counter + " guard nodes were destroyed");
+SetGlobalProperty("guardssystem", 0);
+endprogram

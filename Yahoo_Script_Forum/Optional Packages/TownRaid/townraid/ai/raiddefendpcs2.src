@@ -1,0 +1,396 @@
+//Inteligent Raid Defender AI v0.8
+//GM Scull
+//Rewrite of defenders, these fellas are actually inteligent. THey also happen to use a heap more cycles...
+
+//These dudes can:
+/*
+ Find and Defend a weaker player
+ Talk and taunt
+ -Shout commands to each other
+ -Shout out how much gold is left
+ -give an aproxamation on how many enemys are left
+ -patrol around gold area
+ 
+
+*/
+
+
+use npc;
+use os;
+use cfgfile;
+use math;
+
+include "include/eventid";
+include "include/randname";
+include "include/anchors";
+include "include/dist";
+include "ai/combat/raidcombatevent";
+include "include/vetement";
+include "include/string";
+
+var me:=self();
+
+const HALT_THRESHOLD := 3; // how close before he attacks?
+
+var goalx, goaly;
+var PiD:=GetProperty("#towndefender");
+var last_gold_amount;
+
+const ST_WANDER := 1;
+const ST_ENGAGE := 2;
+
+
+//const EV_COMMANDER_READYUP; //called by commander npc
+
+program RaidDefendPlayers()
+
+	var settings := GetGlobalProperty("raidsettings"+PiD);
+	if (!settings[1] or !settings[2] or !GetGlobalProperty("raidname"+PiD) or (!pid))
+		KillMe();
+	else
+		goalx:=settings[1];
+		goaly:=settings[2];
+	endif
+	settings:={ };
+
+	if (getobjproperty(me, "frozen"))
+		me.frozen := 1;
+	endif
+
+	
+	SetMeUp();
+
+    SetWarMode( 0 );
+    EnableMainEvents();
+
+	local ev;
+	local next_wander := 0;
+	
+	SetAnchor( goalx, goaly, 10, 0 );
+	WalkTowardLocation(goalx, goaly);
+
+	LookForBuddy();
+
+
+    while (1)
+
+		if (readgameclock() > next_wander)
+       		wander();
+			ev := os::wait_for_event( 1 );
+			next_wander := readgameclock() + 10;
+
+			Say_random_string(ST_WANDER);
+
+			if (!GetGlobalProperty("raidname"+PiD)) //check for finished raid (note if they are fighting, they dun stop)
+				KillME();
+				return;
+			endif	
+		endif
+
+        repeat
+
+            case (ev.type)
+                EVID_ENGAGED:
+                EVID_DAMAGED:
+					Fight( ev.source );
+                EVID_ENTEREDAREA:
+					if ((ev.source.script["raid"]) and (ev.source.script != "raiddefendpcs") )
+						Say_random_string(ST_ENGAGE);
+						Fight( ev.source );
+						next_wander:=readgameclock()+15;
+					endif
+				EVID_SPEECH:
+					if (ev.source:=me.master)
+						say("Ill be right with ya");
+					endif
+            endcase
+
+        until (!(ev := os::wait_for_event(1)) );
+
+   endwhile      
+
+
+endprogram
+
+
+function CloseDistance( opponent )
+ 
+	if (DistanceToLocation( goalx, goaly ) > 10)
+		RunTowardLocation( goalx,goaly );
+		RunTowardLocation( goalx,goaly );
+		return 2;
+	endif
+
+    case Distance( me, opponent )
+        1:              // the most likely, so first 
+        0:
+            return 1;
+        default:
+            RunToward( opponent );
+            return 0;
+    endcase
+
+endfunction
+
+
+function EnableMainEvents()
+    DisableEvents( EVID_SPEECH + EVID_DISENGAGED + EVID_LEFTAREA + EVID_OPPONENT_MOVED );
+    EnableEvents( EVID_ENGAGED + EVID_DAMAGED + EVID_ENTEREDAREA, HALT_THRESHOLD );
+endfunction
+
+
+function DisableMainEvents()
+
+    DisableEvents( EVID_ENGAGED + EVID_DAMAGED + EVID_ENTEREDAREA);
+
+endfunction
+
+
+function cleareventque()
+	local ev;
+	repeat
+	until (! (ev := os::wait_for_event(0)) );
+endfunction
+
+function KillME()
+	DisableMainEvents();
+	MoveCharacterToLocation(me,5288 , 1176 , 0,MOVECHAR_FORCELOCATION);
+	SetObjProperty(me,"guardkill",1);
+	damage( me, me.maxhp + 3 );
+endfunction
+
+function DistanceToLocation ( locx, locy )
+
+	Var xdiff := abs(me.x - locx);
+	var ydiff := abs(me.y - locy);
+
+	if (xdiff > ydiff)
+		return xdiff;
+	else
+		return ydiff;
+	endif
+
+endfunction
+
+function RemoveDEXUpgd()
+//compatible with fight
+endfunction
+
+function Look_around()
+//compatible with fight
+endfunction
+
+
+function SetMeUp()
+
+	var npccfg := readconfigfile("npcdesc");
+
+	case( randomint(2) )
+		0: me.graphic := 400; me.gender := 0;
+		1: me.graphic := 401; me.gender := 1;
+	endcase
+
+	setname(me, RandomName( me ) + " the " + GetGlobalProperty("raidname"+PiD) + " defender");
+
+	if (!me.backpack)
+		var newbackpack := CreateItemAtLocation(me.x, me.y, me.z, 0xe75,1);
+		EquipItem(me, newbackpack);
+		if (npccfg[me.npctemplate].colorrange)
+			var parms := splitwords(npccfg[me.npctemplate].colorrange);
+			me.color := randomint(cint(parms[2]) - cint(parms[1]))+cint(parms[1]);
+		endif
+
+		var equiptm := GetObjProperty( me, "Equipt");
+
+		if( equiptm)
+		   set_priority(50);
+		   Habille( me , equiptm );
+		   set_priority(1);
+		elseif (npccfg[me.npctemplate].dress)
+			var parms := {};
+			parms[1]:= me;
+			parms[2]:= npccfg[me.npctemplate].dress;
+			start_script("::/misc/dressme", parms);
+		elseif (npccfg[me.npctemplate].equip)
+    			EquipFromTemplate(me, npccfg[me.npctemplate].equip);
+		endif
+
+	endif
+
+	if ( npccfg[me.npctemplate].mount )
+		local mymount := CreateItemAtLocation(5288,1176,0,0xF021,1);
+		local mountparms := splitwords(npccfg[me.npctemplate].mount);
+		mymount.graphic := cint(mountparms[1]);
+		mymount.color := cint(mountparms[2]);
+		EquipItem(me, mymount);
+	endif
+
+
+endfunction
+
+
+
+function Fight( opponent )
+
+	if ((opponent.cmdlevel > 0) or (opponent.serial = me.serial))
+        	setwarmode(0);
+        	opponent := 0;
+		return;
+	endif
+
+	if (opponent.multi.serial)
+		if (me.multi.serial != opponent.multi.serial)
+			flee(opponent);
+			return;
+		endif
+	endif
+
+	SetOpponent( opponent );
+    prepare_for_fight( opponent );
+	turntoward( opponent );
+
+
+	RemoveDEXUpgd();
+
+	if (randomint(2)=1 and (!opponent.npctemplate))
+		var defendpoints := GetobjProperty(opponent, "#imadefender");
+		if (!defendpoints)
+			defendpoints := 1;
+		else
+			defendpoints := defendpoints + 1;
+		endif
+		SetobjProperty(opponent, "#imadefender",  defendpoints);
+	endif
+
+	var loops := 0;
+    var ev;
+	var waittime := 0;
+
+	DisableEvents( EVID_LEFTAREA + EVID_ENTEREDAREA);
+
+    while ( (opponent) and not (opponent.dead or opponent.hidden or opponent.concealed)) 
+
+	case(CloseDistance( opponent ) )
+		default:
+		0:	
+			loops := loops + 1;
+			waittime := 0;
+		1:
+			loops := 0;
+			waittime := 1;
+			turntoward(opponent);
+		2:
+			SetWarMode( 0 );
+			SetOpponent( 0 );
+			sleep(1);
+			DisableCombatEvents();
+			EnableMainEvents();
+			return;
+	endcase
+
+	in_combat_event_loop(opponent, loops);
+
+	ev := wait_for_event( waittime );
+	case (ev.type)
+        EVID_DAMAGED:
+		EVID_ENGAGED:
+			if (ev.source)
+			  process_combat_event(ev);
+			  if (RandomInt(6)=1)
+				if ((!ev.source.npctemplate) or (ev.source.script = "tamed") )
+					opponent := ev.source;
+			  		SetOpponent( opponent );
+					turntoward( opponent );
+				endif
+			  endif
+			endif
+        EVID_PEACEMADE:
+			SetWarMode( 0 );
+			SetOpponent( 0 );
+			sleep(1);
+			DisableCombatEvents();
+			EnableMainEvents();
+			return;
+	endcase
+
+    endwhile
+
+    post_combat();
+      
+endfunction
+
+function EnableCombatEvents()
+
+    EnableEvents( EVID_ENGAGED + EVID_DAMAGED + EVID_PEACEMADE);
+    EnableEvents( EVID_SPEECH, 5);
+
+endfunction
+
+function DisableCombatEvents()
+
+    DisableEvents( EVID_ENGAGED + EVID_DAMAGED + EVID_PEACEMADE );
+
+endfunction
+
+//Ultra simple flee =)
+function flee(opponent)
+	runawayfrom(opponent);
+endfunction
+
+
+
+
+
+function Say_random_string(stnumber,target:=0)
+
+	if (randomint(10)=1)
+		return;
+	endif
+
+	case(stnumber)
+		ST_WANDER:  case(randomint(2))
+				0:  say("I can feel it, they are close!");
+				1:  say("I think I hear something!");
+				2:	say("They will be hear soon!");
+			endcase
+
+		ST_ENGAGE:  case(randomint(2)) //not very original i know...
+				0:  say("Die!");
+				1:  say("Die you " + TruncateArticle(target.name) "!");
+				2:  say("Prepare to die, " + TruncateArticle(target.name) "!");
+			endcase
+		
+
+		default: return;
+	endcase
+
+
+endfunction
+
+
+function LookForBuddy()
+
+	var whoisit;
+
+	foreach critter in listmobilesnearlocation(me.x, me.y, me.z, 5)
+
+		if (!Critter.npctemplate)
+			if ((Critter.strength+Critter.dexterity) < (whoisit.strength+whoisit.dexterity))
+				whoisit := critter;
+			endif
+		endif
+
+	endforeach
+
+	if (whoisit)
+		say ("Ive got you back, " + whoisit.name);
+	else
+		say("Looks like im going to go this alone!");
+	endif
+
+	me.master := whoisit;
+
+endfunction
+
+
+

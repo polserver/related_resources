@@ -1,0 +1,40 @@
+use uo;
+use os;
+
+program manaregeneration( param)
+  var who;
+  var clean := 0;
+  if( len( param))
+    who := param[1];
+    clean := param[2];
+  else
+    who := param;
+  endif
+  
+  if( who.dead)
+    return 0;
+  endif
+  
+  var amount := who.intelligence;
+  var oldamount := GetObjProperty( who, "manaregenmod");
+
+  if( clean)
+    if( oldamount)
+      who.mana_regen_rate := who.mana_regen_rate - oldamount;
+      EraseObjProperty( who, "manaregenmod");
+      SendSysMessage( who, "Your mana regeneration returned to normal!");
+    endif
+    return 1;
+  endif
+  
+  if( !oldamount)
+    who.mana_regen_rate := who.mana_regen_rate + amount;
+    SetObjProperty( who, "manaregenmod", amount);
+    SendSysMessage( who, "Your mana are regenerating faster now");
+  elseif( oldamount < amount)
+    who.mana_regen_rate := who.mana_regen_rate - oldamount;
+    who.mana_regen_rate := who.mana_regen_rate + amount;
+    SetObjProperty( who, "manaregenmod", amount);
+    SendSysMessage( who, "Your mana are regenerating faster now");
+  endif
+endprogram

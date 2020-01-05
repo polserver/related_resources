@@ -1,0 +1,47 @@
+use uo;
+include "../../cleric";
+include "include/yesno2";
+
+program setacolyte(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var targ := target(who);
+	
+	if (!targ.ip)
+		SendSysMessage(who, "Cancelled");
+		return;
+		
+	elseif (GetObjProperty(who, "Devotion") != GetObjProperty(targ, "Devotion"))
+		SendSysMessage(who, targ.name + " is not of your faith.");
+		return;
+	
+	elseif (IsCleric(targ))
+		SendSysMessage(who, targ.name + " is already a cleric.");
+		return;
+	elseif (!HPBoost(who) && !who.cmdlevel)
+		SendSysMessage(who, "You do not wear the symbol of your god!");
+		return;
+	endif
+	
+	makecleric(who, targ);	
+endprogram
+
+function makecleric(who, targ)	
+	var devotion := GetObjProperty(who, "Devotion");
+	var response := yesno2(targ, "Become a cleric of " + devotion + "?", "Yes, I shall become annointed!", "No, I do not wish this.");
+	if (response)
+		SetObjProperty(targ, "class", GetObjProperty(who, "class"));
+		SendSysMessage(who, targ.name + " is now a cleric of " + devotion);
+		SendSysMessage(who, "You are now a cleric of " + devotion);
+	else
+		SendSysMessage(who, targ.name + " does not wish to be a cleric of " + devotion);
+		SendSysMessage(who, "You have declined being a cleric of " + devotion);
+	endif
+endfunction
+
+function SetSkills(mobile)
+
+	//Insert your skill adjustments here.
+
+endfunction

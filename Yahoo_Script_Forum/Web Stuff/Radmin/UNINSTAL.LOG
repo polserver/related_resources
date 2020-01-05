@@ -1,0 +1,59 @@
+[Header]
+Signature=VISE
+Version=0001
+RemoveInUseFiles=1
+RegistryKeyName=Remote Administrator v1.1
+Product Name=Remote Administrator v1.1
+[WinNT]
+AdminPrivileges=1
+[Directories2]
+count=12
+0=d:\Program Files
+1=d:\Program Files\RAdmin1
+2=C:\WTSRV
+3=C:\WTSRV\Profiles
+4=C:\WTSRV\Profiles\All Users
+5=C:\WTSRV\Profiles\All Users\Start Menu
+6=C:\WTSRV\Profiles\All Users\Start Menu\Programs
+7=C:\WTSRV\Profiles\All Users\Start Menu\Programs\Remote Administrator v1.1
+8=\‚ Ïw”
+9=\‚ Ïw”
+10=\‚ Ïw”
+11=\‚ Ïw”
+?d:\Program Files\RAdmin1\r_server.exe /
+?d:\Program Files\RAdmin1
+?d:\Program Files
+?d:
+[Files]
+count=14
+0=d:\Program Files\RAdmin1\R_server.exe
+1=d:\Program Files\RAdmin1\raddrv.dll
+2=d:\Program Files\RAdmin1\Radmin.exe
+3=d:\Program Files\RAdmin1\Visedll.dll
+4=C:\WTSRV\System32\r_server.exe
+5=C:\WTSRV\System32\raddrv.dll
+6=d:\Program Files\RAdmin1\license.txt
+7=d:\Program Files\RAdmin1\readme.txt
+8=d:\Program Files\RAdmin1\WhatsNew.txt
+9=C:\WTSRV\Profiles\All Users\Start Menu\Programs\Remote Administrator v1.1\Remote Administrator viewer.lnk
+10=C:\WTSRV\Profiles\All Users\Start Menu\Programs\Remote Administrator v1.1\Setup for Remote Administrator server.lnk
+11=C:\WTSRV\Profiles\All Users\Start Menu\Programs\Remote Administrator v1.1\Start Remote Administrator server.lnk
+12=C:\WTSRV\Profiles\All Users\Start Menu\Programs\Remote Administrator v1.1\readme.lnk
+13=C:\WTSRV\Profiles\All Users\Start Menu\Programs\Remote Administrator v1.1\Remove Remote Administrator v1.1.lnk
+[Strings]
+IDS_STRING1=Are you sure you want to completely remove the selected application and all of its components?
+IDS_STRING2=Confirm File Deletion
+IDS_STRING3=The system indicates that the following shared file is no longer used by any programs.
+IDS_STRING4=Remove Shared File?
+IDS_STRING5=Uninstall successfully completed.
+IDS_STRING6=Uninstall
+IDS_STRING7=If any programs are still using this file and it is removed, those programs may not function. Are you sure you want to remove the shared file?
+IDS_STRING8=Uninstall was partially successful.
+IDS_ADMINPRIVILEGESNEEDED=Administrative privileges are needed to uninstall this software.
+IDS_YES=&Yes
+IDS_NO=&No
+IDS_YESTOALL=Yes to &All
+[External Code]
+DllPathName=d:\Program Files\RAdmin1\Visedll.dll
+Param1=1
+Param2=d:\Program Files\RAdmin1\r_server.exe /uninstall

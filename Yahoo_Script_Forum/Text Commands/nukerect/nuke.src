@@ -1,0 +1,91 @@
+// Nuke a rectangle region
+// by olor, 26.04.2001
+use uo;
+
+program textcmd_nuke (me)
+var x1,x2,y1,y2,z1,z2 := 0;
+var x,y,z := 0;
+var orig_y1, orig_z1 := 0;
+var maxx, maxy := 0;
+
+    SendSysmessage (me, "Pick up first corner" );
+    var loc1 :=  TargetCoordinates (me);
+    if (!loc1) 
+       SendSysmessage (me, "Cancelled" );    
+       return; 
+    endif
+    SendSysmessage (me, "Pick up second corner" );    
+    var loc2 :=  TargetCoordinates (me);
+    if (!loc2) 
+       SendSysmessage (me, "Cancelled" );    
+       return; 
+    endif
+
+    if (loc1.x < loc2.x)
+      x1 := loc1.x;
+      x2 := loc2.x;
+    else
+      x1 := loc2.x;
+      x2 := loc1.x;
+    endif
+
+    if (loc1.y < loc2.y)
+      y1 := loc1.y;
+      y2 := loc2.y;
+    else
+      y1 := loc2.y;
+      y2 := loc1.y;
+    endif
+
+    if (loc1.z < loc2.z)
+      z1 := loc1.z;
+      z2 := loc2.z;
+    else
+      z1 := loc2.z;
+      z2 := loc1.z;
+    endif
+
+    //SendSysMessage (me, "x1="+x1+" x2="+x2);
+    //SendSysMessage (me, "y1="+y1+" y2="+y2);
+    //SendSysMessage (me, "z1="+z1+" z2="+z2);
+
+    maxx := x2-x1;
+    maxy := y2-y1;
+    if ((maxx > 50) or (maxy > 50))
+       SendSysmessage (me, "Nuking area greater than 50 tiles not allowed. Cancelled" );        
+       return;
+    endif;
+
+    orig_y1 := y1;
+    orig_z1 := z1;
+
+    // Destroy items inside rectangle area
+    x := x1;
+    repeat
+       y1 := orig_y1; 
+       y := y1;
+       repeat
+          z1 := orig_z1;
+          z := z1;
+          repeat
+
+             foreach thingie in ListItemsNearLocation (x, y, z, 0)
+                DestroyItem (thingie);
+             endforeach
+
+             z1 := z1 + 1;
+             z := z1;
+          until (z > z2);
+          y1 := y1 + 1;
+          y := y1;
+       until (y > y2);
+       x1 := x1 + 1;
+       x := x1;
+    until (x > x2);
+
+SendSysMessage (me, "Region nuked");
+
+
+
+endprogram
+

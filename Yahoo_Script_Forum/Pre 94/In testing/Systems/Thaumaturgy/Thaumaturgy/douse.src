@@ -1,0 +1,35 @@
+
+use os;
+use uo;
+use cfgfile;
+
+include "lightchange";
+include "include/client";
+include "include/objtype";
+include "spellinc";
+
+program extinguish(who)
+
+    const THISSPELL := 101;
+
+    local cfg := ReadConfigFile("lightsource");
+    local elem := findconfigelem(cfg,"on");
+    local sourcearray := GetConfigStringArray(elem,"source");
+    local radius := (cint(GetSkill(who, SKILLID_THAUMATURGY))/16) + 3;
+
+    CleanUp(who);
+
+    if (DoCast(who, THISSPELL))
+    	CleanUp(who);
+    	return;
+    endif
+
+    foreach item in ListItemsNearLocation(who.x, who.y, who.z, radius);
+        if (cstr(item.graphic) in sourcearray)
+              switch_light(who, item);
+        elseif (item.objtype = UOBJ_CAMPFIRE)
+              item.graphic := UOBJ_ASHES;
+        endif
+    endforeach
+
+endprogram

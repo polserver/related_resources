@@ -1,0 +1,62 @@
+include "../pkg/skills/spells/summon";
+include "include/spellRestrictions";
+
+program summon_daemon( parms )
+  var circle := 8;
+  var delivery := "direct";
+  var noto := "neutral";
+  var result := maincast(parms, delivery, circle, noto, 61);
+  if(result == 0)
+    return;
+  endif
+  var caster := result[1];
+  var cast_on := result[2];
+  var conf := ReadConfigFile("::npcdesc");
+  var elem;
+  var points := 0;
+  if(!cast_on)
+    SendSysMessage(caster, "cancelled.");
+    return;
+  endif
+  elem := FindConfigElem(conf, cast_on.npctemplate);
+  if(!elem)
+    SendSysMessage(caster, "error!");
+    return;
+  endif
+  var difficulty := CInt(GetConfigInt(elem, "tameskill"));
+  points := (difficulty*2);
+  if(!difficulty)
+    SendSysMessage(caster, "You can't dominate that!");
+    return;
+  endif
+  if (GetEffectiveSkill(caster, SKILLID_MAGERY) < (difficulty + 20))
+    SendSysMessage(caster, "You have no chance of dominating this creature!");
+    return;
+  endif
+  var thename := get_name(cast_on.name);
+  var critterhp := GetHp(cast_on);
+  if(CheckSkill(caster, SKILLID_MAGERY, difficulty + 10, (points * 10)))
+    SendSysMessage(caster, "You successfully dominate the " + thename);
+    SetObjProperty(cast_on, "master", caster.serial);
+    SetObjProperty(cast_on,"script",cast_on.script);
+    SetObjProperty(cast_on,"prevtamed",1);
+    SetObjProperty(cast_on,"happiness", 30);
+    if(GetObjProperty(cast_on, "regspawn"))
+	  var spawnname := GetObjProperty(cast_on, "regspawn");
+	  var numspawns := CInt(GetGlobalProperty(spawnname))-1;
+	  SetGlobalProperty(spawnname,numspawns);
+    endif
+    cast_on.script := "tamed";
+    RestartScript(cast_on);
+  endif
+endprogram
+
+function get_name(thename)
+  if (find(thename, "an ",1) == 1)
+    return thename[4,len(thename)];
+  elseif (find(thename, "a ",1) == 1)
+    return thename[3,len(thename)];
+  else
+    return thename;
+  endif
+endfunction

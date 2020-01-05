@@ -1,0 +1,162 @@
+/////////////////////////////////////////////////////////////////
+// OSI CLONE Banker - Rincewind.
+//
+//  25/09/2k : Added OSI function "balance" or "statement"
+//             Added OSI function "withdraw" 
+//             Added something I saw on OSI today.
+//                            
+/////////////////////////////////////////////////////////////////
+
+Use npc;
+Use os;
+Use uo;
+
+include "util/bank";
+include "include/randname";
+include "include/eventid";
+include "include/vetement";
+
+Global bank;
+Global me := Self();
+
+if( me.name["<random>"] )
+		SetName ( me , RandomName( me ) );
+	   set_priority(50);
+       Habille( me , "banker" );
+       set_priority(1);
+endif
+
+program banker();
+
+	EnableEvents( EVID_SPEECH, 2 );
+
+	while (1)
+    		Local ev;
+    		ev := os::wait_for_event( 120 );
+    		if (ev)
+   		if (ev.source.z = me.z)               
+         		if ( ev.text["bank"] )
+                          OpenBank(ev.source);
+			endif
+
+         		if ( ev.text["balance"] ) 
+				Balance(ev.source);
+			endif
+
+         		if ( ev.text["withdraw"] )
+				Withdraw(ev.source);
+			endif
+	                
+			if ( ev.text["statement"] )
+				Balance(ev.source);
+			endif
+                      endif
+        	  endif
+	   endwhile
+
+endprogram
+
+function OpenBank(you)
+
+local items := 0;
+local weight := 0;
+
+  foreach item in EnumerateItemsInContainer(FindBankBox( you ))
+    items:= items + 1;
+    weight := weight + item.weight;
+  endforeach
+
+	TurnToward(you);
+	Local bankbox := FindBankBox( you );
+	if (bankbox)
+          say("Bank container has "+ items +" items, " + weight + " stones");    	
+          SendOpenSpecialContainer( you, bankbox );
+        else
+         say("You don't seem to have a bank box, "+ you.name);
+        endif
+
+endfunction
+
+function Balance(you)
+				
+  var myamt := 0; 
+  TurnToward(you);
+
+  foreach item in EnumerateItemsInContainer(FindBankBox( you ))
+   if ((item.graphic = 0xEED) or (item.graphic = 0xEEE)  or 
+    (item.graphic = 0xEEF))
+     myamt := myamt + item.amount;
+    endif
+  endforeach
+
+  If (Myamt > 0) 
+   Say("Thy current bank balance is "+Myamt+" gold.");
+    else
+   Say("You have no gold in thy bank box.");
+  endif
+  
+endfunction
+
+// stolen OSI shit :)
+// npc buy phrase : ... The total of thy purchase is xx gold. My thanks for the patronage.
+
+
+function withdraw(you)
+
+Var TotalGold := 0;
+Var Gold :=0;
+
+local Amount := 
+  cint(RequestInput( you, you.backpack, "How much gold would you like to withdraw ? "));
+
+foreach item in EnumerateItemsInContainer(FindBankBox(you))
+
+  if (item.graphic = 0xEED) 
+     TotalGold := TotalGold + item.amount;
+     Gold :=GetObjType( Item );
+  endif
+
+endforeach
+ 
+  if( !Amount )
+      SendSysmessage( you ,"The transaction has been terminated." );
+      return;
+  endif
+
+ local LeftInBank := TotalGold - Amount;
+ local StacksInBank := LeftinBank / 60000;
+ local StacksInBag := Amount / 60000;
+
+ if (Amount > TotalGold) 
+   Say("Im sorry, thats more gold than thy own."); 
+ else
+
+foreach item in EnumerateItemsInContainer(FindBankBox(you))
+  if (item.graphic = 0xEED) 
+     DestroyItem( Item );
+  endif
+endforeach
+
+   local PutInBank; 
+  
+   for (PutInBank := 1 ; PutInBank <= StacksInBank ; PutInBank := PutInBank + 1 )
+     CreateItemInContainer( FindBankBox(you) , Gold ,60000);      
+   endfor
+
+   local PutInBag; 
+  
+   for (PutInBag := 1 ; PutInBag <= StacksInBag ; PutInBag := PutInBag + 1 )
+     CreateItemInContainer( you.backpack , Gold ,60000);      
+   endfor
+   
+   local BankRemainder := LeftInBank - (StacksInBank * 60000);
+   local BagRemainder := Amount - (StacksInBag * 60000);
+
+   CreateItemInContainer( FindBankBox(you) , Gold ,BankRemainder);      
+   CreateItemInContainer( you.backpack, Gold ,BagRemainder);
+    
+   Say("Thou hast withdrawn "+ amount +" gold from thy account.");
+
+endif
+
+endfunction

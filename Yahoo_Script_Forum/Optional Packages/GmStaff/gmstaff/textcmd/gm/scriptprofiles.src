@@ -1,0 +1,102 @@
+//////////////////////////////////////////////
+// scriptProfiles.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+//////////////////////////////////////////////
+// - view (upto the first 160) current script
+//   profiles, it may take a while to generate
+//   the gump!)
+//////////////////////////////////////////////
+use uo;
+use os;
+
+const PAGE_LENGTH:=20;
+const MAX_PAGES:=8;	// allows for first 160 scripts!!
+
+program Send_Profile_Gump(who);
+  var profiles:=polcore().script_profiles;  
+
+  var profile_layout:={
+   "page 0",
+   "nodispose",
+   "resizepic 0 0 3600 750 520",
+   "resizepic 0 90 3600 750 430",
+   "text 230 10 63 0",
+   "text 80 30 98 1",
+   "text 180 30 98 2",
+   "text 80 50 98 3",
+   "text 180 50 98 4",
+   "text 450 30 98 5",
+   "text 580 30 98 6",
+   "text 450 50 98 7",
+   "text 40 85 98 8",
+   "text 480 85 98 9",
+   "text 535 85 98 10",
+   "text 587 85 98 11",
+   "text 660 85 98 12",
+   "button 430 54 2103 2104 1 0 200"
+  };
+ 
+  var profile_data:={
+   "Current Script Profiles",
+   "Sysload",
+   ": "+polcore().sysload,
+   "Packages",
+   ": "+len(polcore().packages),
+   "Active Scripts",
+   ": "+len(profiles),
+   "Clear Script Profiles",
+   "Script",
+   "Instr",
+   "Invok",
+   "I per I",
+   "Instr %"
+  };
+
+  var pagenum:=1;
+  while (pagenum and pagenum<MAX_PAGES )
+    var start_build:=((pagenum-1)*PAGE_LENGTH)+1;
+    var end_build:=((pagenum)*PAGE_LENGTH);  
+    var prof_len:=len(profiles);
+    profile_layout.append("page "+pagenum);
+    if (pagenum>1)
+      profile_layout.append("button 720 120 250 251 0 "+pagenum-1);
+    endif
+    if (end_build<prof_len)
+      profile_layout.append("button 720 470 252 253 0 "+pagenum+1);
+      pagenum:=pagenum+1;
+    else
+      pagenum:=0;
+    endif
+    var i;
+    for (i:=start_build; i<=end_build; i:=i+1)
+      var y:=((i-start_build)*20)+110;
+      var profile:=profiles[i];
+      if (len(profile))
+        profile_layout.append("text 40 "+y+" 98 "+len(profile_data));
+        profile_data.append(profile[1]);
+        profile_layout.append("text 490 "+y+" 98 "+len(profile_data));
+        profile_data.append(profile[2]);
+        profile_layout.append("text 550 "+y+" 98 "+len(profile_data));
+        profile_data.append(profile[3]);
+        profile_layout.append("text 600 "+y+" 98 "+len(profile_data));
+        profile_data.append(profile[4]);
+        profile_layout.append("text 670 "+y+" 98 "+len(profile_data));
+        profile_data.append(profile[5]);
+      endif
+    endfor
+    sleepms(5);
+  endwhile
+     
+  var retval:=SendDialogGump(who,profile_layout,profile_data);
+  if (retval[200])
+    retval:=polcore().clear_script_profile_counters();
+    if (retval)
+      sendsysmessage(who,retval+" script profile counters cleared.");
+    else
+      sendsysmessage(who,"can't clear profiles:"+retval.errortext);    
+    endif
+  endif
+endprogram

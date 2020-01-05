@@ -1,0 +1,70 @@
+//////////////////////////////////////////////
+//History
+//========
+// ver 0.1  
+// - initial package construction + wrote gmstaff.src
+// - added various textcommands that i had knocking around!
+//========
+// ver 0.2
+// - added some more textcommands and fixed couple 
+//   of bugs with current ones.
+// - rewrote usegmstaff.src to be more efficient.
+//========
+// ver 0.3
+// - restructured the usegmstaff.src gump, added further 
+//   functionality and fixed a couple more minor bugs.
+// - moved command level functionality into a new 
+//   textcmd: cmdLevel.src
+//
+// ver 0.31
+// - added missing selectItem.src to pkg.
+// - more tidying and fixing of textcommands.
+//
+// ver 0.32
+// - fixed major error with selectItem not working
+//   because it was trying to read cfgs from incorrect
+//   dir (doh!)
+//
+// ver 0.33
+// - fixed yet another problem with selectItem not
+//   working on a linux box because of incorrect config 
+//   addressing problem (Thx Dark~Haven & all !)
+// - removed incorrect Elven Bow entry from UOWeapons.cfg
+// - moved many of the previously dynamically generated
+//   selectitem gumps into static form (selectItemGumps.inc) 
+//   to speed it up and use less resources.
+// - restructured docs.
+//
+// ver 0.34
+// - altered createItem to identify root itemdesc items
+//   using a datafile.(This datafile updates automatically 
+//   on server restart, see updateRootItems.src)
+// - added interface for ICP (Myr's Control Package).
+// - removed textcommands followinglightsource and
+//   itemsets. ( They were both adpated from distro scripts,
+//   and although i duly credited the authors i feel i should 
+//   not include them in this package :-)
+// - added destroy radius to gmstaff gump create page (for 
+//   items only).
+// - altered how the textentry travel system works for the
+//   gmstaff gump.
+// - changed UOAlchemy&Magic item 0x0e3b to Spell Book (from
+//   blank scroll)
+// - finished converting all the selectitem gumps to basic layout
+//    and data style (ie not using gumps.inc)
+// - similarly converted the gumps in the following textcmds:
+//   reportables, scriptprofiles, findgreedyscripts, mapgo,
+//   cmdlevel & makenpc.
+// - standardised file names (except the gmstaff\config\UO***.cfg 
+//   files!) according to new pol naming "regime" (...to aid
+//   our linux friends! See pol\docs\filesnames.txt)
+//
+// ver 0.35
+// - restructured gmstaff gump. (again)
+// - added editprivs textcommand ( & remmoved the direct
+//   privs settings from gmstaff.src )
+// - removed the weigh textcommand since it was rubbish!
+// - added viewguilds textcommand (still in testing...)
+// - fixed textcmd mapgo not teleporting correctly to some 
+//   golocs.
+

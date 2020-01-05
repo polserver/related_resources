@@ -1,0 +1,133 @@
+///////////////////////////////////////////////////////////
+// guardscontrol.src
+//
+// Check for guard calls
+//
+// Creator: Hugo P.L.
+// Contact: hugo_pl@bol.com.br
+//
+// Created: 23-Jan-2002
+//
+///////////////////////////////////////////////////////////
+
+use uo;
+use os;
+use cfgfile;
+
+include "include/eventid";
+include "guarded";
+
+Const SEARCH_RANGE := 10;
+
+var reinoatual := 0;
+var guerras := dictionary;
+var cfg := ReadConfigFile("::npcdesc");
+
+program guardas(who)
+
+	// Verify and kill others guradcontrol scripts runing for this character
+	var pid := Cint(who.getprop("gPID"));
+	if (pid)
+		var proc := GetProcess(pid);
+		proc.Kill();
+	endif
+	// Set the script PID for this character
+	who.SetProp("gPID", getpid());
+
+	RegisterForSpeechEvents( who, 0 );
+
+	var ev;
+	var evtext;
+	var nextguardas := 0;	// Time to call guards again
+	while (1)
+
+		ev := os::wait_for_event( 120 );
+		if (ev)
+			if (nextguardas > ReadGameClock())
+				SendSysMessage(who, "You need to wait to call the guards again!!");
+				continue;
+			endif
+			if (ev.type = SYSEVENT_SPEECH and ev.source = who)
+				evtext := lower(ev.text);
+				if (evtext["guard"])
+					nextguardas := ReadGameClock()+5;
+// Guards called!
+					if (who.criminal)
+						SendSysMessage(who, "Criminals cannot call the guards!!");
+						continue;
+// Suport to Permanent greys in my thief PKG.
+//					elseif (who.GetProp("permgrey"))
+//						SendSysMessage(who, "Thiefs cannot call the guards!!");
+//						continue;
+					endif
+
+					reinoatual := Guarded(who);
+					if (!reinoatual)
+						SendSysMessage(who, "This area is not watched by guards.");
+						continue;
+					endif
+
+					var guardsys := GetGlobalProperty("Guardsys");
+					if (!(reinoatual[2] in guardsys))
+						SendSysMessage(who, "This area is temporarily without guards!");
+						continue;
+					endif
+// Search for enemies!
+					var mobiles := ListMobilesNearLocationEx(who.x,who.y,who.z+3,SEARCH_RANGE,LISTEX_FLAG_HIDDEN+LISTEX_FLAG_NORMAL);
+					var guard, timer, tempo;
+					tempo := ReadGameClock();
+
+					// Pega as guerras	
+					guerras := GetGlobalProperty("guerras");
+					foreach npc in mobiles
+						if(npc.isa(POLCLASS_NPC))
+							if(GetWarNPC(npc))
+								if(npc)
+									set_critical(1);
+									SetObjProperty(npc, "guardkill",1);
+									SetObjProperty(npc, "called", 1);
+									guard := CreateNpcFromTemplate( ":hpguards:guard" , 5283,1184,0 );
+									SetObjProperty(guard, "target", npc.serial);
+									set_critical(0);
+								endif
+							endif
+						else
+							timer := Cint(npc.GetProp("#guardstimer"));
+							if(GetWar(npc) and (timer < tempo or timer > (tempo+15)))
+								set_critical(1);
+								guard := CreateNpcFromTemplate( ":hpguards:guard" , 5283,1184,0 );
+								SetObjProperty(guard, "target", npc.serial);
+								SetObjProperty(npc, "#guardstimer", tempo+15);
+								set_critical(0);
+							endif
+						endif
+					endforeach
+				endif
+			endif
+		endif
+		if (!who)
+			EraseObjProperty(who, "gPID");
+			break;
+		endif
+	endwhile
+endprogram
+
+function GetwarNPC(byref npc)
+	var elem := FindConfigElem(cfg, npc.npctemplate);
+	if((elem.alignment = "evil" or npc.master.criminal) and !npc.GetProp("called"))
+		return 1;
+	endif
+	return 0;
+endfunction
+
+function Getwar(byref npc)
+	if (npc.cmdlevel)
+		if (npc.GetProp("guardinvul"))
+			return 0;
+		endif
+	endif
+	if (npc.criminal and npc.acctname)
+		return 1;
+	endif
+	return 0;
+endfunction

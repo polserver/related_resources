@@ -1,0 +1,86 @@
+SPAWN REGION v0.2
+=================
+Written by: Oroborous, mkow@sympatico.ca
+
+This package is a replacement for the outdated RegionalSpawner package.  It has a few
+nifty features and is self-cleaning, meaning that it will correct any dicrepancies that
+may occur during its operation or when you edit the config files.
+
+HISTORY
+=======
+0.2		Removed some bugs, increase spawning efficiancy with multiple processes.
+0.1		Initial Release.
+
+INSTALLATION
+============
+Just drop into pkg/std and configure the SpawnRegions.cfg and SpawnGroups.cfg.  Make
+sure that all of your data in both configs is CASE SENSITIVE and matches each file, or
+you will get error messages on the console, and possibly some wierdness I have been
+unable to track down.
+
+To compile, make sure you put all of the includes from the 'ScriptIncludes' dir to your
+scripts/include directory.
+
+**WARNING**
+Some of those files have been modified by me considerably so you better look and
+compare and merge instead of just copying or you will mess up your other scripts. You
+have been warned!
+
+In every AI script: AiSerial MUST be set on every NPC that uses this spawner.
+------<cut>----------
+SetObjProperty(me, "AiSerial", me.serial);
+------<cut>----------
+
+Changes to death.src: Just drop that code into your death.src and recompile.
+======cut=============
+include "../pkg/std/SpawnRegion/SpawnRegion";
+// SpawnRegion Package death handling.
+SpawnRegionDeath(corpse);
+======cut==============
+
+COMMANDS
+========
+.restartspawnregionmanager [v]
+This command restarts the spawn region manager and forces it to do validation of all its
+data. It will also correct any probelems on restart, so if something wierd happens, just
+restart it, and the problem should go away.  The manager spawns 1 region per cycle, and
+also handles all messages sent from NPC deaths.
+
+.regionmanager [start | stop]
+This command opens the Spawn Region Manager gump.  It is a very powerful tool that allows
+you to micro manage each ragion down to the individual spawns.  You can spawn, respawn, despawn,
+enable or disable any group within a region.  It also allows you to kill individual spawns
+within a region.  Another nifty feature is the "Go To" options.  You can goto an individual
+spawn in a region, or to the centre (or random spot if centre is inaccessible) of the region.
+If Start or Stop are passed, it will either start or stop spawning critters. NOTE: Any spawner processes
+will not be killed if stop is used, they will complete as normal, but no new ones will start.
+
+
+
+SPAWN REGION MANAGER
+====================
+
+REGION SELECTION SCREEN
+You can choose what region to manage or go to.  It shows a list of all your regions.
+
+REGION MANAGEMENT SCREEN
+Lists all the groups within a region.  The 'S' check box marks whether a group is
+enabled or disabled.  Disabled groups do not spawn until enabled.  You can check which
+groups should spawn/despawn or respawn. Respawn overrides the other two, as it performs
+a despawn and then a spawn on the group anyhow.  Details will take you to the Group Spawn
+Screen.  Right click anywhere on the gump to refresh it.  Sometimes it takes a bit for
+the info to be refreshed, so just refresh a few times and wait.
+
+GROUP SPAWN SCREEN
+This screen lets you either kill or goto a specific spawn.  The spawns are listed
+according to what template they belong to.  Sometimes you will see <unreferenced object>
+or some such here, that's because the spawns have been killed, but they have not been
+wiped from the spawns list just yet.  Just wait and it should go away.  Restarting the
+Spawn Region Manager should fix any of those errors as well, should they persist.
+
+TIPS
+====
+Do not make spawn groups more than 60.  Anything more will force the death script to run for
+too long as it deregisters its serial from the proper region and group.  I suggest creating
+multiple groups with a max of 40-50 spawns. This is a better method also because you can disable
+half the spawns in a region to make it more sparse, without too much work.

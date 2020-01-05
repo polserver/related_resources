@@ -1,0 +1,59 @@
+****************************************
+Adding new WasHitScript & DidHitScript's
+****************************************
+
+For the sake of tidyness, all WasHitScript and DidHitScript's should go into the "enchScripts" folder.
+
+The variables passed are in an array as such:
+
+  DidHitScript:
+                { attacker, defender, weapon, armor, basedamage, rawdamage }
+  WasHitScript:
+                { attacker, defender, weapon, armor, basedamage, rawdamage, armourPiece }
+
+
+ArmourPiece is the piece of armour with the enchantment being run.
+The others are the same as passed from the mainhitscript... (except rawdamage :P)
+Example hitscripts can be found in sithmagicitems\enchScripts
+
+**********************************
+Making an enchantment run a script
+**********************************
+In the enchantments entry in the senchantedhit.cfg file, add:
+
+  	WasHitScript enchScripts\myWasHitScript
+        DidHitScript enchScripts\myDidHitScript
+
+Eg:
+
+Enchantment m_thorns
+{
+	Name m_thorns
+	Suffix thorns
+
+	WasHitScript enchScripts\thorned
+
+	AddRanProp t_r_amt 40
+	noNormalMods 1
+	idstring $t_r_amt#% of damage also effects attacker.
+	level 4
+}
+
+******************************
+Returning Damage
+******************************
+Damage is returned much like variables in any function, ie:
+
+rawdamage := rawdamage * 2;
+return rawdamage;
+
+************************
+Important Notes
+************************
+Your hitscripts should _NEVER_ sleep!
+
+The time that each hitscript sleeps will be added to the time 
+it takes between when a person hits someone, and when the damage gets to them.
+
+If you need to simulate something like mana draining slowly,
+then start a new script using start_script - and let that one do the sleeping :)

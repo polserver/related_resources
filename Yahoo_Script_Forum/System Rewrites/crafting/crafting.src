@@ -1,0 +1,685 @@
+use uo;
+use cfgfile;
+use os;
+use util;
+use basic;
+
+include "include\class";
+global cfg := readconfigfile("crafting");
+global menus := readconfigfile("crafting");
+global areatools := readconfigfile("areatools");
+global targetted_material;
+global materialcfg ;
+global qualmod     ;
+global hpmod       ;
+global clrmod      ;
+global diffmod     ;
+global pointmod    ;
+global weightmod   ;
+global hitscript   ;
+global neededamount;
+global hecan_make    ;
+global who2;
+global materials := {};
+global itemcfg := readconfigfile("::itemdesc");
+
+
+
+program use_item(who, item)
+local uses := getobjproperty(item, "uses");
+if (!uses)
+	setobjproperty(item, "uses", randomint(150) + 1);
+	uses := uses := getobjproperty(item, "uses");
+endif
+
+if (!uses)
+	sendsysmessage(who, "The well-worn tool breaks!");
+	destroyitem(item);
+	return;
+endif
+setobjproperty(item, "uses", uses - 1);
+   who2 := who;
+
+   sendsysmessage(who, "What do you want to use that on?");
+   local what := target(who, TGTOPT_CHECK_LOS);
+
+   if (!what)
+      sendsysmessage(who, "Targetting Cancelled");
+      //output(who, "Didn't select anything");
+      return;
+   endif
+
+   reserveitem(what);
+
+   targetted_material := what;
+   //output(who, "Selected " + what.objtype);
+
+   materialcfg     := readconfigfile("materials");
+   qualmod         := materialcfg[what.objtype].quality;
+   hpmod           := materialcfg[what.objtype].hp;
+   clrmod          := cint(materialcfg[what.objtype].Color);
+   diffmod         := materialcfg[what.objtype].difficulty;
+   pointmod        := materialcfg[what.objtype].points;
+   weightmod       := materialcfg[what.objtype].weight;
+   hitscript       := materialcfg[what.objtype].hitscript;
+   local hisclass := getobjproperty(who, "class");
+   
+  local tc := lower(hisclass);
+ 
+   if (tc in getconfigstringarray(materialcfg[what.objtype],"class") )
+   else
+   	local e := materialcfg[what.objtype];
+ 
+ 
+   	sendsysmessage(who, "You do not have the training to work with this material!");
+   	return;
+   endif
+   if (!qualmod)
+      qualmod := 1.0;
+   endif
+
+   if (!hpmod)
+      hpmod := 1.0;
+   endif
+
+   if (!diffmod)
+      diffmod := 1.0;
+   endif
+
+   if(!pointmod)
+      pointmod := 1.0;
+   endif
+
+   if(!weightmod)
+      weightmod := 1.0;
+   endif
+
+   local menuname := format_hex(item.objtype) + "+" + format_hex(what.graphic);
+   //output(who, "Menu name is " + menuname);
+
+   local tmenu := cfg[menuname];
+   if (!tmenu)
+      output(who, "Couldn't find entry for " + menuname);
+      sendsysmessage(who, "You don't know how to make anything out of this");
+      return;
+   endif
+
+   local ret;
+   local exitit := 0;
+   //output(who,"Showmenu is " + tmenu.showmenu);
+   local mname := menus[tmenu.showmenu];
+
+   while (!exitit)
+      //output(who, "mname is " + mname);
+      ret := getsubmenuselection(who, mname, what);
+      //output(who, "RET = " + ret);
+      if (!ret)
+         sendsysmessage(who, "Cancelled");
+         return;
+      endif
+      if (ret.type = 2)
+         mname := menus[ret.objtype];
+      else
+         exitit := 1;
+      endif
+   endwhile
+
+   local telem:= cfg[hex(ret.objtype)];
+   output(who, "Looking for objtype " +hex(ret.objtype));
+   if (!telem)
+     
+      syslog("Unable to find craft.cfg entry for " + ret.objtype);
+      telem := cfg[format_hex(ret.objtype)];
+      if (!telem)
+         output(who, "Didn't find it");
+         return;
+      endif
+   endif
+   
+   local makestack := telem.makestack;
+   if( makestack = error )
+      makestack := 0;
+   endif
+
+
+
+
+
+   local materiallist := {};
+   local materials := getconfigstringarray(telem, "material");
+   
+
+
+   var temp1 := materials[1];
+   temp1["/"] := " ";
+   local temp := splitwords(temp1);
+
+   if( targetted_material.amount < cint(temp[2]) )  //hack, i know :(
+      SendSysmessage(who, "You don't have enough material!");
+      return;
+   endif
+
+   materials.erase(1);
+
+   foreach material in materials
+      local d := grabmaterial(who, material, materiallist, makestack); 
+      if (!d )
+         sendsysmessage(who, "You do not have enough material!");
+           return;
+      else
+         materiallist.append(d[1]);
+      endif
+   endforeach
+   
+   output(who,"Materiallist = " + materiallist);
+
+   local areaitem;
+   local leaveit;
+   leaveit := 0;
+
+   foreach areaitem in getconfigstringarray(telem, "area")
+      leaveit := findareaitem(who, areaitem);
+      if (leaveit)
+         sendsysmessage(who, "Targetting cancelled");
+         return;
+      endif
+   endforeach
+
+   foreach tool in getconfigstringarray(telem, "tool")
+      tool["/"] := " ";
+      local stuf := splitwords(tool);
+      sendsysmessage(who, getprompt(tool));
+      local this := target(who, TGTOPT_CHECK_LOS);
+      if (this.objtype <> cint(stuf[1]))
+         sendsysmessage(who, "Targetting cancelled");
+         return;
+      endif
+     
+   endforeach
+   
+   local success := 0;
+   
+   output(who, "about to check skill");
+   foreach skill in getconfigstringarray(telem, "skill")
+      while (skill["/"])
+         skill["/"]:= " ";
+      endwhile
+      
+      local skillstuff := splitwords(skill);
+       
+      local tskillid := cint(skillstuff[1]);
+      local tdiff := cint(cint(skillstuff[2]) * diffmod);
+      local tpoints := modify_points( who, tskillid , cint( cint( skillstuff[3] ) * cdbl( pointmod ) ) );
+      output(who, "Checking skill " + tskillid + " for " + tdiff + " difficulty");
+      if (checkskill(who, tskillid, tdiff, tpoints))
+         success := 1;
+         output(who, "You made the skillcheck!");
+      else
+         success := 0;
+      endif
+   endforeach
+   
+   output(who, "Checked skill");
+   //ok, if they succeeded in making the item, then the success variable will be 1. Either way, I need to subtract material
+
+   getmaterial(who, telem, materiallist, success);
+
+
+   foreach sound in getconfigstringarray(telem, "sound")
+      sound["/"] := " ";
+      local st := splitwords(sound);
+      local cntr;
+      for (cntr := 1; cntr <= cint(st[2]); cntr := cntr + 1)
+         playsoundeffect(who, cint(st[1]));
+         sleep(1);
+      endfor
+   endforeach
+
+
+
+   if (!success)
+      Sendsysmessage(who, "You fail, and ruin some material");
+      return;
+   endif
+   
+   if (!hecan_make)
+      hecan_make := 1;
+   endif
+   
+   local it := createiteminbackpack(who, cint(ret.objtype), hecan_make);
+
+   if (!it)    
+      //sendsysmessage(who, "Technical problem -- contact Dream Weaver or a GM");
+      //output(who, it.errortext);
+     // //print("ERROR CRAFTING ITEM " + it.errortext);
+        
+      return;
+   endif
+
+   local excep := 0;
+
+   if (telem.exceptional)
+      foreach skill in getconfigstringarray(telem, "skill")
+         while (skill["/"])
+            skill["/"]:= " ";
+         endwhile
+         
+         local skillstuff := splitwords(skill);
+         if (getskill(who, cint(skillstuff[1])) > 90)
+            if (randomint(20) = 1)
+               excep := 1;
+            else
+               excep := 0;
+            endif
+         else
+            excep := 0;
+         endif
+         
+      endforeach
+   endif
+
+   it.quality := qualmod;
+   it.color := clrmod;
+   it.weight := it.weight * weightmod;
+   it.maxhp := cint(it.maxhp * hpmod);
+   if (hitscript)
+      it.hitscript := hitscript;
+   endif
+
+   if (excep)
+      it.quality := 1.25;
+      local tname := SendTextEntryGump( who, 
+                   "You have made an exceptional item!", 
+                   TE_CANCEL_ENABLE,
+                   TE_STYLE_NORMAL,
+                    40,               // normal: chars, num: value
+                   "What would you like to name this item?" );
+      if (tname)
+         it.name := tname;
+      endif
+      
+      it.hp := it.maxhp;
+   else
+      sendsysmessage(who, "You place the item in your pack");
+      it.quality := getquality(who, telem);
+      it.hp := it.maxhp;
+   endif
+   
+endprogram
+
+
+
+
+function getquality(who, elem)
+
+   //local skill;
+   local skillstuff;
+   local totalskillpoints := 0;
+   local tcount := 0;
+   foreach skill in getconfigstringarray(elem, "skill")
+      while (skill["/"])
+         skill["/"]:= " ";
+      endwhile
+      
+      skillstuff := splitwords(skill);
+      totalskillpoints := totalskillpoints + getskill(who, cint(skillstuff[1]));
+      tcount := tcount + 1;      
+   endforeach
+
+   local avg := cint((totalskillpoints / tcount) * 1.2);
+   local retval := randomint(avg) + 1;
+   return retval;
+   
+endfunction
+        
+        
+        
+        
+function getmaterial(who, telem, materiallist, success )
+   
+   local ttt := telem.material;
+   ttt["/"] := " ";
+   local tt := splitwords(ttt);
+
+   neededamount := cint(tt[2]);
+   //print ("tt is " + tt);
+   if (!neededamount)
+      neededamount := 1;
+   endif
+
+   if(!hecan_make)
+      if( telem.makestack )
+         hecan_make := targetted_material.amount / neededamount;
+      else
+         hecan_make := 1;
+      endif
+   endif
+
+//print("Hecan_make: " + hecan_make);
+   if(success)
+   subtractamount(targetted_material, neededamount * hecan_make);
+   else
+   subtractamount(targetted_material, (neededamount * hecan_make)/3);
+   endif
+   foreach elem in getconfigstringarray(telem, "material")
+      local subamount := 0;
+      elem["/"] := " ";
+      local stf := splitwords(elem);
+      if (!success)
+         stf[2] := stf[2] / (randomint(3) + 1);  //FIXME: this is a little arbitrary, how about a lost amount
+                                                 //       according to the needed material amount and skill?
+      endif
+      foreach item in materiallist
+         if (item.objtype = cint(stf[1]))
+            output(who, "Found " + item.amount);
+            if ((item.amount >= (cint(stf[2]) * hecan_make)) and cint(stf[2]) > 0)
+               subtractamount(item.item, cint(stf[2]) * hecan_make);
+               stf[2] := 0;
+            else
+               stf[2] := cint(stf[2]) - item.amount;
+               destroyitem(item.item);
+            endif
+         endif
+      endforeach
+
+   endforeach
+
+endfunction 
+
+
+
+function getprompt(theprompt)
+   theprompt[ 1, Find(theprompt, 1," ") ] := "";
+   return theprompt;
+endfunction
+
+
+
+function grabmaterial(who, material, materiallist, makestack )
+
+   // this function finds the materials they'll need to make an item. 
+   // If it's a regular item (that is, you only make one at a time)
+   // it looks through their backpack for the necessary materials. If 
+   // they're making a stack, it instead prompts them to target the material
+
+   output (who, who.name + " is trying to get " + material + "for " + materiallist + " makestack = " + makestack);
+   local materialentry := {};
+   materialentry.+ objtype;
+   materialentry.+ amount;
+   materialentry.+ item;
+   material["/"] := " ";
+   output (who,"material = " + material);
+   local stuff := splitwords(material);
+//print("makestack: " + makestack);
+   if (!makestack)
+      local totalamount := 0;
+
+         foreach item in enumerateitemsInContainer( who.backpack )
+            if (item.objtype = cint(stuff[1]))
+               output(who, "Adding " + item.objtype + " to the list");
+               totalamount := totalamount + item.amount;
+               materialentry.objtype := item.objtype;
+	       output(who,"Adding materialentry objtype " + materialentry.objtype);
+	       materialentry.amount := item.amount;
+	       output(who, "Adding amount " + materialentry.amount);
+	       materialentry.item := item;
+	       output(who, "Adding item " + item);
+	       //reserveitem(item);
+	       materiallist.append(materialentry);
+            endif
+         endforeach
+         
+//print("Materiallist: " + materiallist );
+//print("totalamount: " + totalamount );
+
+      if (totalamount >= cint(stuff[2]))
+         return materiallist;
+      else
+         return;
+      endif
+      
+  // elseif (cstr(makestack) = "1")      //What is this? what's all the code under the "else" for then?
+  //    //materiallist should be empty
+  //    return 1;
+   else
+      sendsysmessage(who, makestack);
+      local whatt := target(who, TGTOPT_CHECK_LOS);
+      while (whatt.graphic != cint(stuff[1]) && whatt)
+         sendsysmessage(who, "That's the wrong material!");
+         //sendsysmessage(who, makestack);
+         whatt := target(who, TGTOPT_CHECK_LOS);
+      endwhile
+      
+      //output(who, "  You need " + stuff[2]);
+      if (!whatt)
+         sendsysmessage(who, "Targetting cancelled");
+         return;
+      endif
+      
+      reserveitem(whatt);
+      
+      if (whatt.amount < cint(stuff[2]))
+         Sendsysmessage(who, "You don't have enough material to make that!   "  );
+         return;
+      endif
+      
+      materialentry.objtype := whatt.objtype;
+      materialentry.amount := whatt.amount;
+      materialentry.item := whatt;
+      materiallist.append(materialentry);
+      // output(who, "Materiallist = " + materiallist);
+      
+      if( whatt.amount < targetted_material.amount )
+          hecan_make := cint(whatt.amount / cint(stuff[2]));
+      else
+          hecan_make := cint(targetted_material.amount / cint(stuff[2]));
+      endif
+      return materiallist;
+   endif
+
+endfunction
+
+
+
+function getsubmenu(thestring)
+
+   //output(who2, "I'm in getmenu, damnit!");
+   //print ("In getsubmenu, thestring = " + thestring);
+   local retval := {};
+   
+   while (thestring["  "])
+      thestring["  "] := " ";
+   endwhile
+   
+   retval := splitwords(thestring);
+   if (itemcfg[cint(retval[1])].graphic)	
+      retval[1] := itemcfg[cint(retval[1])].graphic;
+      //print ("resetting graphic to " + retval[1]);
+   endif
+   
+   //print ("returning " + retval);
+   return retval;
+endfunction
+
+
+function getgraphic (theval)
+   local retval;
+
+   if (itemcfg[theval].graphic)	
+      retval := itemcfg[theval].graphic;
+      //print ("resetting graphic to " + retval[1]);
+   else
+      retval := cint(theval);
+   endif
+   return retval;
+   
+endfunction
+
+
+
+function can_make(who, entry, what)
+
+   //sendsysmessage(who, "Seeing if you can make " + what + " with entry " + entry);
+   local dtstuff := splitwords(entry);
+   local tentry := cfg[dtstuff[1]];
+   local skill;
+   foreach skill in getconfigstringarray(cfg[dtstuff[1]], "skill")
+      //sendsysmessage(who, "Checking for skill " + skill);
+      while (find(skill, "/", 1))
+         skill["/"] := " ";
+      endwhile
+ 
+      local stuff := splitwords(skill);
+        
+      if (getskill(who, cint(stuff[1])) < cint(cint(stuff[2]) * diffmod)   )
+         output(who, "With skill " + stuff[1] + " You need " + cint(cint(stuff[2]) * diffmod) + " but you have " + getskill(who, cint(stuff[1])));  	
+         return 0;
+      endif
+      
+      return 1;
+   endforeach
+
+endfunction
+
+
+
+function findareaitem(who, areaitem)
+
+   //print ("Lookign for area " + areaitem);
+   local retval;
+   local items := getconfigstringarray(areatools[areaitem], "item");
+   //print ("item list is " + items);
+   local i;
+
+   foreach item in listitemsnearlocation(who.x, who.y, who.z, 3)
+      //print ("there's an " + item.graphic + "nearby");
+      //print ("items.length() is " + len(items));
+	
+      for (i := 1; i <= len(items); i := i + 1)
+         ////print ("Is " + cint(items[i]) + " equal to " + cint(item.objtype) + " ?");
+         if (cint(items[i]) = cint(item.graphic))
+            return 0;
+         endif
+      endfor
+   endforeach
+
+   //if it's near them, then return. Otherwise, you have to look for it
+
+   sendsysmessage(who, "Select the tool you want to use this on, or escape to cancel");
+   local what := targetcoordinates(who);
+
+   if (!what.objtype)
+      return 1;
+   endif
+
+   while (!(what.objtype in items))
+      sendsysmessage(who, "Select the tool you want to use this on, or escape to cancel");
+      what := targetcoordinates(who);
+      if (!what.objtype)
+         return 1;
+      endif
+   endwhile
+
+   return;
+
+endfunction
+
+
+
+function getsubmenuselection(who, submenuname, what)
+
+   /*
+   // output(who2,, "in getsubmenuselection, got " + submenuname);
+   // 
+   // this function takes the name of a submenu and loads it. It returns an array with 
+   // the objtype of the selection, as well as the submenu name (if any)
+   */
+   
+   local retval := {};
+   retval.+type;
+   retval.+objtype;
+   local entry;
+   local menuentries2 := {};
+   local menuentry2 := {};
+   menuentry2.+objtype;
+   menuentry2.+type;
+   menuentry2.+submenu;
+   local themenu2 := createmenu("What would you like to make?");
+   //output(who, "About to check for entries ");
+
+   foreach entry in getconfigstringarray(submenuname, "Entry")
+      //output(who, "Got an entry : "+ entry);
+      local rtvl := can_make(who, entry, what);
+      if (!rtvl)
+         //output(who,"can't make " + entry);
+      endif
+      if (rtvl)
+         //output(who, "adding entry" + entry);//
+         local stuff := splitwords(entry);
+         //output(who, "Calling AddMenuItem(themenu," +   getgraphic(stuff[1]) + "," +  stuff[2] + ")");
+         AddMenuItem(themenu2, getgraphic(cint(stuff[1])), stuff[2]);
+         menuentry2.objtype := cint(stuff[1]);
+         menuentry2.submenu := "";
+         menuentry2.type := 1;
+         menuentries2.append(menuentry2);
+      endif
+      //output(who, menuentries2);
+   endforeach
+
+
+   //sendsysmessage(who, "Checked!!!!!!!!!!");
+   foreach entry in getconfigstringarray(submenuname, "submenu")
+      ////print ("checking submenu " + entry);
+      local stuff := getsubmenu(entry);
+      addmenuitem(themenu2, getgraphic(cint(stuff[2])), stuff[3]);
+      menuentry2.objtype := cint(stuff[2]);
+      menuentry2.type := 2;
+      menuentry2.submenu := stuff[1];
+      menuentries2.append(menuentry2);
+   endforeach
+
+   local retl2 := selectmenuitem2(who, themenu2);
+   ////print (retl2.errortext);
+   if (!retl2.index)
+      //output(who2,, "He didn't select anything!");
+      return 0;
+   else
+      ////print ("Index is " + retl2.index + " objtype = " + retl2.objtype);
+      if (menuentries2[retl2.index].type = 2)
+         retval.objtype := menuentries2[retl2.index].submenu;
+         retval.type := 2;
+         //output(who2,, "type is 2######################");
+      else
+         retval.objtype := menuentries2[retl2.index].objtype;
+
+         retval.type := 1;
+         ////print ("type is 1#$$$$$$$$$$$$$$$$$$$$$$");
+      endif
+   endif
+   output(who, "returning " + retval);
+   return retval;
+   
+endfunction
+
+
+
+
+function output(who, message)
+	if (who2.cmdlevel)
+		sendsysmessage(who, message);
+		//print(message);
+	endif
+endfunction
+
+function format_hex(theobjtype)
+   local thex := hex(theobjtype);
+   if (len(thex) = 5)
+      thex["0x"] := "0x0";
+   elseif (len(thex) = 4)
+      thex["0x"] := "0x00";
+   elseif (len(thex) = 3)
+      thex["0x"] := "0x000";
+   endif
+   return thex;
+   
+endfunction

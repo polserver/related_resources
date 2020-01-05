@@ -1,0 +1,23 @@
+use uo;
+use cfgfile;
+
+include "include/attributes";
+include "druid";
+
+program cast_refresh(caster)
+
+	if(!checkstaff(caster))
+		return;
+	endif
+	
+  checkdruidopts(caster, 1);
+  	
+  usemana(caster, 1);
+
+  var ref := geteffectiveskill(caster, SKILLID_ANIMALLORE)/2;
+  var cast_on := target(caster);
+  playobjectcenteredeffect(cast_on, FX_BLESS_EFFECT,10,10);
+  PlaySoundEffect( cast_on, SFX_SPELL_HEAL );
+  SetStamina(cast_on, GetStamina(cast_on) + ref);
+  
+endprogram

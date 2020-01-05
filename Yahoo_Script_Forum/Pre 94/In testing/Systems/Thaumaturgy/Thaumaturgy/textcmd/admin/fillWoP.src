@@ -1,0 +1,37 @@
+
+use cfgfile;
+use uo;
+
+program FillWoP(who)
+
+local list := GetGlobalProperty("WoPList");
+if (list)
+	EraseGlobalProperty("WoPList");
+endif
+
+local WoPHash := dictionary;
+
+local spellcfg := ReadConfigFile("::spells");
+
+local i := 101;
+local elem := FindConfigElem(spellcfg, i);
+
+while (elem)
+	local words := GetConfigString(elem, "PowerWords");
+	local magicid := GetConfigInt(elem,"SpellID");
+
+	while (words[" "])
+		words[" "] := "";
+	endwhile
+
+	words := lower(words);
+	
+	WoPHash[words] := magicid;
+	i := i+1;
+
+	elem := FindConfigElem(spellcfg, i);
+endwhile
+
+SetGlobalProperty("WoPList",WoPHash);
+
+endprogram

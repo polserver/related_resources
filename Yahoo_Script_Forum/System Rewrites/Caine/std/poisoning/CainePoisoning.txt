@@ -1,0 +1,22 @@
+CainePoisoning
+--------------
+
+This was changed to work with my Alchemy pkg (CaineAlch).
+
+Poison potions are now read in correctly... and damage and duration is done according to poison strength.
+
+And now you can't poison everything. 
+
+Great.
+
+So now it works, hopefully. ;))
+
+19/9/2000 :
+----------- 
+AAARG! found a huge bug in their script... and just too late, darn! It would poison once correctly, and for every other time you poisoned the posioned weapon... it would add a hitscript, makeing the effects of a weapon really unbelivable.
+
+also, added partial successes, (for all the posioners among us).
+if you fail the initial check, it will re-check on potions that require a skill above 50, 'cause i use the formula ( skill-10 >= 40 ). If you do score a partial success, the potions effective str is reduced by 2.
+
+
+caine

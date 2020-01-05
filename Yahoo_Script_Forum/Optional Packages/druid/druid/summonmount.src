@@ -1,0 +1,49 @@
+use uo;
+use os;
+use util;
+
+include "include/client";
+include "druid";
+
+var spelldelay := 5;
+
+program cast_summonspirit(caster)
+
+	if(!checkstaff(caster))
+		return;
+	endif
+	
+  checkdruidopts(caster, 2);
+ 	
+  usemana(caster, 2);
+
+  local amount := 1;
+  local thecritter;
+
+  local parms := {};
+  local npctemplate := "blank";
+
+  parms .+ script := "tamed";
+
+  While(amount>0)
+
+	local creature := RandomDiceRoll("1d3");
+	Case (creature)
+		1:
+			npctemplate := "horse3";
+		2:
+			npctemplate := "forestostard";
+		3:
+			npctemplate := "llama";
+	endcase
+
+	local casttarg := targetcoordinates (caster);
+			
+	thecritter := CreateNPCfromTemplate(npctemplate, casttarg.x, casttarg.y,casttarg.z, parms);
+	SetObjProperty(thecritter,"master", caster.serial);
+	PlaySoundEffect(caster, 0x022b);
+	amount := amount - 1;
+	
+    endWhile
+
+endprogram

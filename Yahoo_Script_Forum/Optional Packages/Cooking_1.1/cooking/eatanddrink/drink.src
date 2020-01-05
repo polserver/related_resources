@@ -1,0 +1,42 @@
+//
+// 1.1
+// 
+// drink.src
+//
+// By Austin Heilman
+// Aheilman@home.com
+//
+// Requires my poison watcher, or you to write your own
+// alcohol effect. When someone drinks, it gets them drunk ;)
+//
+// Created 6/19/2001 12:45PM
+// Modified 6/19/2001 12:45PM
+//
+
+use uo;
+use cfgfile;
+use util;
+
+Const DRINK_SOUND := 0x32;
+Const ACTION_DRINK := 0x22;
+
+include "include/poisons";
+
+program drinkit(who, drink)
+	var config := ReadConfigFile(":*:itemdesc");
+	config := config[drink.objtype];
+	var alcohol := config.Proof;
+	var nutrition := config.nutrition;
+	
+	if (!nutrition)
+		nutrition := 1;
+	endif
+	
+	//Replace the below line with your own alcohol system if you
+	//dont want to use my poison watcher package.
+	AddPoison(who, "alcohol", alcohol);
+	
+	PlaySoundEffect(who, DRINK_SOUND);
+	PerformAction(who, ACTION_DRINK);
+	SubtractAmount(drink, 1);
+endprogram

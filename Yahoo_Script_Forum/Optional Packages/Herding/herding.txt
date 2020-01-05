@@ -1,0 +1,45 @@
+1. Installation
+2. Special Thanks
+ 1. I N S T A L L A T I O N 
+  1. unzip herding.zip to pol\pkg\std\herding\
+  2. edit herding_settings.inc and recompile herdingai.src if you want
+  3. locate ShepherdsCrook from your itemdesc.cfg's, it will most likely be in pol\pkg\std\combat\itemdesc.cfg
+  4. append 'Script :herding:herding' to it so it looks like this:
+
+Weapon 0x0e81
+{
+    Name            ShepherdsCrook
+    Default         1
+    Speed           30
+    Damage          3d4
+    MinDam          3
+    MaxDam          12 
+    SkillId         Mace
+    MaxHP           50
+    HitSound        0x13C
+    MissSound       0x234
+    Anim            0xC
+    VendorSellsFor  24
+    VendorBuysFor   12
+    blockcircle 9
+    TwoHanded 1
+    BlocksCastingIfInHand 0
+    Anim            0x000d
+        hitscript mainhitscript
+    controlscript makehitscript
+    equipscript equipweapon
+    unequipscript unequipweapon
+    destroyscript destroyweapon
+    Script :herding:herding
+}
+
+     5. restart pol and off you go :)
+
+ 2. S P E C I A L   T H A N K S 
+
+    Special thanks to 
+           Slilohen for "forcing" and helping me to make this
+           Tharaxis for helping
+           Myrathi for smirking too much (i had to put this in here :)
+           Syzygy for well... if you don't know then jump into a lake
+

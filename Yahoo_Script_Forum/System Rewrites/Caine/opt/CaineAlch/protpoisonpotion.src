@@ -1,0 +1,34 @@
+use os;
+use uo;
+use util;
+use cfgfile;
+include "drinkpotion";
+
+program drink_blue (character, potion)
+if (!checkifcandrink(character,potion))
+        return;
+endif
+    local potion_strength := get_potion_strength(potion);
+
+
+    if (is_poison(potion))
+        do_poison(character, potion);
+    else
+        empty_bottle(character, potion);
+        local poison_level := Cint (GetObjProperty(character, "poison_level"));
+        poison_level := poison_level - potion_strength;
+
+        SetObjProperty(character, "poison_level", cstr(poison_level));
+        PlayObjectCenteredEffect( character, EFFECT_BLUE_SPARKLE, 10,10); 
+        Detach();
+        sleep(10);
+        candrink(character);
+        sleep(60 * potion_strength);
+        if (Cint(GetObjProperty(character, "poison_level")) < 0)
+                SetObjProperty(character, "poison_level", "0");
+        endif
+        SendSysmessage (character, "The protection from poison potion has worn off");     
+
+    endif
+
+endprogram

@@ -1,0 +1,42 @@
+**************
+newinserts
+**************
+**************
+How to make new things socketable with SMIS (Sith's Magic Item System), using the CFG.
+These items will be socketable using the "Enchant With" button in ItemID
+
+--------------
+Step 1
+--------------
+Open senchantedhit.cfg
+Goto the first element, "Data 420"
+Add the item ID of the object (in hex), followed by the script to run on selection, ie:
+
+	0x6500 :sithmagicitems:myinsert
+
+--------------
+Step 2
+--------------
+Make a new script for the insert... in this case its "sithmagicitems\myinsert.src"
+The parameters passed are in an array:
+
+  { who, socketing_item, socketed_item }
+     ^         ^               ^
+     |         |                \Weapon/Armour etc with sockets in.
+     |         |
+     |          \Item being put into socketed_item
+     |
+      \Character socketing item
+
+
+Here are the functions needed:
+
+  getFreeEnchSlots( item )			//Returns # of free enchantment slots/sockets
+  hasConflicts( ench, item )			//Checks if the enchantment is conflicted by another on the item
+  addEnch( item, ench )				//Adds the enchantment. Returns int 420 for success.
+  getEnchConfigProp( ench, propname, proptype ) //Pass "level" as propname and "integer" as type to get the level of the enchantment.
+  fillEnchSlots( item, ench, amount, stone )    //Fills up the slots and adds data of item being socketed ("stone")
+  refreshEnchNames( item )			//Fixes the order of names after a socketing
+
+The enchantment name is the ID of the element in senchantedhit.cfg - ie. "m_thorns" or "m_gm_smithys"
+For an example script, see "geminsert.src" in the sithmagicitems package.

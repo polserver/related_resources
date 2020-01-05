@@ -1,0 +1,179 @@
+use uo;
+use os;
+use npc;
+
+include "include/eventid";
+include "include/randname";
+include "include/clock";
+include "include/math";
+
+include "include/objtype";
+include "include/client";
+
+Global me:= self();
+global locations := ReadConfigFile("::traveling");
+if(!locations)
+	return;
+endif
+
+global comands := { "travel",
+		"price"
+};
+
+
+if( me.name["<random>"] )
+   SetName ( me , RandomName( me ) );
+endif
+
+EquipFromTemplate( me , "Clothes" );
+
+
+
+EnableEvents( EVID_ITEM_GIVEN);
+EnableEvents( EVID_SPEECH,2);
+EnableEvents(EVID_DAMAGED + EVID_ENGAGED);
+
+while (1)
+	local ev := wait_for_event( 30 );
+	if (ev)
+		case(ev.type)
+			EVID_SPEECH:
+			 ProcessSpeech(ev.source, ev.text);
+			EVID_ITEM_GIVEN: ProcessItem(ev.source, ev.item);
+			EVID_DAMAGED:
+			EVID_ENGAGED:  say("guards!!!");
+		endcase
+	endif
+endwhile
+
+function ProcessSpeech(who, text)
+
+local cmd;
+foreach st in comands
+	if(text[st])
+		cmd := st;
+		break;
+	endif
+endforeach
+
+case(cmd)
+	"travel": BuildTravelMenu(who);
+	"price" : say("Each travel costs 500gps");
+endcase
+endfunction
+
+function BuildTravelMenu(who)
+
+	Local Location;
+	Local X;
+	Local Y;
+	Local Z;
+	
+	Local Ok;
+	
+	Local Gate1;
+	Local Gate2;
+	
+	Say("Each travel costs 500gps?");
+	
+	//Create Menu
+	
+	Local Menu:=CreateMenu("Where would you like to go?");
+	Local i:=1;
+	Local elm := FindConfigElem(locations, i);
+	
+	While (elm)
+		Location := GetConfigString(elm, "name");
+		AddMenuItem(menu,UOBJ_BLUE_MOONGATE,"Gate to "+Location);
+		i:=i+1;
+		elm := FindConfigElem(locations, i);
+	endwhile
+    	Local Op:=SelectMenuItem2( who, menu );
+    	
+    	//Check Option
+    	If (Op.index);
+    	  //Search for money
+    	  Foreach item in EnumerateItemsInContainer(who.backpack)
+    	    If (item.objtype = 0x0eed and item.amount >= 500)
+    	        //Take Money
+    	    	SubtractAmount(item, 500);
+    	    	
+    	    	//Get Location Props
+    	    	elm := FindConfigElem(locations, op.index);
+    	    	X := GetConfigInt(elm, "x");
+    	    	Y := GetConfigInt(elm, "y");
+    	    	Z := GetConfigInt(elm, "z");
+    	    	
+    	    	Say("Thanks!");
+    	    	sleepms(500);
+    	    	Say("Vas Rel Por");
+		PerformAction( me, ANIM_CAST_DIR );		
+    	    	sleepms(4500);
+    	    	
+		//Create Gates
+
+    	    	set_critical(1);
+    	    	
+    	    	Gate1 := CreateItemAtLocation(who.x , who.y+1, who.z, UOBJ_BLUE_MOONGATE, 1);
+    	    	Gate1.movable :=0;
+    	    	Gate1.graphic :=1;
+    	    	Gate2 := CreateItemAtLocation(x, y, z, UOBJ_BLUE_MOONGATE, 1);
+    	    	Gate2.graphic :=1;
+    	    	Gate2.movable :=0;
+    	    	    	    	    	    	
+    	    	    	    	    	    	
+    	    	SetObjProperty(gate1, "GateDestX", Gate2.x);
+    	    	SetObjProperty(gate1, "GateDestY", Gate2.y);
+    	    	SetObjProperty(gate1, "GateDestZ", Gate2.z);
+    	    	
+    	    	SetObjProperty(gate2, "GateDestX", Gate1.x);
+    	    	SetObjProperty(gate2, "GateDestY", Gate1.y);
+    	    	SetObjProperty(gate2, "GateDestZ", Gate1.z);
+   	    	
+    	    	set_critical(0);
+    	    	
+    	    	PlaySoundEffect( self(), SFX_SPELL_GATE_TRAVEL );
+    	    	
+    	    	For (i:=6899;i<=6907;i:=i+1)
+    	    	   Gate1.graphic := i;
+    	    	   Gate2.graphic := i;
+    	    	   sleepms(150);
+    	    	Endfor
+    	    	    	    	
+    	    	Gate1.graphic := UOBJ_BLUE_MOONGATE;
+    	    	Gate2.graphic := UOBJ_BLUE_MOONGATE;
+    	    	
+    	    	sleep(30);
+    	    	
+    	    	For (i:=6907;i>=6899;i:=i-1)
+    	    	   Gate1.graphic := i;
+    	    	   Gate2.graphic := i;
+    	    	   sleepms(150);
+    	    	Endfor
+    	    	
+    	    	DestroyItem(Gate1);
+    	    	DestroyItem(Gate2);
+    	    	ok := 1;
+    	    	break;
+    	    Endif
+    	  Endforeach
+    	  If (!OK)
+    	    Say("You dont have enought money");
+    	  Endif
+    	Endif
+
+endfunction
+
+
+function ProcessItem(who, item)
+
+if(item.objtype = 0x0eed) //eh o viajante e eh money
+	say("Thanks!");
+	DestroyItem(item);
+else
+	say("Yucks! I dont have use for this");
+	MoveItemToContainer(item, who.backpack);
+endif
+
+
+endfunction

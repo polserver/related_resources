@@ -1,0 +1,18 @@
+
+use uo;
+use os;
+
+program fillmyspellbook(who)
+
+   var spellbook := target(who);
+
+   if (spellbook.objtype != 0xa237)
+      SendSysMessage(who, "That is not a thaumaturgical spellbook!");
+      return;
+   endif
+
+   var circlesarray := {255,255,255,255,255,255,255,255};
+
+   SetObjProperty(spellbook, "Circles", circlesarray);
+
+endprogram

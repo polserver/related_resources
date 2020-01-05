@@ -1,0 +1,225 @@
+// key.src - key double-click script
+//	They're all lockid-style keys now.
+//
+//	Use a key on itself to rename it.
+//	Use a blank key on a key to copy it.
+//	Use a key on a lock to lock/unlock it.
+//
+//	Use a keyring on a key to move the key to the keyring
+//	Use a keyring on itself to remove all the keys.
+//	Use a keyring on a lock to lock/unlock it.
+//
+//	TODO: Make the key utility autosearch keyring contents as
+//		well as the player's pack.
+//
+//		-Dundee
+//
+//
+//Added to config/itemdesc.cfg:
+//
+// Item 0x1011
+// {
+//	Name            keyring
+//	Script          key
+//	VendorSellsFor  12
+//	VendorBuysFor   4
+// }
+//
+//Also:  Add all the keys and a keyring to a vendor so players can buy them!
+//
+
+use uo;
+include "include/objtype";
+
+Const KEYSTART := 0x100E;
+Const KEYEND := 0x1013;
+Const KEYRING := 0x1011;
+
+program use_key(character, key)
+
+    local thetarget := Target(character);
+    if (! Accessible (character, thetarget))
+        PrintTextAbovePrivate(character, "You can't reach that", character);
+        return;
+    endif
+
+    if (key.objtype = KEYRING)
+	Use_KeyRing(character,key,thetarget);
+	return;
+    elseif (thetarget.serial = key.serial)
+	RenameKey( character, key );
+	return;
+    endif
+
+    local lockid := GetObjProperty( key, "lockid" );
+    local targetlockid := GetObjProperty( thetarget, "lockid" );
+
+    if (! targetlockid)
+	PrintTextAbovePrivate( thetarget, "That doesn't have a lock.", character );
+	return;
+    endif
+
+   if (! lockid)
+	CopyKey( character, key, thetarget );
+	return;
+    endif
+
+    if (lockid != targetlockid )
+ 	PrintTextAbovePrivate( thetarget, "That's the wrong key!", character );
+	return;
+    else
+	if ( (thetarget.objtype >= KEYSTART) and (thetarget.objtype <= KEYEND) )
+		PrintTextAbovePrivate( character, "These keys match", character );
+		return;
+	else
+		UnLockIt(thetarget,character);
+		return;
+	endif
+    endif
+
+endprogram
+
+function UnLockIt(thetarget,character)
+
+    if (thetarget.graphic in { GID_PLANK_EXTENDED_FACING_EAST,
+                               GID_PLANK_EXTENDED_FACING_WEST,
+                               GID_PLANK_EXTENDED_FACING_NORTH,
+                               GID_PLANK_EXTENDED_FACING_SOUTH } )
+        PrintTextAbovePrivate( thetarget, "You can't lock the plank while it's extended.", character );
+        return;
+    endif
+local houseserial := GetObjProperty(thetarget, "houseserial");
+
+local house := SystemFindObjectBySerial(houseserial);
+local private := GetObjProperty(house, "private");
+if(!private)
+    thetarget.locked := (not thetarget.locked);
+endif
+
+
+
+
+
+    if (thetarget.locked and private = error)
+        PrintTextAbovePrivate( thetarget, "You lock it.", character );
+    elseif(!private)
+        PrintTextAbovePrivate( thetarget, "You unlock it.", character );
+    endif
+   
+   
+   	if(private)
+  		  PrintTextAbovePrivate( thetarget, "You CANNOT lock a Public house!", character );
+	endif
+
+endfunction
+
+function Use_KeyRing(character, key, thetarget)
+
+	local lockid := GetObjProperty( key, "lockid" );
+	local targetlockid := GetObjProperty( thetarget, "lockid" );
+	local insidering := FindMyPack(key.serial);
+
+	//target the keyring to dump the contents all over your pack
+	if (key.serial = thetarget.serial)
+		PrintTextAbovePrivate( character, "You remove the keys from the ring.", character );
+		foreach otherkey in EnumerateItemsInContainer(insidering)
+			moveitemtocontainer(otherkey, character.backpack);
+		endforeach
+		key.graphic := 4113;
+		return;
+	endif
+
+	//exit if the target is not a lock or is a blank key
+	if (! targetlockid)
+		PrintTextAbovePrivate( thetarget, "That doesn't have a lock.", character );
+		return;
+	endif
+
+	//if the target is a key, move it into the keyring, otherwise try to unlock it
+	if ( (thetarget.objtype >= KEYSTART) and (thetarget.objtype <= KEYEND) and (thetarget.objtype != KEYRING ))
+		PrintTextAbovePrivate( character, "You put the key on the keyring.", character );
+		moveitemtocontainer(thetarget, insidering);
+		if (! key.graphic)
+			key.graphic := 4113;
+		endif
+		if (key.graphic = 4113)
+			key.graphic := 5993;
+		elseif (key.graphic < 5995)
+		    key.graphic := key.graphic + 1;
+		endif
+		return;
+	else
+		//check the lockid of all the keyring's contents against the lock
+		foreach otherkey in EnumerateItemsInContainer(insidering)
+			lockid := GetObjProperty( otherkey, "lockid" );
+			if (lockid = targetlockid)
+				UnlockIt(thetarget,character);
+				return;
+			endif
+		endforeach
+	endif
+
+	PrintTextAbovePrivate( key, "None of your keys fit that lock.", character );
+	return;
+
+endfunction
+
+function RenameKey( character, key )
+
+	local keyDescription := RequestInput( character, key, 
+		"Please enter a description for this key. (max 20 characters)" );
+
+    	local descriptionLen := Len( keyDescription );
+
+	if ( keyDescription )
+		if ( descriptionLen <= 20 )
+			key.name := "a key: "+ keyDescription;			
+			SendSysMessage( character, "Key is renamed." );
+		else
+			SendSysMessage( character, "That name is too long" );
+		endif
+	endif
+
+endfunction
+
+function CopyKey( character, key, thetarget)
+
+    local lockid := GetObjProperty( key, "lockid" );
+    local targetlockid := GetObjProperty( thetarget, "lockid" );
+
+    if ( (thetarget.objtype >= KEYSTART) and (thetarget.objtype <= KEYEND) )
+	SetObjProperty( key, "lockid", targetlockid );
+	PrintTextAbovePrivate( key, "You make a copy of the key", character );
+    else
+	PrintTextAbovePrivate( key, "This key is blank", character );
+    endif
+
+endfunction
+
+function OpenTamedStorageAreas()
+
+    local bank := FindStorageArea( "Tamed Storage" );
+    if (!bank)
+        bank := CreateStorageArea( "Tamed Storage" );
+    endif
+
+    return bank;
+
+endfunction
+
+function FindMyPack(myserial)
+
+    local mybank := OpenTamedStorageAreas();
+
+    local bank_obj_name := "Bankbox  " + hex(myserial);
+
+    local bankbox := FindRootItemInStorageArea( mybank, bank_obj_name );
+
+    if (!bankbox)
+        bankbox := CreateRootItemInStorageArea(mybank, bank_obj_name, UOBJ_BANKBOX  );
+
+    endif
+    
+    return bankbox;
+
+endfunction

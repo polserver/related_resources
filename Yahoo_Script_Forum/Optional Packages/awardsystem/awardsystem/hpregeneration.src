@@ -1,0 +1,40 @@
+use uo;
+use os;
+
+program hpregeneration( param)
+  var who;
+  var clean := 0;
+  if( len( param))
+    who := param[1];
+    clean := param[2];
+  else
+    who := param;
+  endif
+  
+  if( who.dead)
+    return 0;
+  endif
+  
+  var amount := who.strength;
+  var oldamount := GetObjProperty( who, "hpregenmod");
+
+  if( clean)
+    if( oldamount)
+      who.hp_regen_rate := who.hp_regen_rate - oldamount;
+      EraseObjProperty( who, "hpregenmod");
+      SendSysMessage( who, "Your hits regeneration returned to normal!");
+    endif
+    return 1;
+  endif
+  
+  if( !oldamount)
+    who.hp_regen_rate := who.hp_regen_rate + amount;
+    SetObjProperty( who, "hpregenmod", amount);
+    SendSysMessage( who, "Your hits are regenerating faster now");
+  elseif( oldamount < amount)
+    who.hp_regen_rate := who.hp_regen_rate - oldamount;
+    who.hp_regen_rate := who.hp_regen_rate + amount;
+    SetObjProperty( who, "hpregenmod", amount);
+    SendSysMessage( who, "Your hits are regenerating faster now");
+  endif
+endprogram

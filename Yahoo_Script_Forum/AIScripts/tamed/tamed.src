@@ -1,0 +1,644 @@
+use npc;
+use os;
+use uo;
+use cfgfile;
+use util;
+
+global me := Self();
+sleep(1);
+include "include/eventid";
+include "include/dist";
+include "include/client";
+
+include "ai/main/tamesetup";
+include "ai/fighting/tamefighting";
+include "ai/misc/tamefollow";
+include "ai/misc/tamecast";
+
+
+program TamedAI()
+
+EnableEvents( EVID_SPEECH, 9 );
+EnableEvents( EVID_ENGAGED + EVID_DAMAGED );
+EnableEvents( EVID_DOUBLECLICKED );
+EnableEvents( EVID_ITEM_GIVEN );
+
+SetWarMode(0);
+SetObjProperty(me, "serial", me.serial);
+
+local ev, friendly, checktimer :=0;
+while (happyness)
+	if(nexthungry < ReadGameClock())
+		nexthungry :=  ReadGameClock()+hungryrate;
+		happyness := happyness-1;
+		SetProperty("happyness",happyness);
+	endif
+
+	if(checktimer < ReadGameClock())
+		checktimer := ReadGameClock()+60;
+		CheckMaster();
+	endif
+
+	ev := wait_for_event(10);
+	if(ev)
+		friendly := CheckPerson(ev.source.serial);
+		case (ev.type)
+			EVID_SPEECH:
+				if(friendly)
+					Do_Command(ev,friendly);
+				endif
+			EVID_ENGAGED:
+			EVID_DAMAGED:
+				if(ev.source)
+					opponent := ev.source;
+					fightqueue := {};
+					followed :=0;
+				endif
+	        	EVID_DOUBLECLICKED:
+				if(friendly)
+					OpenMyPack(ev.source,friendly);
+				endif
+			EVID_DISENGAGED:
+			EVID_PEACEMADE:
+				break;
+			EVID_ALL_ATTACK_CMD:
+				opponent := ev.target;
+				fightqueue := {};
+				followed :=0;
+			EVID_ALL_FOLLOW_CMD:
+				opponent := 0;
+				followed := ev.target;
+			EVID_ITEM_GIVEN:
+				if(friendly)
+					ProcessItem(ev.source,ev.item);
+				else
+					MoveItemToLocation(ev.item,ev.source.x,ev.source.y,ev.source.z,0x40000000);
+				endif
+
+			//disabled since the code is too bugged
+			//EVID_MASTER_DEAD:
+			//EVID_BODY_TOUCHED:	
+	        endcase
+	endif
+	if(opponent)
+		Fight();
+	endif
+	if(followed)
+		Follow();
+	endif
+endwhile
+
+Release();
+
+endprogram
+
+
+function ProcessItem(who,item)
+
+local script:=GetConfigString(icfg[item.objtype], "script");
+
+//ok, This should be way better, dragons and birds both fly, but eat different amounts of food
+if(script["eat"]) //it's food
+	if(happyness < 11)
+		happyness := happyness+1;
+	endif
+	destroyitem(item);
+	return;
+endif
+
+if(me.graphic = 0x123 or me.graphic =0x124) //have pack
+	if (!me.backpack)
+		local newbackpack := CreateItemAtLocation(me.x, me.y, me.z, 0xe75,1);
+		EquipItem(me, newbackpack);
+	endif
+	MoveItemToContainer(item, me.backpack);
+	return;
+endif
+MoveItemToLocation(item,who.x,who.y,who.z,MOVEITEM_FORCELOCATION);
+endfunction
+
+
+function CloseDistance( someone )
+    case (Distance( me, someone ))
+        1:              // the most likely, so first 
+        0:
+            return 1;
+        
+        2:
+            if(!WalkToward( someone ))
+               sleep(1);
+               return 2;
+            else
+               return 0;
+            endif
+
+        default:
+            if(!RunToward( someone ))
+               sleep(1);
+               return 2;
+            else
+               return 0;
+            endif
+    endcase
+endfunction
+
+
+function Release()
+
+local summoned := GetProperty( "summoned" );
+local myscript := GetProperty(  "script" );
+if (summoned or !myscript)
+	damage( me , me.hp + 3 );
+else
+	EraseObjProperty(me,"friends");
+	EraseObjProperty(me,"friends_name");
+	EraseObjProperty(me,"happyness");
+	PrintTextAbove( me , me.name + " can run free!" );
+	me.setmaster( 0 );
+
+	me.script := myscript;
+	EraseObjProperty(me,"master");
+	EraseObjProperty(me,"script");
+	SetAnchor(me.x,me.y,10,1 );
+	RestartScript(me);
+endif
+endfunction
+
+
+function Do_Command(ev,friend)
+
+local command := SplitWords(lower(ev.text));
+if(command.size() <2)
+	return;
+endif
+
+local type;
+if(command[1] = me.name)
+	type:=0;
+elseif(command[1] = "all")
+	type :=1;
+else
+	return;
+endif
+
+case(command[2])
+	"kill":
+	"fight":
+		if(!CanCommand(ev.source))
+			return;
+		endif
+
+		local what := Target( ev.source , TGTOPT_HARMFUL + TGTOPT_CHECK_LOS );
+		if(!what.maxhp)
+			return;
+		endif
+		if(type)
+			local eve :={};
+			eve.+type := EVID_ALL_ATTACK_CMD ;
+			eve.+source := me;
+			eve.+target := what;
+			SendEvent( me , eve );
+			//what about listmobilesinLOS ?
+			foreach mob in ListMobilesNearLocation(ev.source.x,ev.source.y,ev.source.z,9)
+				if(GetObjProperty(mob,"master")=me.master.serial )
+					SendEvent( mob , eve );
+				endif
+			endforeach
+		else
+			opponent := what;
+		endif
+		followed :=0;
+
+	"come":
+		if(!CanCommand(ev.source))
+			return;
+		endif
+        	local times := 0;
+		while( Distance(me,ev.source) >2 and times <4)
+			if(!RunToward(ev.source))
+				times :=times+1;
+			else
+				times :=0;
+			endif
+		endwhile
+		followed:=0;
+		opponent :=0;
+		fightqueue :=0;
+
+	"followme":
+		if(!CanCommand(ev.source))
+			return;
+		endif
+
+		if(type)
+			var eve :={};
+			eve.+type := EVID_ALL_FOLLOW_CMD;
+			eve.+source := me;
+			eve.+target := ev.source;
+			SendEvent( me , eve );
+			foreach mob in ListMobilesNearLocation( ev.source.x, ev.source.y, ev.source.z, 9 )
+				if( GetObjProperty( mob , "master" ) = me.master.serial )
+					SendEvent( mob , eve );
+				endif
+ 			endforeach
+                else
+			followed := ev.source;
+		endif
+		opponent :=0;
+
+	"follow":
+		if(!CanCommand(ev.source))
+			return;
+		endif
+                local the_leader := Target( ev.source , TGTOPT_CHECK_LOS );
+		if(!the_leader.maxhp or the_leader.serial = me.serial)
+			return;
+		endif
+
+		if(type)
+			var eve :={};
+			eve.+type := EVID_ALL_FOLLOW_CMD;
+			eve.+source := me;
+			eve.+target := the_leader;
+			SendEvent( me , eve );
+			foreach mob in ListMobilesNearLocation(ev.source.x,ev.source.y,ev.source.z,9)
+				if( GetObjProperty( mob , "master" ) = me.master.serial)
+					SendEvent( mob , eve );
+				endif
+			endforeach
+			
+		else
+			followed :=the_leader;
+		endif
+		opponent :=0;
+
+	"friend":
+		if(friend =1)
+			if(friends.size() >=10)
+				SendSysMessage(master, "You cant add new friends");
+				return;
+			endif
+			local whom := Target(master);
+			if(whom.acctname and whom.serial !=masterserial)
+				foreach ppl in friends
+					if(ppl = whom.serial)
+						return;
+					endif
+				endforeach
+				friends.append(whom.serial);
+				friends_name.append(lower(whom.name));
+				SetProperty("friends",friends);
+				SetProperty("friends_name",friends_name);
+				PrintTextAbove( me,"Now I obbey orders from "+whom.name+ " too");
+			endif
+		else
+			PrintTextAbovePrivate( me,"You can't make people friendly to this animal", ev.source );
+		endif
+
+	"transfer":
+		if(friend=1)
+			SendSysmessage( master , "Transfer " + me.name + " to whom?" );
+			local whom := Target(master);
+			if(whom.acctname and whom.serial != masterserial)
+				SetProperty("friends",{});
+				SetProperty("friends_name",{});
+				SetProperty("happyness",  happyness-1);
+				SetProperty("master" , whom.serial );
+				PrintTextAbove( me,"Now I only obbey orders from "+whom.name );
+				RestartScript(me);
+			endif
+		endif
+
+	"release":
+		if(friend=1)
+			Release();
+		elseif(friend =2)
+			local g,rez:=0;
+			for(g:=1;g<=friends.size();g:=g+1)
+				if(friends[g] = ev.source.serial)
+					rez :=g;
+					break;
+				endif
+			endfor
+			if(rez)
+				friends.erase(rez);
+				friends_name.erase(rez);
+				SetProperty("friends",friends);
+				SetProperty("friends_name",friends_name);
+				PrintTextAbove( me,"Now I no longer obbey orders from "+ev.source);
+			endif
+		endif
+
+	"fetch":
+		if(!CanCommand(ev.source))
+			return;
+		endif
+		local tobj := Target(ev.source);   //object I'm supposed to get
+		if(!tobj or tobj.multi.serial != ev.source.multi.serial)
+			return;
+		else
+			if (tobj.container or tobj.maxmana)
+				return;
+			else
+				if(EnumerateItemsInContainer(tobj) != error or !CheckLineOfSight(me,tobj) )
+					return;
+				endif
+			endif
+		endif
+		
+		local times := 0;
+		while ( (distance(me, tobj) >1) and times < 4 )
+			if(!runtoward(tobj) )
+				sleepms(250);
+				times := times + 1;
+			else
+				times := 0;
+			endif
+		endwhile
+		if(times <4) //soo it won't get things from unreached places
+			MoveItemToContainer(tobj,me.backpack);
+		endif
+		followed :=0;
+		opponent :=0;
+		fightqueue :={};
+
+	"stop":
+		followed :=0;
+		opponent :=0;
+		fightqueue :={};
+
+	"drop":
+		if(!CanCommand(ev.source))
+			return;
+		endif
+		foreach myitems in enumerateitemsincontainer(me.backpack)
+			if(myitems.container.serial = me.backpack.serial)
+				moveitemtolocation(myitems, me.x, me.y, me.z,0);
+			endif
+		endforeach
+		followed :=0;
+		opponent :=0;
+		fightqueue :={};
+
+	"speak":
+		if(!CanCommand(ev.source))
+			return;
+		endif
+		local sound_number := melem.attackhitsound;
+		PlaySoundEffect( me , sound_number);
+		if(happyness <11)
+			if(!RandomInt(51))
+				happyness := happyness+1;
+				SetProperty("happyness",happyness);
+			endif
+		endif
+
+	"unfriend":
+		if(friend =1)
+			local targ:="",rez :=0;
+			if(command.size() >2)
+				command.erase(1);
+				command.erase(1);
+				foreach nn in command
+					targ := targ+nn+" ";
+				endforeach
+				targ := lower(targ[1,len(targ)-1]);
+				local k;
+				for(k:=1;k<=friends.size();k:=k+1)
+					if(friends_name[k] = targ)
+						rez :=k;
+					endif
+				endfor
+			else
+				targ := target(master);
+				if(!targ or !targ.acctname)
+					SendSysMessage(master,"Canseled");
+					return;
+				endif
+				local h;
+				for(h:=1;h<=friends.size();h:=h+1)
+					if(friends[h] = targ.serial)
+						rez:=h;
+						break;
+					endif
+				endfor
+			endif
+			if(rez)
+				friends.erase(rez);
+				friends_name.erase(rez);
+				SetProperty("friends",friends);
+				SetProperty("friends_name",friends_name);
+				PrintTextAbove( me,"Now I don't obbey orders from "+targ.name);
+			endif
+
+		endif
+	"report":
+		local theword;
+		theword := "My master is ";
+		theword := theword + master.name;
+		if(friends.size())
+			theword := theword + " and my friends are";
+			foreach migo in friends_name
+				theword := theword+" "+migo;
+			endforeach
+		else
+			theword := theword +" and I don't have friends";
+		endif
+		say(theword);
+endcase
+
+endfunction
+
+
+function CanCommand(dude)
+
+if(GetProperty("summoned"))
+	return 1;
+endif
+
+//taming and animal lore
+if( CheckSkill(dude, 35,(tameskill/2),2) and CheckSkill(dude, 2,(tameskill*3/4),4) ) 
+	return 1;
+else
+	return 0;
+endif
+
+endfunction
+
+
+function CheckMaster()
+
+master :=SystemFindObjectBySerial(masterserial);
+if(master.x and distance(master,me) <ENABLE_TRESHOLD )
+	return;
+endif
+if(len(friends))
+	foreach fds in friends
+		local dude :=SystemFindObjectBySerial(cint(fds));
+		if( dude.x and distance(dude,me) <ENABLE_TRESHOLD )
+			return;
+		endif
+	endforeach
+endif
+DisableEvents( EVID_SPEECH );
+
+local oldX :=me.x;
+local oldY := me.y;
+local ev;
+SetWarMode(0);
+local timer :=  ReadGameClock();
+local nextcheck := timer+60;
+
+while(1)
+	timer := ReadGameClock();
+	if( nextcheck < timer )
+		master :=SystemFindObjectBySerial(masterserial);
+		if(master.x and distance(master,me) <ENABLE_TRESHOLD)
+			return;
+		endif
+		if(len(friends))
+			foreach fds in friends
+				local dude :=SystemFindObjectBySerial(cint(fds));
+				if( dude.x and distance(dude,me) <ENABLE_TRESHOLD )
+					return;
+				endif
+			endforeach
+		endif
+		nextcheck:= timer+60;
+	endif
+
+	if( nexthungry < timer)
+		nexthungry :=  timer + hungryrate;
+		happyness := happyness-1;
+		SetProperty("happyness",happyness);
+		if(!happyness)
+			return;
+		endif
+	endif
+
+	ev := wait_for_event(60);
+	if (ev)
+		case (ev.type)
+			EVID_ENGAGED:
+			EVID_DAMAGED:
+				if(ev.source)
+					opponent := ev.source;
+					WaitFight();
+				endif
+			EVID_ITEM_GIVEN:
+				MoveItemToLocation(ev.item,ev.source.x,ev.source.y,ev.source.z,0x40000000);
+		endcase
+	endif
+endwhile
+
+
+EnableEvents(EVID_SPEECH);
+timer :=0;
+while( coordist(me.x,me.y,oldX,oldY) > 3 and timer <4)
+	if(!WalkTowardLocation(oldX,oldY))
+		timer:= timer+1;
+	else
+		timer :=0;
+	endif
+	sleepms(250);
+endwhile
+
+endfunction
+
+
+function OpenMyPack(who,friend)
+
+if(!friend) return; endif
+
+if (distance(me,who) > 2)
+	return;
+endif
+local mounttype := 0;
+
+case (me.graphic)
+	0x123:
+	0x124:
+	    SendOpenSpecialContainer( who, me.backpack );
+	    return;
+	0xcc: //dark brown/horse
+		mounttype := 0x3ea2;
+	0xc8: //lightbrown/horse2
+		mounttype := 0x3e9f;
+	0xe2: //light grey/horse3
+		mounttype := 0x3ea0;
+	0xe4: //greybrown/horse4
+		mounttype := 0x3ea1;
+/* nao temos t2a
+	0xdc: //Llama:
+		mounttype := 0x3ea6;
+	0xd2: //desert
+		mounttype := 0x3ea3;
+	0xda: //frenzied
+		mounttype := 0x3ea4;
+	0xdb: //forest
+		mounttype := 0x3ea5;
+*/
+endcase
+
+if (mounttype)
+	if(who.serial != masterserial)
+		if(!(who.serial in friends))
+			return;
+		endif
+	endif
+
+	MoveCharacterToLocation(who,me.x,me.y,me.z,MOVECHAR_FORCELOCATION);
+	who.facing := me.facing;
+	set_critical(1);
+	local mount := CreateItemAtLocation(me.x, me.y, me.z, 0xF021,1);
+	mount.graphic := mounttype;
+	mount.color := me.color;
+	setobjproperty(mount,"petname",me.name);
+	if(GetProperty("summoned"))
+		setObjproperty(mount,"summoned",1);
+	endif
+	setobjproperty(mount,"happyness",happyness);
+	setobjproperty(mount,"friends",friends);
+	setobjproperty(mount,"friends_name",friends_name);
+	setobjproperty(mount,"master",masterserial);
+	setobjproperty(mount,"script", GetProperty("script"));
+	EquipItem(who,mount);
+	set_critical(0);
+	MoveCharacterToLocation(me,0,0,0,MOVECHAR_FORCELOCATION);
+	setobjproperty(me,"guardkill",1);
+	applyrawdamage(me,me.maxhp);
+endif
+
+endfunction
+
+
+function  CheckPerson(serial)
+
+if(serial = masterserial)
+	return 1;
+endif
+
+if(serial in friends)
+	return 2;
+endif
+
+return 0;
+
+endfunction
+
+
+function GetOpponent()
+local retval:=0;
+while(fightqueue.size())
+	retval := SystemFindObjectBySerial(cint(fightqueue[1]));
+	fightqueue.erase(1);
+	if(retval)
+		if(retval in ListHostiles(me))
+			return retval;
+		endif
+	endif
+	retval :=0;
+endwhile
+
+return 0;
+endfunction

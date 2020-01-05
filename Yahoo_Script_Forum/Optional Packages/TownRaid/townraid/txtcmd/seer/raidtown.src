@@ -1,0 +1,308 @@
+//v0.7c
+
+use uo;
+use os;
+//use util;
+use cfgfile;
+
+include "include/math";
+include "include/raidconsts";
+
+//include option for text entry
+
+const TEXTDOWN:=65;
+const PERPAGE:=11;
+
+
+var originallayout := array(
+	"page 0",
+	"nodispose",
+	"resizepic  50 0 2600 300 405",
+
+	"text 105 20 80 0", //title
+	"text 245 65 45 1", //Select
+
+	"text 145 45 70 2", //step title
+	"text 80 65 45 3", //name
+
+	"text 95 365 45 4" //step description
+);
+
+var originaldata := array(
+       "TownRaid v0.7c RaidMenu",
+       "Select"
+);
+
+
+var optionslayout := array(
+	"page 0",
+	"nodispose",
+	"resizepic  50 0 2600 300 405",
+
+	"text 105 20 80 0", //title
+	"text 165 40 70 1", //options
+
+	"text 135 355 40 2", //Start the raid
+	"button 295 355 2117 2118 1 0 20",
+
+
+	"text 95 77   55 3", // Quest Type
+
+	"text 85 97    42 4", // Raid With Gold
+	"radio 305 97  210 211 1 30",
+	"text 85 117   42 5", // Raid with no Gold
+	"radio 305 117 210 211 0 31",
+	"text 85 137   42 6", // TownRun
+//	"radio 305 137 210 211 0 32",
+	"text 85 157   42 7", // MonsterGenerator
+//	"radio 305 157 210 211 0 33",
+
+
+	"text 95 190   55 8", // Global options
+
+	"text 85 210 40 9",					// Raid Guards
+	"checkbox 305 210 210 211 1 10",
+	"text 85 230 40 10",					// raid ends when no gold left
+	"checkbox 305 230 210 211 0 11",
+	"text 85 250 40 11",					//players get reward on winning
+	"checkbox 305 250 210 211 1 12",
+	"text 85 270 40 12",					//Raiders dont attack unless provoked
+	"checkbox 305 270 210 211 0 13",
+	"text 85 290 40 13",					//Raiders attack each other
+	"checkbox 305 290 210 211 0 14"
+
+);
+
+var optionsdata := array(
+       "TownRaid v0.7 RaidMenu",
+       "Options",
+	   "Start the Raid!",
+
+		"Quest Type",         //3
+		"Raid with gold",
+		"Raid without gold",
+		"(NA) TownRun",
+		"(NA) MonsterGenerator",
+
+		"Global Options",
+		"RaidGuards",  //9
+		"Raid ends when no gold left",
+		"Players get reward on win",
+		"Raiders only attack if provoked",
+		"Raiders attack other raiders"
+
+);
+
+
+
+
+var user;
+
+program StartARaid(who)
+	user:=who;
+
+	UnloadConfigFile( ":townraid:groups" );
+	UnloadConfigFile( ":townraid:locations" );
+	UnloadConfigFile( ":townraid:difficulty" );
+
+	var locationcfg := ReadConfigFile( ":townraid:locations" );
+	var groupcfg := ReadConfigFile( ":townraid:groups" );
+	var difficultycfg := ReadConfigFile( ":townraid:difficulty" );
+
+	if (!locationcfg)
+		sendsysmessage(user, "Could not find pkg/opt/townraid/Location.cfg");
+		return;	
+	elseif (!groupcfg)
+		sendsysmessage(user, "Could not find pkg/opt/townraid/groups.cfg");
+		return;
+	elseif (!difficultycfg)
+		sendsysmessage(user, "Could not find pkg/opt/townraid/difficulty.cfg");
+		return;	
+	endif
+
+	var params := {};
+
+	params[1] := GetThaData(locationcfg,1);
+	if (params[1]=0)
+		sendsysmessage(user, "Canceled.");
+		return;
+	endif
+
+	params[2] := GetThaData(groupcfg,2);
+	if (params[2]=0)
+		sendsysmessage(user, "Canceled.");
+		return;
+	endif
+
+	params[3] := GetThaData(difficultycfg,3);
+	if (params[3]=0)
+		sendsysmessage(user, "Canceled.");
+		return;
+	endif
+
+	if (!OptionWindow(params))
+		sendsysmessage(user, "Canceled.");
+		return;
+	endif
+
+	params[4] := who.name;
+
+	start_script( ":townraid:raidtown" , params);
+
+
+endprogram
+
+
+
+function GetThaData(cfg,steptodo)
+
+	var list := {};
+	var layout:=originallayout;
+	var data:=originaldata;
+
+	case(steptodo)
+		1: 
+		   list := GetConfigStringKeys( cfg );
+		   data.append("Chose Location");
+		   data.append("Name");
+   		   data.append("The Raiders attack goal");
+		2: 
+		   list := GetConfigStringKeys( cfg );
+		   data.append("Chose Raiders");
+		   data.append("Group");
+   		   data.append("The type and amount of attackers");
+		3: 
+		   list := GetConfigStringKeys( cfg );
+		   data.append("Chose Difficulty");
+		   data.append("Level");
+   		   data.append("The ferocity and length of the attacks");
+
+	endcase
+
+	var prev_y := cint(TEXTDOWN);
+	var buttonret := 1;
+	var i, count:=0;
+	var pagecount := 1;
+
+	for( i := 1 ; i <= len(list); i := i + 1  )
+
+		count := count + 1;
+
+		if (mod(count, PERPAGE) = 1)
+
+		  // Forward
+		  if (count >= PERPAGE)
+			layout.append("button 200 310 5540 5541 0 " + (pagecount));
+		  endif
+
+		  // Set Page Number
+		  layout.append("page " + pagecount);
+		  pagecount := pagecount + 1;
+		  prev_y := TEXTDOWN;
+
+		  if (count > PERPAGE)
+			// Back
+			if( i > PERPAGE)
+			  layout.append("button 180 310 5537 5538 0 " + (pagecount - 2));
+			endif
+		  endif
+		endif
+
+
+		layout.append("text 90 " + cstr(prev_y + 20) + " 40 " + len(data));  //Select
+		data.append(list[i]);
+
+		layout.append("button 260 " + cstr(prev_y + 20) + " 2117 2118 1 0 " + buttonret); // Choose
+
+		prev_y := prev_y + 20;
+
+	  buttonret := buttonret + 1;
+
+	endfor
+
+
+	var result:=SendDialogGump( user, layout, data );
+
+	if (result[0]=0)
+		return 0;
+	endif
+
+	return list[result[0]];
+
+endfunction
+
+/*
+[5] - stop the raid if no gold left
+[6] - raidguards enabled
+[7] - players get gold reward on winning
+[8] - RaidType 
+       0: raid with no gold
+       1: raid with gold
+[9] - Raiders dont attack unless provoked (so players choose who they fight)
+[10] - RaidWar
+*/
+
+function OptionWindow(byref params)
+
+	var result:=SendDialogGump( user, optionslayout, optionsdata );
+
+	if (result[0]=0)
+		return 0;
+	endif
+		
+	if(result[10]) //raidguards
+		params[PA_RAIDGUARDS] := 1;
+	else
+		params[PA_RAIDGUARDS] := 0;
+	endif
+
+	if(result[11]) //raid ends with no gold
+		params[PA_STOPNOGOLD] := 1;
+	else
+		params[PA_STOPNOGOLD] := 0;
+	endif
+
+	if(result[12]) //players get gold when they win
+		params[PA_REWARDPLAYERS] := 1;
+	else
+		params[PA_REWARDPLAYERS] := 0;
+	endif
+
+
+	if(result[13]) //provoke
+		params[PA_PROVOKE] := 1;
+	else
+		params[PA_PROVOKE] := 0;
+	endif
+
+	if(result[14]) //Monsters fight each other
+		params[PA_RAIDWAR] := 1;
+	else
+		params[PA_RAIDWAR] := 0;
+	endif
+
+
+
+
+	if(result[30]) //raidwithgold
+		params[PA_RAIDTYPE] := RAID_RAIDWITHGOLD;
+	elseif(result[31]) //raid with no gold
+		params[PA_RAIDTYPE] := RAID_RAIDNOGOLD;
+//	elseif(result[32]) //townrun
+//		params[PA_RAIDTYPE] := RAID_TOWNRUN;
+//	elseif(result[33]) //monsterGenerator
+//		params[PA_RAIDTYPE] := RAID_KILLMONSTERGENERATOR;
+	endif
+
+
+	if (result[0]=0)
+		return 0;
+	endif
+
+	if (result[20]=1)
+		return 1;
+	endif
+
+	return 0;
+
+endfunction

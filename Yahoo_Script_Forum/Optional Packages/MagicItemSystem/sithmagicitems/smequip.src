@@ -1,0 +1,109 @@
+use uo;
+use os;
+use util;
+use cfgfile;
+
+var itemdesc := ReadConfigFile(":combat:itemdesc");
+
+include "sench";
+
+program equipSithMagicItem( who, item, startup )
+
+        if( GetObjProperty(item, "smi_eq") == who.serial )
+            return 1;
+        endif
+
+	if (GetObjProperty(item, "a_equipped")=who.serial)
+	  return 1;
+	endif
+	
+	var skilladv := GetObjProperty( item, "skill_adj" );
+	if( skilladv )
+		ModifySkillTemporaryMod( who, item.skillid, Cint(skilladv) );
+	endif
+
+	var oldEquip := GetObjProperty( item, "oldEquipScript" );
+	if( oldEquip )
+	  start_script( oldEquip, {who,item,startup} );
+	endif
+
+	//Check for armour-equip. Add your other equip script checks here!!!
+	if( cint(itemdesc[item.objtype].DexPenalty) ) //Needs the armor equip/unequip!
+	  eqarmor( who, item, startup );
+	endif
+
+	//This bit handles skill stuff
+	var cEnch := GetObjProperty( item, "Enchantments" );
+	var toSkills;
+	var newSkill;
+	var toStats;
+	foreach ench in cEnch
+	    toSkills := getEnchConfigProp( ench, "toSkill", "stringarray" );
+	    foreach toSkill in toSkills
+		toSkill := SplitWords( toSkill );
+		if( len(toSkill) == 2 )
+		    if( toSkill[1] != "wepSkill" )
+		        if( cInt(toSkill[1]) )
+			    toSkill[1] := toSkill[1];
+			elseif( !GetSkillIdByAttributeId(toSkill[1]) )
+			    toSkill[1] := GetObjProperty( item, toSkill[1] );
+			endif
+		    else
+			toSkill[1] := item.attribute;
+		    endif
+		    if( !cInt(toSkill[2]) )
+			toSkill[2] := GetObjProperty( item, toSkill[2] );
+		    else
+			toSkill[2] := cInt(toSkill[2]);
+		    endif
+		    if( cInt(toSkill[1]) )
+		        ModifySkillTemporaryMod( who, cInt(toSkill[1]), toSkill[2] );
+		    else
+		    	ModifyAttributeTemporaryModBaseValue( who, toSkill[1], toSkill[2]*10 );
+		    endif
+		endif
+	    endforeach
+	    
+	    toStats := getEnchConfigProp( ench, "toStat", "stringarray" );
+	    foreach toStat in toStats
+		toStat := SplitWords( toStat );
+		toStat[2] := cInt(toStat[2]);
+		case( lower(toStat[1]) )
+			"str": SetStrengthMod( who, GetStrengthMod( who ) + toStat[2] );
+			"dex": SetDexterityMod( who, GetDexterityMod(who) + toStat[2] );
+			"int": SetIntelligenceMod( who, GetIntelligenceMod(who) + toStat[2] );
+		endcase
+	    endforeach
+	endforeach
+
+	SetObjProperty( item, "w_equipped", who.serial );
+	SetObjProperty( item, "a_equipped", who.serial );
+	SetObjProperty( item, "smi_eq", who.serial );
+
+endprogram
+
+//This handles the equipping of armour (Dex penalties!)
+function eqarmor(who,item,startup)
+
+set_critical(1);
+if(!startup and !who.npctemplate)
+        if (GetObjProperty( item, "a_equipped")=who.serial)
+                //the item is already equipped and hasn't been dequipped
+                //so we don't want to adjust their stats again:
+                return 1;
+        endif
+        SetObjProperty(item,"a_equipped",who.serial);
+        var dex := GetDexterity(who);
+        var penalty := cint(itemdesc[item.objtype].DexPenalty);
+        if (penalty)
+                if ((dex - GetDexterityMod(who) - penalty) <= 0)
+                     SendSysMessage(who, "You are unable to move with that on.");
+                     return 0;
+                endif
+                GetDexterityMod(who) := GetDexterityMod(who) - penalty;
+        endif
+endif
+
+return 1;
+        
+endfunction

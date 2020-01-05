@@ -1,0 +1,62 @@
+Siths Magic Item System
+Biasing
+
+Biasing is a way of making enchantments only usable with certain objects, or groups of objects. With biasing we can make enchantments that can only be used on armor, weapons, clothes... anything we need.
+
+
+Biases are applied in the enchantment header. The enchantment header is that bit right up the top of senchantedhit.cfg with lots of things that look something like this:
+
+	Enchantment dmg2mana all
+                       ^      ^
+                       |      \
+                       |       This is a bias.
+                       \
+                        This is the enchantment def / keyword.
+
+After the enchantment definition, you can list as many biases as you want. The biases can be:
+  -A group tag. Groups are groups of objtypes.
+  -The "all" tag. this allows it to be added to ANYTHING.
+  -An item object type. Allows it to be added to that specific item.
+
+
+***********************
+How to make a new group
+***********************
+Open up the config file sithmagicitems\configuration\itemgroups.cfg
+To make a new group, create a new element like:
+
+ItemGroup myBias
+{
+    #Items here
+}
+
+Then add the object types of the items you want in that group, followed by a 1:
+
+ItemGroup myBias
+{
+    #myitems
+    0x7000 1
+    0x7001 1
+}
+
+Once youve put all the items you want into your group, goto the top of the config file and add your group to the "allGroups" element:
+
+GroupGroup allGroups
+{
+	igroup else
+	igroup clothes
+	igroup wep
+	igroup arm
+	#my shards groups
+	igroup myBias
+}
+
+If you want to be able to add sockets to the items in your group, then add it to the "socketables" group as well (just below "allGroups").
+
+Once youve done that, then you can use it just like the other biases in your enchantment headers:
+
+	Enchantment myEnchantment myBias
+
+
+1337!
+:)

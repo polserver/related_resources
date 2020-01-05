@@ -1,0 +1,195 @@
+v1.14
+-[Files Required]
+  All source (.src) and include (.inc) files.
+  Your configuration files should be fine, just fine.
+
+-Added Naksu's 'heaven' weapon enchantment
+
+-changed the functionality of the hitscripts
+ +They now return the rawdamage to the core, simply using the "return" function:
+    SetObjProperty(who,"returnDmg",rawdamage); 
+  becomes...
+    return rawdamage;
+
+-Converted the system over to 094 core,
+ +Last I heard there were some worries about equip/unequip scripts on startup and shutdown...
+  +I've tested equiping/unequiping, but not over startup & shutdown.
+   +Just be wary of those equip mods thing... check with http://groups.yahoo.com/group/pol-core-test 
+
+ +toSkill's first argument now accepts three inputs:
+  1) An Attribute ID.
+  2) A Skill ID.
+  3) A CProp name, pointing to a Skill ID.
+ +How does it know the different between a CProp name and an attribute name?
+  +It checks if the attribute is valid, and if not looks for the CProp.
+  
+-Fixed up (and tested) NPC enchantments.
+ +Theres also some docs that will tell you how to make it so you can use "enchantment" lines in npcdesc.cfg
+
+-Fixed up a lot of naming issued with enchantments.
+ +NPCs dont get name effects when enchanted. Maybe later.
+ +Enchantments added to an item will cause it to be displayed as
+    a magic [name]
+  eg.
+    a magic pitchfork
+  +Once an enchantment has been ItemID'd, the names will show up.
+   +Enchantments added after it has been IDed, will show up instantly.
+
+
+v1.13
+-Added itemgroups.cfg in configuration\itemgroups
+ +Changed functionality for 'biasing'
+  +Bias groups can now be defined in itemgroups.cfg (look in CFG, self explanatory)
+  +Groups in the CFG must be listed in the "allGroups" element at the top
+  +Groups whos items are socketable must be listed in the "socketables" element at the top
+  +Biases are defined same as before, you can use the groups you make in itemgroups.cfg now :)
+ +Clothes are now a seperate bias to "else" - clothes are non-socketable (seemed logical)
+  +You can change this by going to itemgroups.cfg!! :) Add "igroup clothes" to the "socketables" element at the top
+
+-Added a new argument for "toSkill"
+ +specifying "wepSkill" as the skill ID, will make the skill bonus goto the skill used by that weapon!
+ +heres an example:
+  toSkill wepSkill 15
+
+-Added another new argument for "toSkill"
+ +Specifying a string in the amount, will cause the script to get the amount from the CProp of that name, ie:
+  toSkill wepSkill skillBonus
+ +Will make the script add the amount from the CProp "skillBonus", to the skill used by that weapon.
+
+
+v1.12
+-Added a bit of documentation to "docs" folder
+ +Moved mench.txt to the "docs" folder
+-Changed DEBUG mode to a compile-time constant in senchantedhit.src
+ +To enable debug, change the constant "debug" at the top of the file to 1
+
+-Item Specific Bias'ing
+ +You can now specify an item object type in the biases of an enchantment, eg:
+   Enchantment m_gm_smithys else 0x13e3
+   //Clothes, Jewellery, Etc, Smithy hammers :)
+
+-Spell groupings
+ +You can now specify a group of spells, like "fire" or "necromancy"
+  +The groups are specified in sithmagicitems\configuration\spellgroups.cfg
+  +In the "spellResist [id] [percentige]" line, pass the group name as the id:
+   spellResist fire 40
+   +If you were recreating a zulu shard, a level 1 enchantment could be:
+    spellResist all 100
+    +lol just jk's :)
+
+
+v1.11
+-Stopped addEnch function from trying to add names to mobiles (for now)
+-ItemID modified slightly,
+ -Now supports multiple config entries for "idstring"
+  +They will be displayed in order of entry...
+  +This includes the rune description gumps, which modify their height dynamically to account for it :)
+  
+-The one I promised in the last "todo" update:
+ -Enchantments now support spell resistences and bonuses!!!
+  +More config props, once again you can have as many as you want...
+   -Format for resistences is:
+    spellResist [id] [percentige]
+     +percentige is the percentige to absorb. 100 is complete resistence. 50% is half, etc...
+     
+   -Format for bonuses is:
+    spellBonus [id] [percentige]
+     +percentige is the percentige of damage to do. 200 is double. 50 is half, etc...
+       
+  +To enable spell enchantments,
+   -See the readme.txt and goto step #7
+   -In the spells you want to use, pass the ID (string) onto the end of the Resisted function, ie:
+    Resisted(circle,caster,cast_on,dmg,"fstrike")
+
+
+v1.10
+-w00t:
+ -Look and feel of item ID changed. Looks heaps cooler.
+
+ -New ItemID button: "Enchant With"
+  +This works through the senchantedhit.cfg (like everything,)
+  +In the "Data" element, you can add "Enchant With" scripts - format is:
+  [ItemID] [Script]
+  Theres some examples there,
+
+ -New 'socketAlignments' element in CFG
+  +This is for un-dwarven-runestone socketed items using the "Enchant With" button
+  +Format is:
+  [ItemID] [X-Offset] [Y-Offset]
+  +They are pixel offsets for the little picture of the item when you select its socket
+
+ -Couple of new sench.inc functions:
+  sortEnchantments( item )
+  isSocketedIn( enchantment, item )
+  +USE sortEnchantments, after you have added an enchantment that doesnt socket (with the "Enchant With" button)
+   ++That way, the socketed enchantments will be @ the bottom, and the non-socketed at the top.
+
+
+v1.09
+-Quickfix to a couple of skill mod issues...
+ There is now functions in sench.inc to use in the skillcap'r, so that it wont drop skills over 100 because of item mods:
+  getRealSkill( who, skillid )
+  getTotalSkillMods( who, skillid )
+
+ So it would be something like
+  if( getRealSkill(who,skillid) > max_skill )
+    SetSkill( who, skillid, max_skill + getTotalSkillMods(who,skillid) );
+  endif
+
+-New enchantments with skill mods will now have a destroy script as well as the equip + unequip scripts.
+
+
+v1.08
+-Where did 1.07 go!
+ +'Twas never released, dun worry though, you have 1.08 now.
+-Stat and Skill adjustments on equiping and unequiping of the enchanted item!!!
+ toStat [statid] [amount]
+  -statid is str, dex, or int
+ toSkill [skillid] [amount]
+  -skillid is the numerical value of the skill (core092)
+-More than one of the above in 1 enchantment works fine :) see the m_wizards example.
+
+
+v1.07
+-Never released.
+
+
+v1.06
+-Updated include to version 0.7
+-Now supports random prop min/max values, so the AddRanProp in CFGs can now be:
+AddRanProp [name] [maxvalue]
+AddRanProp [name] [minvalue] [maxvalue]
+The script determines it by the numbers of arguments for AddRanProp, so you wont have to change any old enchantments :)
+-Removal of enchantments will now remove the ar_mod effect of the enchantment too.
+-Removal of enchantments now erases the random CProps to free memory (sah-weet).
+
+
+v1.05
+Merely minutes after the release of 1.04, Myrathi told me to remove the hardcoding of the enchantment strings that show up in the ItemID. So here it is.
+If your only upgrading from 1.04, the only new things you need are:
+sench.inc
+itemid.src
+senchantedhit.cfg
+If you have added your own enchantments, then move the string from ItemID -> the CFG entry, more info in mench.txt
+
+
+v1.04
+-Multiple ranProps now supported,
+ Just add as many "ranProp" entries to the CFG elem as you like :)
+-Fixed a bug where correct damage would not be counted till the next hit from that person, or perhaps even never at all, resulting in what seemed like random damage modification.
+-Packaged most of the system, its a *lot* cleaner and easier to install now.
+-Moved silverhit to enchScripts\, inline with the other hitscrips.
+-The 3 items (runestones, tomes, tools) are now in their own itemdesc.
+-magicweapons.cfg and magicarmor.cfg are now independent of the combat versions.
+
+
+v1.03
+-Added new props:
+  ocArmourMod
+  toColour
+-Added new prop:
+  noNormalMods
+-Added new props:
+  WasHitScript
+  DidHitScript
+-Rewrote entire system.

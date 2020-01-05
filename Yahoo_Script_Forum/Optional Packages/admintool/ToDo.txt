@@ -1,0 +1,9 @@
+Those are silly little thingies that i didn't manage to end in time :P
+I'll finish them at fly when i'll have a bit free time
+
+ToDO;
+  |- character details ( all of them :P )
+  |- allowing an admin to hear what victim is saying to other ppl, and using guild chat (whole guild-chats, msgs, ppl sorrounding victim etc also would be neat :))
+  
+  
+  

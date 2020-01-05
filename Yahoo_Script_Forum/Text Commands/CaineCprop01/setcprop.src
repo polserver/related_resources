@@ -1,0 +1,85 @@
+///////////////////////////////////////////////////////////////////////////////////////
+//	setcprop.src
+//	
+//	author :	Caine
+//	date :		2/10/2000
+//
+//	Description :	This command gives the GM the power to change the cprop values
+//			of any item/mobile realtime, this leads to the changing of 
+//			cprop values on the fly, as opposed to manual file editing
+//
+//	notes :		Careful, the shyte can hit the fan if you change settings that 
+//			shouldn't be messed with ;)
+//
+//
+///////////////////////////////////////////////////////////////////////////////////////
+			
+use uo;
+use basic;
+use os;
+
+//set_debug(1);
+
+program textcmd_setcprop( who, text )
+
+	local props := SplitWords( text );
+	// Checking the arguments
+	if( !(props[1]) )
+		SendSysmessage( who, "Missing cprop Type! : i = Intger, s = String" );
+		SendSysmessage( who , "Syntax: .setcprop [i/s] [propname] [amount]" );
+		return;
+	
+	elseif( props[1] && !( props[2] ) )
+		SendSysmessage( who, "Missing cprop Name!" );
+		SendSysmessage( who , "Syntax: .setcprop [i/s] [propname] [amount]" );
+		return;
+	
+	elseif( props[1] && props[2] && !( props[3] ) )
+		SendSysmessage( who, "Missing cprop Amount!" );
+		SendSysmessage( who , "Syntax: .setcprop [i/s] [propname] [amount]" );
+		return;
+	endif
+
+	local useint := 0;
+	
+	local type := Cstr( props[1] );
+	local propname := Cstr( props[2] );
+	local amount := Cint( props[3] );
+	local amount_str := props[3];
+
+	if ( type ) // for interger or string 
+		case ( type )
+			"i":	useint := 1;
+			"I": 	useint := 1;
+			"s":	useint := 0; // i know i dont need these here, but just to be safe... ;)
+			"S": 	useint := 0; 
+			default: 	SendSysmessage( who, "Invalid Type : " + type + ", please use i or s." );
+					return;
+		endcase
+	endif
+	
+	SendSysMessage( who, "Select something" );
+	
+	local obj := Target( who );
+	if (obj)
+		local name := obj.name;
+		
+		if ( !name )
+			name := "Unnamed Object";
+		endif
+		
+		SendSysMessage(who, "Setting " + name + " with cprop " + propname + " of value " + amount_str );
+		
+		if ( useint ) // use int cprop or not?
+			Setobjproperty( obj, propname, amount ); // do int cprop
+        	else
+        		Setobjproperty( obj, propname, amount_str ); // do str cprop
+        	endif
+
+	else
+	SendSysMessage(who, "Cancelled.");
+endif
+
+endprogram
+
+

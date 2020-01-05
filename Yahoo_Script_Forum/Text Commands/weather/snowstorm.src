@@ -1,0 +1,25 @@
+use uo;
+use os;
+use util;
+
+program snowstorm( who , params )
+    params := SplitWords( params );
+    
+
+    var rand := RandomInt( 30 );
+    var res := 
+      SetRegionWeatherLevel( params[1],       // region name
+                                2,            // weather type = snow
+                               10,            // severity
+                                0,            // aux
+                                6 );          // lightoverride
+
+    broadcast( "A snowstorm moves into " + params[1] );
+    
+    if (!res)
+        SendSysMessage( who, "Error: " + res.errortext );
+    endif
+
+start_script(":daynight:daynight");
+
+endprogram

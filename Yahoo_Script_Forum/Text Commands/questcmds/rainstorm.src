@@ -1,0 +1,16 @@
+use uo;
+use os;
+use util;
+
+program rain( who  )
+      var rand := RandomInt( 30 );
+    	var res := SetRegionWeatherLevel( "Background",       // region name
+                                1,            			// weather type = rain
+                               10,            			// severity
+                                0,            			// aux
+                                6 );          			// lightoverride
+    	Broadcast( "A rainstorm hits Sosaria" );
+      if (!res)
+        	SendSysMessage( who, "Error: " + res.errortext );
+    	endif
+endprogram

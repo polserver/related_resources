@@ -1,0 +1,7 @@
+use uo;
+
+program Logon(who)
+	if (!GetObjProperty(who, "Devotion"))
+		SetObjProperty(who, "Devotion", "Faithless");
+	endif
+endprogram

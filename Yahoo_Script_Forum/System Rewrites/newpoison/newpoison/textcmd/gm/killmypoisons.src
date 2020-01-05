@@ -1,0 +1,14 @@
+use uo;
+use os;
+
+include "include/newpoisons";
+
+program killmypoisonscript(who)
+
+local poisonscript := getpoisonscript(who);
+poisonscript.kill();
+eraseobjproperty(who, "poisons");
+eraseobjproperty(who, "poisonscript");
+unload_scripts("poison");
+sendsysmessage(who, "Killed yer poisons");
+endprogram

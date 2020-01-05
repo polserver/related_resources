@@ -1,0 +1,7 @@
+(possible) Add scripts:
+ 'spellwashit'
+ 'spelldidhit'
+
+(possible) NPC support:
+ -Random NPC enchantment.
+ -Anatomy integration to see what enchantments an NPC has.

@@ -1,0 +1,172 @@
+// spawnpoint.src
+// This function allows staff to create TUS-type, object-oriented
+// spawns.   The control script does the actual spawning, this
+// script just lets the staff make changes on the spawnpoint.
+
+use uo;
+
+var SpawnEditLayout :=
+{
+	"page 0",
+	"gumppic 30 0 101",
+	"button 118 90 2130 2129 1 0 100",
+	"text 80 120 33 0",
+	"text 85 140 0 1",
+	"text 85 156 0 2",
+	"text 85 180 33 3",
+	"text 100 196 0 4",
+	"text 100 212 0 5",
+	"text 95 250 33 6",
+	"textentry 160 140 40 15 50 1 7",
+	"textentry 160 156 40 15 50 2 8",
+	"textentry 155 196 30 15 50 3 9",
+	"textentry 155 212 30 15 50 4 10",
+	"textentry 65 268 160 15 50 5 11"
+};
+
+var SpawnEditData := 
+{
+	"Spawn Point Data",
+	"Amount: ",
+	"Range: ",
+	"Delay (Minutes)",
+	"Min: ",
+	"Max: ",
+	"Monster Type",
+	"0",
+	"0",
+	"0",
+	"0",
+	"NONE"
+};
+
+
+program use_spawnpoint(who, spawnpoint)
+
+// Only Seers or higher can use these.   To restrict to GMs, check
+// for .cmdlevel < 3
+
+	if (who.cmdlevel < 2)
+		return;
+	endif
+
+// Reading spawn point data.
+
+	local Spawn := GetObjProperty(spawnpoint, "Spawn");
+	local Amount := GetObjProperty(spawnpoint, "Amount");
+	local MinDelay := GetObjProperty(spawnpoint, "MinDelay");
+	local MaxDelay := GetObjProperty(spawnpoint, "MaxDelay");
+	local Range := GetObjProperty(spawnpoint, "Range");
+	local i, x;
+
+// Initializing Gump Data.
+
+	if (Spawn = "NONE")
+		SendSysMessage(who, "Initializing new spawnpoint...");
+	else
+		SpawnEditData[8] := CStr(Amount);
+		SpawnEditData[9] := CStr(Range);
+		SpawnEditData[10] := CStr(MinDelay);
+		SpawnEditData[11] := CStr(MaxDelay);
+		SpawnEditData[12] := CStr(Spawn);
+	endif
+
+	local res := SendDialogGump(who, SpawnEditLayout, SpawnEditData);
+
+// We only change data if the "Okay" was pressed.
+
+	if (res[0] != 100)
+		SendSysMessage(who, "Aborted.");
+		return;
+	endif
+
+// Make sure all fields have entries.
+
+	for (i := 1; i <= 5; i := i + 1);
+		if (!res[i])
+			SendSysMessage(who, "Error: spawn data incomplete.  Aborting.");
+			return;
+		endif
+	endfor
+
+	x := Len(res[1]);
+	i := res[1];
+	i := i[4, (x-3)];
+	Amount := Cint(i);
+
+	x := Len(res[2]);
+	i := res[2];
+	i := i[4, (x-3)];
+	Range := Cint(i);
+
+	x := Len(res[3]);
+	i := res[3];
+	i := i[4, (x-3)];
+	MinDelay := Cint(i);
+
+	x := Len(res[4]);
+	i := res[4];
+	i := i[4, (x-3)];
+	MaxDelay := Cint(i);
+
+	
+// Amount and Range must be between 1 and 32.
+
+	if ( (Amount < 1) or (Amount > 32) )
+		SendSysMessage(who, "Amount must be between 1 and 32.  Setting to 1.");
+		Amount := 1;
+	endif
+
+	if ( (Range < 1) or (Range > 32) )
+		SendSysMessage(who, "Range must be between 1 and 32.  Setting to 1.");
+		Range := 1;
+	endif
+
+// MinDelay and MaxDelay must be between 0 and 1440.  MaxDelay cannot
+// be less than MinDelay.
+
+	if ( (MinDelay < 0) or (MinDelay > 1440) )
+		SendSysMessage(who, "MinDelay must be between 0 and 1440.  Setting to 1.");
+		MinDelay := 1;
+	endif
+
+	if ( (MaxDelay < 0) or (MaxDelay > 1440) )
+		SendSysMessage(who, "MaxDelay must be between 0 and 1440.  Setting to 1.");
+		MaxDelay := 1;
+	endif
+
+	if (MaxDelay < MinDelay)
+		SendSysMessage(who, "MaxDelay cannot be less than MinDelay.   Setting equal.");
+		MaxDelay := MinDelay;
+	endif
+
+// See if the creature selected is a valid creature type.
+
+	x := Len(res[5]);
+	i := res[5];
+	i := i[4, (x-3)];
+	Spawn := i;
+
+	local thecritter := CreateNPCfromTemplate(i, who.x, who.y, -200);
+	if (!thecritter)
+		Print("SpawnType: *" + i + "*");
+		SendSysMessage(who, "Invalid creature type.");
+		Spawn := "NONE";
+	else
+		SetObjProperty(thecritter, "summoned", 1);
+		ApplyRawDamage(thecritter, thecritter.hp+3);
+	endif
+
+// Reset the spawn data, and let the controller know to restart
+// itself by creating a "ResetMe" property on the spawnpoint.
+	
+	SetObjProperty(spawnpoint, "Amount", Amount);
+	SetObjProperty(spawnpoint, "Range", Range);
+	SetObjProperty(spawnpoint, "MinDelay", MinDelay);
+	SetObjProperty(spawnpoint, "MaxDelay", MaxDelay);
+	SetObjProperty(spawnpoint, "Spawn", Spawn);
+	SetObjProperty(spawnpoint, "ResetMe", 1);
+
+	SendSysMessage(who, "Spawnpoint initialized.  Resetting spawn.  This may take a minute...");
+
+endprogram

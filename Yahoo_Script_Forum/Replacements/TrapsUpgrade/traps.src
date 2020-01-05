@@ -1,0 +1,123 @@
+///////////////////////////////////////////////////////
+//
+// Traps script (POL 092)
+//
+///////////////////////////////////////////////////////
+//
+// Author : Racalac (racalac@resnet.gatech.edu)
+// Updated: Dougall (dougalloogle@yahoo.com)
+//
+// - fixed problem with checking keys and keyrings
+// - fixed 'keep' Cprop to allow permanent traps
+// - added some trap options for package
+//
+///////////////////////////////////////////////////////
+
+use uo;
+use os;
+use util;
+use cfgfile;
+
+include "include/client";
+include "include/skillpoints";
+
+const UOBJ_KEYRING 	:= 0x1011;
+const KEYSTART 		:= 0x100e;
+const KEYEND 		:= 0x1013;
+
+program open_trapped_item(character, item)
+	var trapdata:=ReadConfigFile("traps");
+	var trapsetup:=FindConfigElem(trapdata,"setup");
+	var trap_option:=GetConfigInt(trapsetup,"trap_option");
+
+	var points := get_default_points(SKILLID_REMOVETRAP);
+	var thelock := GetObjProperty(item,"lockid");
+	var has_key := 0;
+    
+	if (trap_option)
+		has_key:=FindKeyOn(character,thelock);
+	endif
+
+	if (!has_key)
+		SetOffTrap(character,item);    
+	elseif (trap_option=1)
+    		if (CheckSkill( character, SKILLID_REMOVETRAP, -1,points))
+			DisarmTrap(item);
+			PrintTextAbovePrivate(item,"You notice and successfully disarm a trap!",character);
+   		else
+   			SetOffTrap(character,item);
+   		endif
+	elseif (trap_option=2)
+   		DisarmTrap(item);
+		PrintTextAbovePrivate(item,"You notice and disarm a trap!",character);
+   	else		//ie if trap option = 3
+		PrintTextAbovePrivate(item,"You notice it's trapped!",character);
+	endif
+endprogram
+
+
+function SetOffTrap(character,item)
+	var traptype := GetObjProperty(item,"trap_type");
+	var trapstrength := GetObjProperty(item,"trap_strength");
+	case traptype
+            "1" :   PlaySoundEffect(character, SFX_225);
+                    local dmg := randomint(30 * cint(trapstrength));
+                    SendSysmessage(character, "You set off a needle trap!");
+                    ApplyDamage(character, dmg);
+            "2" :   PlaySoundEffect(character, SFX_206);
+                    PrintTextAbovePrivate (character, "You have been poisoned!", character);
+                        // used to be called EFFECT_SPARKLE
+                    PlayObjectCenteredEffect( character, FX_CURSE_EFFECT, 10,10);    
+                    SetObjProperty(character, "poison_level", cstr( trapstrength));
+                    start_script( ":spells:poisondamage", character );
+
+            "3" :   PlaySoundEffect(character, SFX_208);
+                    SendSysmessage (character, "You set off a trap!");
+                    PlayObjectCenteredEffect( character, FX_EXPLODE_3, 10,10);  
+                    local dmg := randomint(30 * cint(trapstrength)); 
+                    foreach critter in listmobilesnearlocation(character.x, character.y, character.z, cint(trapstrength))
+                    	if (!critter.npctemplate or critter.script = "tamed")
+                    		ApplyDamage(character, dmg);
+                        endif
+                    endforeach
+            default:	SendSysmessage (character, "You narrowly avoid the trap!");
+			EraseObjProperty(item,"keep");
+	endcase
+	if (!getobjproperty(item, "keep"))
+		DisarmTrap(item);
+	endif
+endfunction
+                                                  
+// Check for Key ( + check Keyring )
+// see pol\scripts\items\key.src also!
+function FindKeyOn(character,thelock)
+   	var this_item;
+   	foreach this_item in EnumerateItemsInContainer(character.backpack)
+		if (this_item.objtype = UOBJ_KEYRING)
+			foreach check_key in EnumerateItemsInContainer(FindKeyring(this_item.serial))
+				if (GetObjProperty(check_key,"lockid")= thelock)
+					return 1;
+				endif
+			endforeach
+		elseif ((this_item.objtype >= KEYSTART) and (this_item.objtype <= KEYEND))
+	           	if (GetObjProperty(this_item,"lockid") = thelock)
+		               	return 1;
+	           	endif
+		endif
+   	endforeach
+	syslog("didn't find key");
+   	return 0;
+endfunction
+
+function FindKeyring(myserial)
+    var tame_storage := FindStorageArea( "Tamed Storage" );
+    var keyringname:="Bankbox  " + hex(myserial);
+    var contents:=FindRootItemInStorageArea( tame_storage, keyringname );
+    return contents;
+endfunction
+
+function DisarmTrap(item)
+	EraseObjProperty( item, "trap_type" );
+	EraseObjProperty( item, "trap_strength" );
+	item.usescript := "";
+endfunction

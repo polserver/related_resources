@@ -1,0 +1,34 @@
+use uo;
+use util;
+use os;
+
+program poisonhit(param)
+
+	local attacker := param[1];
+	local defender := param[2];
+	local weapon := param[3];
+	local armor := param[4];
+	local basedamage := param[5];
+	local rawdamage := param[6];
+
+	printtextabove(defender, defender.name + " has been poisoned!");
+	local potion_strength := getobjproperty(weapon, "poison_level");
+	local duration := cint(getobjproperty(weapon, "pstr"));
+	if (!duration)
+		duration := 10;
+	endif
+	if (randomint(4) + 1 < 4)
+		return;
+	endif
+
+//resisting not in yet
+
+	local parms := {};
+	parms[1] := defender;
+	parms[2] := potion_strength;
+	parms[3] := duration;
+	start_script(":poison:dopoison", parms);
+
+	SetObjProperty(weapon, "TempDamage", rawdamage);
+ 
+endprogram

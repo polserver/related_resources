@@ -1,0 +1,80 @@
+use uo;
+use util;
+use os;
+
+program poisonhit(param)
+
+	local attacker := param[1];
+	local defender := param[2];
+	local weapon := param[3];
+	local armor := param[4];
+	local basedamage := param[5];
+	local rawdamage := param[6];
+	local crim := attacker.criminal;
+	
+	local potion_strength := getobjproperty(weapon, "poison_level");
+	local duration := cint(getobjproperty(weapon, "pstr"));
+	
+	if ( ( !duration  ) or ( !potion_strength ) ) // Start weapon cleanup
+
+		var hits := GetObjProperty(weapon,"OnHit");
+		var i;
+		for( i := 0; i <= len(hits); i := i + 1 )
+			if( hits[i] = "poisonhit" ) // remove these cprops
+				//print("cleaning up weapon"); //debug
+				printtextaboveprivate( attacker, "There is no more poison left on my weapon!", attacker );
+				hits.erase(i);
+				local nohits := GetObjProperty(weapon,"OnHit");
+				if  ( nohits )
+					EraseObjProperty(weapon,"OnHit");
+				else
+					SetObjProperty(weapon,"OnHit",hits);
+				endif
+				EraseObjProperty(weapon,"pstr");
+				EraseObjProperty(weapon,"poison_level");
+				EraseObjProperty(weapon,"pbefore");
+				EraseObjProperty(weapon,"TempDamage");
+				return;  // bops you outta the loop at the first poisonhit you get
+			endif
+		endfor
+	endif
+	
+	if (randomint(4) + 1 < 4)
+		return;
+	endif
+
+//resisting not in yet
+	
+	
+	if ( !defender.poisoned )
+		printtextabove(defender, defender.name + " has been poisoned!");
+		defender.SetPoisoned(1);
+	else
+		printtextabove(defender, defender.name + " has been further poisoned!");
+	endif
+	
+	local parms := {};
+	parms[1] := defender;
+	parms[2] := potion_strength;
+	parms[3] := duration;
+	
+	
+	start_script(":poison:dopoison", parms);
+	
+	SetObjProperty(weapon, "TempDamage", rawdamage);
+
+/*    if ( randomint(10)+1 <= 5 ) // for random reduction of poison left... i dont think i want that...
+    	print("doing str minus"); // debug
+    	SetObjProperty( weapon, "pstr", cint(getobjproperty(weapon, "pstr"))-1);
+    endif
+*/
+    	
+    if ( randomint(10)+1 <= 1 ) // for random reduction of poison level...
+//    	print("doing str minus"); // debug
+    	SetObjProperty( weapon, "poison_level", cint(getobjproperty(weapon, "poison_level"))-1);
+    	printtextaboveprivate( attacker, "I have lost some poison from my weapon!", attacker );
+    endif
+
+    	SetObjProperty( weapon, "pstr", cint(getobjproperty(weapon, "pstr"))-1);
+ 	
+ endprogram

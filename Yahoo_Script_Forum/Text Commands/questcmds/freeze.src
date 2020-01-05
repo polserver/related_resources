@@ -1,0 +1,13 @@
+use uo;
+
+program freeze( who )
+	SendSysMessage( who, "Who do you wish to freeze?" );
+	var res := TargetCoordinates( who );
+	if (res.mobile)
+		res.mobile.frozen := 1;
+		SetObjProperty(res.mobile,"frozen",1);
+		PrintTextAbovePrivate( res.mobile, res.mobile.name + " is now frozen", who );
+	else
+		SendSysMessage( who, "Cancelled" );
+	endif
+endprogram

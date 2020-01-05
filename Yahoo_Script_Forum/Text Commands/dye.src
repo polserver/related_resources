@@ -1,0 +1,25 @@
+use uo;
+use os;
+use util;
+
+program dye_item( char, color )
+
+    local params := SplitWords( color );
+    local newcolor := CInt( params[1] );
+    local dtarget := Target(char);
+
+    print( "color=" + Hex(newcolor) );
+
+    if(!newcolor)
+	SendSysmessage(char, "this command dyes an item. Usage: dye <colorhexcode>");
+	return;
+    endif
+
+    if(!dtarget)
+	SendSysMessage(char, "Cancelled.");
+	return;
+    endif
+
+    dtarget.color := newcolor;
+
+endprogram

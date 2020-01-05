@@ -1,0 +1,77 @@
+// .create command - create items
+// Items created with this command will not decay.
+// Sends a gump which allows the user to input neccessary info
+//
+include "include/modules";
+include "include/gumps";
+
+var objtype, amount, altitude, res;
+
+program textcmd_create( who, params )
+	if( params )
+		params := SplitWords( params );
+		objtype := params[1];
+		amount := CInt( params[2] );
+		altitude := CInt( params[3] );
+		DoCreate( who, objtype, amount, altitude );
+	else
+		var gump_ret := DoGump( who );
+		if( gump_ret[1] == 1 )
+			DoCreate( who, gump_ret[2], CInt(gump_ret[3]), CInt(gump_ret[4]) );
+		elseif( gump_ret[1] == 3 )
+			DoMenuSelection( who );
+		endif
+	endif
+endprogram
+
+function DoGump( who )
+	GFSetRef( 50, 50 );
+	GFPage( 0 );
+	GFNoDispose();
+	GFResizePic( 0, 0, BKGND_GOLDTRIM, 210, 220 );
+	GFGumpPic( 10, 71, 0x462 );
+	GFGumpPic( 10, 116, 0x462 );
+	GFGumpPic( 10, 161, 0x462 );
+	GFTextMid(    0,  15, 210, 4, "Enter Create Variables" );
+	GFTextLine(  10,  50, 4, "Enter Objtype" );
+	GFTextLine(  10,  95, 4, "Enter Amount" );
+	GFTextLine(  10, 140, 4, "Enter Altitude" );
+	GFTextLine(  10, 180, 4, "Or use the create menu" );
+	GFButtonID(  50, 185, 0x992, 0x993, 1 );
+	GFButtonID( 120, 185, 0x995, 0x996, 1 );
+	GFButtonID( 180, 186, 0x939, 0x938, 1 );
+	objtype := GFTextEntry( 11, 70, 175, 16, 4 );
+	amount := GFTextEntry( 11, 115, 175, 16, 4 );
+	altitude := GFTextEntry( 11, 160, 175, 16, 4 );
+	res := GFSendGump( who );
+	objtype := GFExtractData( objtype.keyid, res );
+	amount := GFExtractData( amount.keyid, res );
+	var params := { CInt(res[0]-1024), objtype, amount, altitude };
+	return params;
+endfunction
+
+function DoCreate( who, objct, amnt, altit )
+	if( !CInt(objct) )
+		objct := GetObjtypeByName( objct );
+	endif
+	if ( !amnt )
+		amnt := 1;
+	endif
+	if( !altit )
+		altit := who.z;
+	endif
+	var i;
+	for( i := 1; i <= amnt; i := i + 1 )
+		var item := CreateItemAtLocation( who.x, who.y, altit, CInt(objct), 1 );
+		item.decayAt := 0;
+	endfor
+endfunction
+
+function DoMenuSelection( who )
+	var selection := SelectMenuItem2( who, "ItemCreation" );
+	if( selection )
+		var created := CreateItemAtLocation( who.x, who.y, who.z, selection.objtype, 1 );
+		created.color := selection.color;
+		created.decayAt := 0;
+	endif
+endfunction

@@ -1,0 +1,32 @@
+use uo;
+use util;
+
+include "../../cleric";
+
+program lightning(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost > 5)
+		pietyboost := 5;
+	endif
+	
+	var targ := ClericalTarget(who, info.npctarget, "Select a target", TGTOPT_CHECK_LOS + TGTOPT_HARMFUL);
+	
+	if (!targ.ip && !targ.npctemplate)
+		SendSysMessage(who, "Cancelled");
+		return;
+	elseif (!distancecheck(who, targ, piety+3))
+		SendSysMessage(who, "Too far away.");
+		return;
+	endif
+	
+	PlaySoundEffect(who, 477);	
+	PlayMovingEffect(who, targ, 14365, 3, 3, 1);
+	
+	var thepain := RandomDiceRoll("1d10")+10; // 10-20 damage
+	ApplyDamage(targ, thepain);
+endprogram

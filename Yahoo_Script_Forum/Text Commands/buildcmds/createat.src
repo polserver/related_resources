@@ -1,0 +1,78 @@
+//
+// .createat command - create items
+// Items created with this command will not decay.
+// Two forms:
+//   ".createat [objtype] [amount]" - specify object type and amount
+//       amount defaults to 1
+//   ".createat" - show the item creation menu, create one of that item
+//
+include "include/modules";
+include "include/gumps";
+
+var objtype, amount, res;
+
+program textcmd_createat( who, params )
+	if( params )
+		params := SplitWords( params );
+		objtype := params[1];
+		amount := CInt( params[2] );
+		DoCreate( who, objtype, amount );
+	else
+		var gump_ret := DoGump( who );
+		if( gump_ret[1] == 1 )
+			DoCreate( who, gump_ret[2], gump_ret[3] );
+		elseif( gump_ret[1] == 3 )
+			DoMenuSelection( who );
+		endif
+	endif
+endprogram
+
+function DoGump( who )
+	GFSetRef( 50, 50 );
+	GFPage( 0 );
+	GFNoDispose();
+	GFResizePic( 0, 0, BKGND_GOLDTRIM, 210, 220 );
+	GFGumpPic( 10, 71, 0x462 );
+	GFGumpPic( 10, 116, 0x462 );
+	GFTextMid( 0, 15, 210, 4, "Enter Create Variables" );
+	GFTextLine( 10, 50, 4, "Enter Objtype" );
+	GFTextLine( 10, 95, 4, "Enter Amount" );
+	GFTextLine( 10, 180, 4, "Or use the create menu" );
+	GFButtonID( 50, 140, 0x992, 0x993, 1 );
+	GFButtonID( 120, 140, 0x995, 0x996, 1 );
+	GFButtonID( 180, 186, 0x939, 0x938, 1 );
+	objtype := GFTextEntry( 11, 70, 175, 16, 4 );
+	amount := GFTextEntry( 11, 115, 175, 16, 4 );
+	res := GFSendGump( who );
+	objtype := GFExtractData( objtype.keyid, res );
+	amount := GFExtractData( amount.keyid, res );
+	var params := { CInt(res[0]-1024), objtype, amount };
+	return params;
+endfunction
+
+function DoCreate( who, objct, amnt )
+		if( !CInt(objct) )
+			objct := GetObjtypeByName( objct );
+		endif
+		if ( !amnt )
+			amnt := 1;
+		endif
+		var i;
+		for( i := 1; i <= amnt; i := i + 1 )
+			SendSysMessage( who, "Select a location on the ground where you want the item to appear." );
+			var place := TargetCoordinates( who );
+			var item := CreateItemAtLocation( place.x, place.y, place.z, CInt(objtype), 1 );
+			item.decayAt := 0;
+		endfor
+endfunction
+
+function DoMenuSelection( who )
+	var selection := SelectMenuItem2( who, "ItemCreation" );
+	if( selection )
+		SendSysMessage( who, "Select a location on the ground where you want the item to appear." );
+		var place := TargetCoordinates( who );
+		var created := CreateItemAtLocation( place.x, place.y, place.z, selection.objtype, 1 );
+		created.color := selection.color;
+		created.decayAt := 0;
+	endif
+endfunction

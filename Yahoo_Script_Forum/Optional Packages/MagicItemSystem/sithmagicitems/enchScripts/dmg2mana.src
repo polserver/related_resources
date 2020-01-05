@@ -1,0 +1,20 @@
+////////////////////////////////////////////////
+//Damage Taken -> Mana
+////////////////////////////////////////////////
+//Percentage is cprop "d2mAmt"
+
+use uo;
+use util;
+
+include "sdmg";
+include "include/client";
+
+program dmgtomana( parms )
+
+	var defender := parms[2];
+	var zDmg := parms[6];
+	var zMulti := GetObjProperty( parms[7], "d2mAmt" );
+	SetMana( defender, (GetMana(defender)+(zDmg*zMulti/100)) );
+	return;
+
+endprogram

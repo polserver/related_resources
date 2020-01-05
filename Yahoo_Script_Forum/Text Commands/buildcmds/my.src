@@ -1,0 +1,15 @@
+include "include/modules";
+
+program  my( who )
+	var howfar := SendTextEntryGump( who, "How far in the negative y direction?" );
+	SendSysMessage( who, "Select the item to move" );
+	var what := Target(who, TGTOPT_NOCHECK_LOS);
+	if (!what)
+		return;
+	endif
+	howfar := CInt(howfar);
+	if( !howfar )
+		howfar := 1;
+	endif
+	MoveItemToLocation( what, what.x, what.y - howfar, what.z, MOVEITEM_FORCELOCATION );
+endprogram

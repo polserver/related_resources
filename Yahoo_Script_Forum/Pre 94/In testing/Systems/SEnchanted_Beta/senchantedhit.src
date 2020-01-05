@@ -1,0 +1,291 @@
+////////////////////////////////////////////
+//S!tH Enchantment System                 //
+//Howsit going.                           //
+//Welcome to S!tH's Enchantment System    //
+//         Hitscript Department           //
+//                                        //
+//help me!	:)			  //
+//sith@wn.com.au			  //
+//					  //
+//things to add:			  //
+// -Spellcasting on enchantments          //
+// -Equip/Unequip department:             //
+//	-stat mods			  //
+//	-skill mods			  //
+// -Lootgroup department:                 //
+//	-for looting the weapons          //
+// -Maybe:				  //
+//	-make a system for the weapons to //
+//	 be made by players. somehow...   //
+//things to fix:                          //
+// -Make the script work.(if it doesnt)   //
+////////////////////////////////////////////
+//theres a 1% chance im going to do any   //
+//of them :) except maybe making the      //
+//script work, tho i cant test it :/      //
+//----------------------------------------//
+//					  //
+//thanks go out to:                       //
+//             +-------+                  //
+//             |  Myr  |                  //
+//             | Scull |                  //
+//             |GM Zulu|                  //
+//             +-------+		  //
+////////////////////////////////////////////
+
+use uo;
+use util;
+use os;
+
+include "include/client";
+include "include/skillpoints";
+
+program senchantedhit (param)
+
+	local attacker := param[1];	//(split the parameters sent in)
+	local defender := param[2];
+	local weapon := param[3];
+	local armor := param[4];
+	local basedamage := param[5];
+	local rawdamage := param[6];
+
+	Var CFGFILE, ELENUM, ELEMENT, DATA, ENCHSTART, ENCHEND, ENCHAMNT, ENCHANTMENT_NAME, ENCHANTMENT_OWNS, ENCHANTMENT_GETSOWNED, ENCHANTMENT_OWNAGEMULTI, ENCHANTMENT_OWNAGEADD, ENCHANTMENT_OWNEDDIV, ENCHANTMENT_OWNEDSUB, ENCHANTMENT_NORMADD, ENCHANTMENT_NORMSUB, ENCHANTMENT_NORMMULTI, ENCHANTMENT_NORMDIVIS, OWNGAMNT, GOWNGAMNT, VA, VB, VC, VD, VE, VEA, VEB, VEC, VED, VEE, VEF, VEG, VEH, VEI, VEL, VEM; //crank some variables
+	CFGFILE := ReadConfigFile( "senchantedhit" );					//Read the config
+	ELENUM := ( ENCHSTART - 1 );							//Variable we can change for the element number. leave it like this to start with.
+	ELEMENT := FindConfigElem( CFGFILE, ( ELENUM ) );				//Find the element for the 'ELENUM' value
+	DATA := FindConfigElem( CFGFILE, 0 );						//Find the element for 0 (where the data is stored)
+	ENCHSTART := GetConfigInt( DATA, "Enchantment_Start" );				//Get the 1st enchantments number
+	ENCHEND := GetConfigInt( DATA, "Enchantment_End" );				//Get the last enchantments number 
+	ENCHAMNT := GetConfigInt( DATA, "Enchantment_Amount" );				//Get the number of enchantments
+	ENCHANTMENT_NAME := GetConfigString( ELENUM, "Name" );				//Get the chosen enchantments name
+	ENCHANTMENT_OWNS := 0;								//array for the ownage list
+	ENCHANTMENT_GETSOWNED := 0;							//array for the getting owned list
+	ENCHANTMENT_OWNAGEMULTI := GetConfigInt( ELENUM, "OwnageMulti" );		//Get the chosen enchantments damage mods.
+	ENCHANTMENT_OWNAGEADD := GetConfigInt( ELENUM, "OwnageAdd" );			//ditto
+	ENCHANTMENT_OWNEDDIV := GetConfigInt( ELENUM, "GotOwnedDiv" );			//ditto
+	ENCHANTMENT_OWNEDSUB := GetConfigInt( ELENUM, "GotOwnedSub" );			//ditto
+	ENCHANTMENT_NORMADD := GetConfigInt( ELENUM, "NormalAdd" );			//ditto
+	ENCHANTMENT_NORMSUB := GetConfigInt( ELENUM, "NormalSub" );			//ditto
+	ENCHANTMENT_NORMMULTI := GetConfigInt( ELENUM, "NormalMulti" );			//ditto
+	ENCHANTMENT_NORMDIVIS := GetConfigInt( ELENUM, "NormalDivis" );			//ditto
+	OWNGAMNT := GetConfigInt( ELENUM, "OwnsAmount" );				//get the amount of enchantments it owns
+	GOWNGAMNT := GetConfigInt( ELENUM, "GetsOwnedAmount" );				//get the amount of enchantments that own it
+	VA := 1;	       								//USED by script
+	VB := 0;									//OLD SCRIPT ENTRY
+	VC := 0;									//OLD SCRIPT ENTRY
+	VD := 0;               								//USED by script
+	VE := ( ENCHEND + 1 ); 								//USED by script
+	VEA := 0;	       								//USED 01 by script, Line 50
+	VEB := 0;	       								//USED 02 by script
+	VEC := 0;	       								//USED 03 by script
+	VED := 0;	       								//USED 04 by script
+	VEE := 0;	       								//USED 05 by script
+	VEF := {};									//USED 06 by script (temp array storage)
+	VEG := {};									//USED 07 by script (temp array storage)
+	VEH := GetConfigString( ELENUM, "GetsOwned" );					//Get the chosen enchantments getting owned list
+	VEI := GetConfigString( ELENUM, "Owns" );					//Get the chosen enchantments ownage list
+	VEL := 0;									//used in script
+	VEM := 0;									//used in script
+
+	if( GetObjProperty(weapon, "SENCHANTED" ) )					//if the weapon has the CProp SENCHANTED set to >0
+	while( ELENUM != ENCHEND )							//while ELENUM is not the last enchantment
+		ELENUM := ( ELENUM + 1 );						//add 1 to elenum (move down the enchantment list 1)
+			if ( !VEH )							//Setup OWNS array.
+	    Print( "Bad 'Owns' entry in .cfg file, element " + ELENUM );		//Code thanks to Myr.
+	    return;									//Ta for that.
+	else										//
+	    ENCHANTMENT_OWNS := SplitWords( VEH );					//
+	endif										//
+	    for idx := 1 to ENCHANTMENT_OWNS.size()					//Myr's Stripper!!!
+        	var entry := ENCHANTMENT_OWNS[idx];					//Doesnt she look sexy?
+		        while ( (entry[1] == "0") && (len(entry) > 1) )			//This is to strip the "0"s offa the front of the owns & getsowned entrys
+		            entry[1] := "";						//Even if there are none. still converts to integers!
+		        endwhile							//Thanks go to Myr.
+	        ENCHANTMENT_OWNS[idx] := CInt( entry );					//!!
+	    endfor									//End Myr's Stripper
+	if ( !VEI )									//Setup GETSOWNED array.
+	    Print( "Bad 'GetsOwned' entry in .cfg file, element " + ELENUM );		//Code thanks to Myr.
+	    return;									//Ta for that.
+	else										//
+	    ENCHANTMENT_GETSOWNED := SplitWords( VEI );				//
+	endif										//
+	    for idx := 1 to ENCHANTMENT_GETSOWNED.size()				//Myr's Stripper 2!!!
+        	var entry := ENCHANTMENT_GETSOWNED[idx];				//Doesnt she look sexy?
+		        while ( (entry[1] == "0") && (len(entry) > 1) )			//This is to strip the "0"s offa the front of the owns & getsowned entrys
+		            entry[1] := "";						//Even if there are none. still converts to integers!
+		        endwhile							//Thanks go to Myr.
+	        ENCHANTMENT_GETSOWNED[idx] := CInt( entry );				//!!
+	    endfor									//End Myr's Stripper
+		if( GetObjProperty(weapon, ( ENCHANTMENT_NAME ) ) )			//if the weapon has current enchantment CProp set to >1
+		rawdamage := ( rawdamage + ( ENCHANTMENT_NORMADD ) );			//Do the enchantment rawdamage
+		rawdamage := ( rawdamage - ( ENCHANTMENT_NORMSUB ) );			//Line 60, ditto
+		rawdamage := ( rawdamage * ( ENCHANTMENT_NORMMULTI ) );			//ditto
+		rawdamage := ( rawdamage / ( ENCHANTMENT_NORMDIVIS ) );			//ditto
+			if( GetObjProperty(armor, ( "SENCHANTED" ) ) )			//if the armour is enchanted
+			VEB := ( ENCHANTMENT_OWNAGEMULTI );				//put the current enchantments damage mods somewhere.
+			VEC := ( ENCHANTMENT_OWNAGEADD );				//ditto
+			VED := ( ENCHANTMENT_OWNEDDIV );				//ditto
+			VEE := ( ENCHANTMENT_OWNEDSUB );				//ditto
+			VEA := ( ELENUM );						//put the number of the current enchantment somewhere
+			VEF := ( ENCHANTMENT_OWNS );					//put the enchantments ownage list somewhere
+			VEG := ( ENCHANTMENT_GETSOWNED );				//put the enchantments got owned list somewhere
+				//ARMOR CHECK : ARMOR SUX!
+				ELENUM := ( ENCHSTART - 1 );				//set the enchantment back to 1 below 1st.
+						foreach VA in VEF			//foreach enchantment that the weapons enchantment owns.
+						ELENUM := ( VA );			//make that the selected enchantment for a sec.
+							if( GetObjProperty(armor, ( ENCHANTMENT_NAME ) ) )	//if the armour has that enchantments CProp
+							rawdamage := ( rawdamage + ( VEC ) );			//run the damage mods
+							rawdamage := ( rawdamage * ( VEB ) );			//ditto
+							endif				//end if
+						endforeach				//end foreach enchantment that the weapons enchantment owns
+						VA := 1;				//make sure VA returns to 1.
+					//ARMOR CHECK : ARMOR OWNS!
+					ELENUM := ( ENCHSTART - 1 );			//set the ELENUM back again
+						foreach VA in VEG			//foreach enchantment that the weapon gets owned by
+						ELENUM := ( VA );			//make it the selected enchantment for a bit
+							if( GetObjProperty(armor, ( ENCHANTMENT_NAME ) ) )	//if the armour has that enchantments CProp
+							rawdamage := ( rawdamage - ( VEE ) );			//run the damage mods
+							rawdamage := ( rawdamage / ( VED ) );			//ditto
+							endif				//end if
+						endforeach				//end for each enchantment the weapon gets owned by.
+						VA := 1;				//make sure VA returns to 1
+			ELENUM := ( VEA );						//set the elenum back to what we were up to with the weapons foreach.
+			endif								//end the armour checks
+			//DEFENDER CHECKS!
+			if( GetObjProperty(defender, ( "SENCHANTED" ) ) )		//if the defender has the SENCHANTED flag set.
+			VEB := ( ENCHANTMENT_OWNAGEMULTI );				//store the enchantments damage mods
+			VEC := ( ENCHANTMENT_OWNAGEADD );				//ditto
+			VED := ( ENCHANTMENT_OWNEDDIV );					//ditto
+			VEE := ( ENCHANTMENT_OWNEDSUB );					//ditto
+			VEA := ( ELENUM );						//store the enchantments number
+			VEF := ( ENCHANTMENT_OWNS );					//put the enchantments ownage list somewhere
+			VEG := ( ENCHANTMENT_GETSOWNED );				//put the enchantments got owned list somewhere
+				//DEFENDER CHECK: DEFENDER SUX!
+				ELENUM := ( ENCHSTART - 1 );				//put the enchantment selected back to 1 below the 1st enchantment.
+					foreach VA in VEF				//foreach enchantment in the ownage list we stored (i hope)
+					ELENUM := ( VA );				//make that the current element number
+						if( GetObjProperty(defender, ( ENCHANTMENT_NAME ) ) )	//if the defender has this enchantments CProp
+						rawdamage := ( rawdamage + ( VEC ) );			//run the damage mods
+						rawdamage := ( rawdamage * ( VEB ) );			//ditto
+						endif							//end if
+					endforeach					//end foreach
+					VA := 1;
+				//DEFENDER CHECK: DEFENDER OWNS!
+				ELENUM := ( ENCHSTART - 1 );				//put the selected element back.
+					foreach VA in VEG				//foreach enchantment that owns the weapon
+					ELENUM := ( VA );				//make it the selected enchantment for a sec
+						if( GetObjProperty(defender, ( ENCHANTMENT_NAME ) ) )	//if the defender has this enchantment
+						rawdamage := ( rawdamage - ( VEE ) );			//run the damage mods
+						rawdamage := ( rawdamage / ( VED ) );			//run the damage mods
+						endif							//end if
+					endforeach					//end foreach
+					VA := 1;
+				//END DEFENDER CHECKS!
+			ELENUM := ( VEA );						//put the element number back to what we are up to with the weapon
+			endif								//end the defender checks
+		endif									//end the IF statement for if the weapon has the current enchantment
+	endwhile									//end the while statement for sorting through the enchantments
+	endif										//end the IF statement for the weapon being enchanted
+
+	ELENUM := ( ENCHSTART - 1 );							//we're done with checkin the wep for enchantments, set the selected enchantment back!
+
+	if( GetObjProperty(armor, "SENCHANTED" ) )					//if the armour has the enchanted flag set
+	while( ELENUM != ENCHEND )							//while the selected enchantment is NOT the last enchantment
+		ELENUM := ( ELENUM + 1 );						//add 1 to the enchantment
+			if ( !VEH )							//Setup OWNS array.
+	    Print( "Bad 'Owns' entry in .cfg file, element " + ELENUM );		//Code thanks to Myr.
+	    return;									//Ta for that.
+	else										//
+	    ENCHANTMENT_OWNS := SplitWords( VEH );					//
+	endif										//
+	    for idx := 1 to ENCHANTMENT_OWNS.size()					//Myr's Stripper!!!
+        	var entry := ENCHANTMENT_OWNS[idx];					//Doesnt she look sexy?
+		        while ( (entry[1] == "0") && (len(entry) > 1) )			//This is to strip the "0"s offa the front of the owns & getsowned entrys
+		            entry[1] := "";						//Even if there are none. still converts to integers!
+		        endwhile							//Thanks go to Myr.
+	        ENCHANTMENT_OWNS[idx] := CInt( entry );					//!!
+	    endfor									//End Myr's Stripper
+	if ( !VEI )									//Setup GETSOWNED array.
+	    Print( "Bad 'GetsOwned' entry in .cfg file, element " + ELENUM );		//Code thanks to Myr.
+	    return;									//Ta for that.
+	else										//
+	    ENCHANTMENT_GETSOWNED := SplitWords( VEI );					//
+	endif										//
+	    for idx := 1 to ENCHANTMENT_GETSOWNED.size()				//Myr's Stripper 2!!!
+        	var entry := ENCHANTMENT_GETSOWNED[idx];				//Doesnt she look sexy?
+		        while ( (entry[1] == "0") && (len(entry) > 1) )			//This is to strip the "0"s offa the front of the owns & getsowned entrys
+		            entry[1] := "";						//Even if there are none. still converts to integers!
+		        endwhile							//Thanks go to Myr.
+	        ENCHANTMENT_GETSOWNED[idx] := CInt( entry );				//!!
+	    endfor									//End Myr's Stripper
+		if( GetObjProperty(armor, ( ENCHANTMENT_NAME ) ) )			//if the currently selected enchantment is found on the armor
+		rawdamage := ( rawdamage - ( ENCHANTMENT_NORMADD ) );			//run the damage mods
+		rawdamage := ( rawdamage + ( ENCHANTMENT_NORMSUB ) );			//ditto
+		rawdamage := ( rawdamage / ( ENCHANTMENT_NORMMULTI ) );			//ditto
+		rawdamage := ( rawdamage * ( ENCHANTMENT_NORMDIVIS ) );			//ditto
+			//ATTACKER CHECKS!
+			if( GetObjProperty(attacker, ( "SENCHANTED" ) ) )		//if the attacker is enchanted (someone is wearing enchanted armour is being hit by an enchanted monster. we dont have to check for enchanted weapons because the weapon section above covers armour damage mods!)
+			VEB := ( ENCHANTMENT_OWNAGEMULTI );				//chuck the armor's damage mods somewhere
+			VEC := ( ENCHANTMENT_OWNAGEADD );				//ditto
+			VED := ( ENCHANTMENT_OWNEDDIV );					//ditto
+			VEE := ( ENCHANTMENT_OWNEDSUB );					//ditto
+			VEA := ( ELENUM );						//chuck the armor's currently selected enchantment number somewhere
+			VEF := ( ENCHANTMENT_OWNS );							//put the enchantments ownage list somewhere
+			VEG := ( ENCHANTMENT_GETSOWNED );							//put the enchantments got owned list somewhere
+				//attacker CHECK: attacker SUX!
+				ELENUM := ( ENCHSTART - 1 );				//chuck the selected enchantment back to default
+					foreach VA in VEF				//foreach enchantment in the armors ownage list
+					ELENUM := ( VA );				//make it selected for a while
+						if( GetObjProperty(attacker, ( ENCHANTMENT_NAME ) ) )	//if the attacker has this enchantment
+						rawdamage := ( rawdamage - ( ENCHANTMENT_OWNEDSUB ) );	//run teh damage mods for the attackers tak being owned
+						rawdamage := ( rawdamage / ( ENCHANTMENT_OWNEDDIV ) );	//ditto
+						endif							//end if
+					endforeach					//end foreach
+					VA := 1;
+				//attacker CHECK: attacker OWNS!
+				ELENUM := ( ENCHSTART - 1 );				//set teh enchantment number back to default
+					foreach VA in VEG				//foreach enchantment in the armours anti-ownage list
+					ELENUM := ( VA );				//select this enchantment for a while
+						if( GetObjProperty(attacker, ( ENCHANTMENT_NAME ) ) )		//if this happens to be one of the attackers enchantments
+						rawdamage := ( rawdamage + ( ENCHANTMENT_OWNAGEADD ) );		//run the damage mods
+						rawdamage := ( rawdamage * ( ENCHANTMENT_OWNAGEMULTI ) );	//ditto
+						endif								//endif
+					endforeach					//end for each
+					VA := 1;
+			//END attacker CHECKS!
+			ELENUM := ( VEA );						//set the selected enchantment back to what we were up to with the armor checks
+			endif								//end the attacker checks
+		endif									//end the IF statement that checks if the armour has this enchantment selected
+	endwhile									//end the WHILE statement that runs through the enchantments
+	endif										//end the armour checks
+
+	ELENUM := ( ENCHSTART - 1 );							//put the enchantment selected back to default
+
+	if( GetObjProperty(defender, "SENCHANTED" ) )					//if the defender has the SENCHANTED CProp
+	while( ELENUM != ENCHEND )							//while the selected enchantment isnt the last
+		ELENUM := ( ELENUM + 1 );						//add 1 to the selected enchantment
+		if( GetObjProperty(defender, ( ENCHANTMENT_NAME ) ) )			//if the defender has the current enchantment
+		rawdamage := ( rawdamage - ( ENCHANTMENT_NORMADD ) );			//      run default dmg mods
+		rawdamage := ( rawdamage + ( ENCHANTMENT_NORMSUB ) );			//      inverted because this is the defender
+		rawdamage := ( rawdamage / ( ENCHANTMENT_NORMMULTI ) );                 //      make sense?
+		rawdamage := ( rawdamage * ( ENCHANTMENT_NORMDIVIS ) );                 //      thought so :)
+		endif									//endif
+	endwhile									//end the WHILE statement for running through the enchantments
+	endif										//end the IF statement that sees if teh defender is SENCHANTED
+
+	ELENUM := ( ENCHSTART - 1 );							//put the selected enchantment back to normal
+
+	if( GetObjProperty(attacker, "SENCHANTED" ) )					//if the attacker is enchanted
+	while( ELENUM != ENCHEND )							//while the selected enchantment isnt teh last
+		ELENUM := ( ELENUM + 1 );						//add 1 to the selected enchantment
+		if( GetObjProperty(attacker, ( ENCHANTMENT_NAME ) ) )			//if the attacker has this enchantment on him
+		rawdamage := ( rawdamage + ( ENCHANTMENT_NORMADD ) );			//run the damage mods!
+		rawdamage := ( rawdamage - ( ENCHANTMENT_NORMSUB ) );			//cool eh
+		rawdamage := ( rawdamage * ( ENCHANTMENT_NORMMULTI ) );			//im not saying ditto!
+		rawdamage := ( rawdamage / ( ENCHANTMENT_NORMDIVIS ) );			//damn i musta been bored...
+		endif									//end if!
+	endwhile									//end the while statement that runs through teh enchantments
+	endif										//end the IF statement that checks if the attacker is SENCHANTED
+
+	SetObjProperty(weapon, "TempDamage", rawdamage);				//not exactly sure what thats for. it remains from the Silverhit.src that this was built off :)
+endprogram

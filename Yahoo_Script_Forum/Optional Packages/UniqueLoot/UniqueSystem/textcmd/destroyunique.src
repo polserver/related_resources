@@ -1,0 +1,12 @@
+use uo;
+
+program textcmd_destroyunique( who )
+  SendSysMessage( who, "Please target a unique item to destroy" );
+  var tgt := Target( who );
+  if(tgt)
+    EraseObjProperty( tgt, "unique" );
+    DestroyItem( tgt);
+  else
+    SendSysMessage( who, "You can only destroy items" );
+  endif
+endprogram

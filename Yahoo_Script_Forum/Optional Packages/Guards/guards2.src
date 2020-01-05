@@ -1,0 +1,72 @@
+use uo;
+use os;
+use npc;
+use cfgfile;
+
+include "include/eventid";
+global cfg := ReadConfigFile("::npcdesc");
+const SEARCH_RANGE := 10;
+global guard, timer, elem,tempo, mobiles;
+
+program guard(item)
+
+local range:=0;
+while(!range)
+	range := GetobjProperty(item, "range");
+	sleep(1);
+endwhile
+
+set_priority(5);
+RegisterForSpeechEvents(item, range);
+EnableEvents( EVID_SPEECH, range);
+local ev;
+while (1)
+	ev := wait_for_event(20);
+	repeat
+		if(ev.text["guarda"] and !ev.source.criminal)
+			LookAround(ev.source);
+		endif
+	until( !(ev :=wait_for_event(0) ) );
+	if(!item)
+
+		return;
+	endif
+endwhile
+
+endprogram
+
+function LookAround(who)
+
+mobiles := ListMobilesNearLocation(who.x, who.y,who.z,SEARCH_RANGE);
+
+tempo:= ReadGameClock();
+foreach npc in mobiles
+	if(npc.npctemplate)
+		elem := FindConfigElem(cfg, npc.npctemplate);
+		if(!elem.guardignore and !GetobjProperty(npc, "called"));
+			set_critical(1);
+			if(npc)
+				SetObjProperty(npc, "called", 1);
+				guard := CreateNpcFromTemplate( "guard" , npc.x, npc.y, npc.z );
+				SetObjProperty(guard, "target", npc.serial);
+				set_critical(0);
+			endif
+		endif
+
+	else
+		timer := GetObjProperty(npc, "guardstimer");
+		if(!timer) timer :=0; endif
+		if(npc.criminal and ( timer < ReadGameClock() or timer > (tempo+15)) )
+			set_critical(1);
+			guard := CreateNpcFromTemplate( "guard" , 5283,1184,0 );
+			SetObjProperty(guard, "target", npc.serial);
+			SetObjProperty(npc, "#guardstimer", tempo+15);
+			set_critical(0);
+		endif
+	endif
+endforeach
+
+sleepms(200);
+
+endfunction
+

@@ -1,0 +1,17 @@
+//////
+// breakit.src
+//
+// This is a targettable version of destroyradius with a radius of 1
+//	Great for those 'mistakes'
+//////
+use uo;
+
+program breakit(who)
+	var where := TargetCoordinates( who );
+	if( !where )
+		return;
+	endif
+	foreach item in ListItemsNearLocation(where.x, where.y, where.z,1)
+		DestroyItem( item );
+	endforeach
+endprogram

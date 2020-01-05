@@ -1,0 +1,266 @@
+// Created by GMTalos. Ver .5  gmtalos@bughunt.net
+// .camp # command - to create a random camp with creatures
+//Usage is: Camp [#]
+//Current camps are:
+//1=Orc
+//2=Lizard
+//3=Troll
+//4=Etten/Ogre
+//5=Ratmen
+//6=Empty
+// Items created with this command will not decay or move.
+//
+use uo;
+use util;
+
+
+program textcmd_camp( who, text )
+
+	if (!text)
+		SendSysMessage(who,"Usage is: Camp [#]");
+		SendSysMessage(who,"Current camps are:");
+		SendSysMessage(who,"1=Orc");
+		SendSysMessage(who,"2=Lizard");
+		SendSysMessage(who,"3=Troll");
+		SendSysMessage(who,"4=Ettin/Ogre");
+		SendSysMessage(who,"5=Ratmen");
+		SendSysMessage(who,"6=Empty");
+		return;
+	elseif (text="1")
+		camp_items(who);
+		Orc_camp(who);
+	elseif (text="2")
+		camp_items(who);
+		Lizard_camp(who);
+	elseif (text="3")
+		camp_items(who);
+		Troll_camp(who);
+	elseif (text="4")
+		camp_items(who);
+		Giant_camp(who);
+	elseif (text="5")
+		camp_items(who);
+		Rat_camp(who);
+	elseif (text="6")
+		camp_items(who);
+	elseif (text<"5")
+		SendSysMessage(who,"Usage is: Camp [#]");
+		SendSysMessage(who,"Current camps are:");
+		SendSysMessage(who,"1=Orc");
+		SendSysMessage(who,"2=Lizard");
+		SendSysMessage(who,"3=Troll");
+		SendSysMessage(who,"4=Ettin/Ogre");
+		SendSysMessage(who,"5=ratmen");
+		SendSysMessage(who,"6=Empty");
+		return;
+		
+	endif
+
+endprogram
+
+function camp_items(who)
+
+local i;
+local objtype;
+for ( i:=1; i <= 8; i := i + 1)
+
+local which := randomint(24) + 1;
+
+case (which)
+1: objtype:= 0x41f;
+2: objtype:= 0x428;
+3: objtype:= 0x975;
+4: objtype:= 0x9ae;
+5: objtype:= 0x9e8;
+6: objtype:= 0xa57;
+7: objtype:= 0xa59;
+8: objtype:= 0xa2a;
+9: objtype:= 0xde3;
+10: objtype:= 0x0fac;
+11: objtype:= 0x10ee;
+12: objtype:= 0xe0f2;
+13: objtype:= 0x0e7b;
+14: objtype:= 0x0e7e;
+15: objtype:= 0x11fc;
+16: objtype:= 0x122a;
+17: objtype:= 0x1640;
+18: objtype:= 0x166d;
+19: objtype:= 0x1ad6;
+20: objtype:= 0x1b10;
+21: objtype:= 0x1bb4;
+22: objtype:= 0x1e1b;
+23: objtype:= 0x1e97;
+24: objtype:= 0x1e98;
+endcase   
+
+
+local item := CreateItemAtLocation((RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z, objtype, 1);
+        item.decayat := 0;
+	item.movable := 0;
+
+endfor
+endfunction
+
+function Orc_camp(who)
+
+local i;
+local ttemplate;
+for ( i:=1; i <= 6; i := i + 1)
+
+local which := randomint(34) + 1;
+
+case (which)
+1 : ttemplate := "orc_lord";
+2: ttemplate := "orc1";
+3: ttemplate := "orcarcher";
+4: ttemplate := "orcmarksman";
+5: ttemplate := "orc2";
+6: ttemplate := "orcmage";
+7: ttemplate := "orcking";
+8: ttemplate := "orccleric";
+9: ttemplate := "orcdefender";
+10: ttemplate := "orc3";
+11: ttemplate := "orc4";
+12: ttemplate := "orcelite";
+13: ttemplate := "orccaptain";
+14: ttemplate := "orcmastermage";
+15: ttemplate := "orcdefender";
+16: ttemplate := "orcdefender";
+17: ttemplate := "orccleric";
+18: ttemplate := "orccleric";
+19: ttemplate := "orcmage";
+20: ttemplate := "orcmage";
+21: ttemplate := "orcmarksman";
+22: ttemplate := "orcmarksman";
+23: ttemplate := "orc3";
+24: ttemplate := "orc3";
+25: ttemplate := "orc3";
+26: ttemplate := "orc3";
+27: ttemplate := "orc3";
+28: ttemplate := "orc4";
+29: ttemplate := "orc4";
+30: ttemplate := "orc4";
+31: ttemplate := "orccaptain";
+32: ttemplate := "orccaptain";
+33: ttemplate := "orcelite";
+34: ttemplate := "orc2";
+endcase            
+
+local result := CreateNpcFromTemplate( ttemplate, (RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z );
+
+endfor
+
+endfunction
+
+function Lizard_camp(who)
+
+local i;
+local ttemplate;
+for ( i:=1; i <= 6; i := i + 1)
+
+local which := randomint(13) + 1;
+
+case (which)
+1 : ttemplate := "lizardman1";
+2: ttemplate := "lizardman2";
+3: ttemplate := "lizardman3";
+4: ttemplate := "lizardmanarcher";
+5: ttemplate := "lizardmanshaman";
+6: ttemplate := "lizardmanwarlock";
+7: ttemplate := "lizardmanking";
+8: ttemplate := "lizardmandefender";
+9 : ttemplate := "lizardman1";
+10: ttemplate := "lizardman2";
+11: ttemplate := "lizardman3";
+12: ttemplate := "lizardmanarcher";
+13: ttemplate := "lizardmanshaman";
+endcase        
+
+local result := CreateNpcFromTemplate( ttemplate, (RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z );
+
+endfor
+
+endfunction
+
+function Troll_camp(who)
+
+local i;
+local ttemplate;
+for ( i:=1; i <= 6; i := i + 1)
+
+local which := randomint(18) + 1;
+
+case (which)
+1 : ttemplate := "troll1";
+2: ttemplate := "troll2";
+3: ttemplate := "troll3";
+4: ttemplate := "troll_lord";
+5: ttemplate := "trollarcher";
+6: ttemplate := "trollarcher2";
+7: ttemplate := "trollarcher3";
+8: ttemplate := "trollmarksman";
+9: ttemplate := "trollmarksman2";
+10: ttemplate := "troll4";
+11: ttemplate := "troll5";
+12: ttemplate := "troll6";
+13: ttemplate := "trollwarlord";
+14: ttemplate := "trollking";
+15: ttemplate := "trollshaman";
+16 : ttemplate := "troll1";
+17: ttemplate := "troll2";
+18: ttemplate := "troll3";
+endcase        
+
+local result := CreateNpcFromTemplate( ttemplate, (RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z );
+
+endfor
+endfunction
+
+function Giant_camp(who)
+
+local i;
+local ttemplate;
+for ( i:=1; i <= 5; i := i + 1)
+
+local which := randomint(7) + 1;
+
+case (which)
+1 : ttemplate := "ogre";
+2: ttemplate := "ogrelord";
+3: ttemplate := "ogre";
+4: ttemplate := "ettin2";
+5: ttemplate := "ettin";
+6: ttemplate := "ettin";
+7: ttemplate := "ettin2";
+endcase        
+
+local result := CreateNpcFromTemplate( ttemplate, (RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z );
+
+endfor
+endfunction
+
+
+function Rat_camp(who)
+
+local i;
+local ttemplate;
+for ( i:=1; i <= 7; i := i + 1)
+
+local which := randomint(9) + 1;
+
+case (which)
+1 : ttemplate := "ratman1";
+2: ttemplate := "ratmanmarksman";
+3: ttemplate := "ratman2";
+4: ttemplate := "ratman3";
+5: ttemplate := "ratman_lord";
+6: ttemplate := "ratman1";
+7: ttemplate := "ratman2";
+8: ttemplate := "ratman2";
+9: ttemplate := "ratman3";
+endcase        
+
+local result := CreateNpcFromTemplate( ttemplate, (RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z );
+
+endfor
+endfunction

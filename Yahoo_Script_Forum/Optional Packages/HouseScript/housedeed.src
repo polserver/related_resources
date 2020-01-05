@@ -1,0 +1,157 @@
+//
+// housedeed - house plan/deed double-click script
+//
+// - creates a "built" deed in placer's bank (deed possession is house ownership)
+// - creates keys (one in bank, one in backpack)
+// - places the house
+// - destroys the house plans (unbuilt deed)
+// - locks doors, and associates with new keys.
+//
+// A "built" deed will have the following custom properties:
+//    builtserial: serial of the built house, after it's built.
+// 
+// A deed's name is "A deed to a [type]" if not built, or
+// "A deed to a [type] (built)" if built. 
+//
+// TODO: the keys should probably be named.
+// 
+// 1/7/1999 ENS
+// 5/11/1999 Racalac, adapted from shipdeed.src
+//
+
+use uo;
+use os;
+
+include "util/key";
+include "util/bank";
+include "include/objtype";
+
+Const UOBJECT_DOORS_START := 0x0675;
+Const UOBJECT_DOORS_END   := 0x06f4;
+Const UOBJECT_BRASS_SIGN := 0x0bd2;
+Const UOBJECT_WOOD_SIGN := 0x0bd0;
+Const UOBJECT_TENT_CHEST := 0x0E43;
+
+program usehousedeed( character, deed )
+    if (DeedAlreadyBuiltFrom( deed ))
+        PrintTextAbovePrivate( deed, "That house has already been built.", character );
+    else
+        Buildhouse( character, deed );
+    endif
+endprogram
+
+
+
+//
+// Buildhouse: build a house from a deed.
+// 
+// The character is prompted to place the house.  If the house, the new keys, and
+//    the ownership deed can be created, then they are, and the original deed is
+//    destroyed.
+//
+// TODO: Test the location for items blocking
+
+function Buildhouse( character, deed )
+    local housetype := GetObjProperty( deed, "housetype" );
+
+    if (housetype = error)
+        PrintTextAbovePrivate( deed, "That house deed appears to be broken.", character );
+        syslog( "Deed " + deed.serial + " had no housetype property!" );
+        return;
+    endif
+
+    local where := TargetMultiPlacement( character, housetype );
+    if (!where) // cancelled
+        return;
+    endif
+
+        //
+        // Do the work, atomically.
+        //
+
+    if( deed.objtype = 0x6026 )  //large patio house deed
+        where.z := where.z + 7;
+    endif
+
+    set_critical( 1 );
+
+    local created := CreatehouseKeysAndBuiltDeed( character, housetype, where.x, where.y, where.z );
+    if (!created)
+        return;     // note Createhouse.. prints appropriate error message
+    endif
+
+    SetObjProperty( created.house , "numlockdowns" , GetObjProperty( deed , "numlockdowns" ));
+    SetObjProperty( created.house , "numsecure" , GetObjProperty( deed , "numsecure" ));
+
+    SetName( created.builtdeed, deed.desc + " at " + created.house.x + ", " + created.house.y + ", " + created.house.z + " (built)" );
+    DestroyItem( deed );
+
+    SetObjProperty( created.house , "ownerserial" , character.serial );
+    SetObjProperty( created.house , "owneracct" , character.acctname );
+    local lockid := AllocLockId();
+    SetObjProperty( created.packkey, "lockid", lockid );
+    SetObjProperty( created.bankkey, "lockid", lockid );
+
+    foreach item in (created.house.components)
+        if( ((item.objtype >= UOBJECT_DOORS_START) and (item.objtype <= UOBJECT_DOORS_END)) or item.objtype = UOBJECT_TENT_CHEST )
+            item.locked := 1;
+            SetObjProperty( item , "lockid" , lockid );
+        elseif( (item.objtype = UOBJECT_BRASS_SIGN) or (item.objtype = UOBJECT_WOOD_SIGN) )
+            SetObjProperty( item , "lockid" , lockid );
+        endif
+    endforeach
+
+endfunction
+
+
+
+//
+// CreatehouseAndParaphernalia: atomically create house, keys, and new deed
+//
+// The keys and deed, in the bankbox and backpack, are created first because
+// it's possible to delete them.  It's nontrivial to delete the house.
+//
+// Returns a structure with references to the created objects.
+//
+
+function CreatehouseKeysAndBuiltDeed( character, housetype, x, y, z )
+    local bankbox := FindBankBox( character );
+
+    local packkey := CreateItemInBackpack( character, UOBJ_GOLD_KEY );
+    if (!packkey)
+        PrintTextAbovePrivate( character, "My backpack is too full!", character );
+        return 0;
+    endif
+
+    local bankkey := CreateItemInBackpack( character, UOBJ_GOLD_KEY );
+
+    local house := CreateMultiAtLocation( x, y, z, housetype );
+    if (!house)
+        PrintTextAbovePrivate( character, "I can't place the house there.", character );
+        print(house.errortext);
+        DestroyItem( packkey );
+        DestroyItem( bankkey );
+        return;
+    endif
+
+    local result array;
+    
+    result .+ packkey := packkey;
+    result .+ bankkey := bankkey;
+    result .+ house := house;
+    
+    return result;
+endfunction
+
+
+//
+// A deed has been built from if it has a "builtserial" custom property.
+//
+
+function DeedAlreadyBuiltFrom( deed )
+    if (GetObjProperty( deed, "builtserial" ))
+        return 1;
+    else
+        return 0;
+    endif
+endfunction

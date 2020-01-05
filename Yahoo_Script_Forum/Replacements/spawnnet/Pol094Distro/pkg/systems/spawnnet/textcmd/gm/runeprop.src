@@ -1,0 +1,26 @@
+use uo;
+use os;
+use util;
+
+program textcmd_runeedit(who,  input)
+
+local counter := 0;
+if (!input)
+	sendsysmessage(who, "Anwendung: runeprop prop wert");
+	return 0;
+endif
+
+input := splitwords(input);
+local propname := cstr(input[1]);
+local propval := cstr(input[2]);
+foreach obj in ListObjectsInBox(0, 0, -128, 10000, 10000, 128)
+if (obj.objtype = 0xa300)
+	SetObjProperty(obj, propname, propval);
+	counter := counter +1;
+endif
+
+endforeach
+
+SendSysMessage(who, "Ihr habt " +counter+ " Runen gesetzt mit " +propname+   " : " +propval);
+
+endprogram

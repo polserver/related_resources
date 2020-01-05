@@ -1,0 +1,203 @@
+////////////////////////////////////////////////////////
+// selectitem.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+////////////////////////////////////////////////////////
+// Notes:
+//
+// - Uses selectItemGump.inc for the gumps.
+//
+// - And Uses the UO*****.cfg files in :gmstaff:config\ 
+//   ( which were converted from DoHItems.scp, a Dundee's 
+//   Other Hand config file) to get item info.
+//
+// - If you wish to alter the UO******.cfg files then first
+//   read docs\customizingGmStaff.txt
+//
+////////////////////////////////////////////////////////
+//
+// + Thanks to Dark~Haven and the admin at his shard who
+//   sorted out the ReadConfigFile adressing problem :-)
+//
+
+use uo;
+use os;
+use cfgfile;
+
+include "selectItemGumps";
+
+////////////////////////////////////////////////////////
+// Global Vars
+
+var itemcfg:=ReadConfigFile(":*:itemdesc");
+
+var show_graphics:=1;
+
+////////////////////////////////////////////////////////
+
+program selectItem(who,parms)
+  var i,finished:=0;
+  while (!finished);
+    var retval:=SendDialogGump(who,main_layout,main_data);
+    if (!retval)
+      finished:=1;
+    else
+      for (i:=10;i<=14;i:=i+1)
+        if (retval[i])
+          SelectItemFromRootGroup(who,(i-9));
+        endif
+      endfor
+    endif
+  endwhile
+endprogram
+
+////////////////////////////////////////////////////////
+
+
+function SelectItemFromRootGroup(who,grouptype)
+  var this_data:=array;
+  var this_layout:=array;  
+  case (grouptype)
+  1: //Buildings
+    this_data:=buildings_data;
+    this_layout:=buildings_layout;
+  2: //Decorations
+    this_data:=decorations_data;
+    this_layout:=decorations_layout;
+  3: //General
+    this_data:=general_data;
+    this_layout:=general_layout;
+  4: //Provisions
+    this_data:=provisions_data;
+    this_layout:=provisions_layout;
+  endcase
+  
+  var finished:=0;
+  while (!finished)
+    var retval:=SendDialogGump(who,this_layout,this_data);
+    if (retval)
+      var button_num;
+      var i:=1024;
+      while (i<1200)
+        i:=i+1;
+        if (retval[i])
+          button_num:=i-1024;
+          i:=1200;
+        endif
+      endwhile
+      if (button_num)
+        var j:=0;
+        var cfgfilename,cfgfilekey;
+        for (i:=2;i<=len(this_data);i:=i+1)
+          var check:=this_data[i];
+          if (!Cint(check))
+            if (check[1]="U" and check[2]="O")
+              cfgfilename:=check;
+            else
+              j:=j+1;
+              if (j=button_num)
+                cfgfilekey:=check;          
+                i:=len(this_data);
+                break;
+              endif
+            endif
+          endif
+        endfor  
+        SendItemGump(who,cfgfilename,cfgfilekey);
+      endif
+    else
+      finished:=1;
+    endif   
+  endwhile
+  
+endfunction
+
+////////////////////////////////////////////////////////
+     
+function SendItemGump(who,cfgfilename,cfgfilekey)
+  var this_name:=":gmstaff:config/"+cfgfilename+""; 
+  var thiscfg:=ReadConfigFile(this_name);
+  if (!thiscfg)
+    sendsysmessage(who,"!Config '"+this_name+"' :"+thiscfg.errortext);
+    return;
+  endif
+  var this_layout:=baseitemsgump_layout;
+  var this_data:=baseitemsgump_data;
+  
+  var graphics_on:=0;
+  var button;
+  var item_buttons:=array;
+  
+  var x:=200;
+  var y;
+  var thiselem:=FindConfigElem(thiscfg,cfgfilekey);
+  var items:=GetConfigStringArray(thiselem,"item");
+  var item_types:=array;
+  var page_num:=1;
+  var graphics_lytidxs:=array;
+  var graphics_on_layout:=array;
+
+  var i:=0;
+  foreach item in items
+    i:=i+1;
+    y:=100+(i*20);
+    var splitit:=splitwords(item);
+    item_types.append(Cint(splitit[1]));
+    this_layout.append("");
+    graphics_lytidxs.append(len(this_layout));
+    graphics_on_layout.append("tilepic 80 "+y+" "+Cint(splitit[1]));
+   
+    this_layout.append("text 200 "+y+" 98 "+len(this_data));
+    this_data.append(item);
+    this_layout.append("button 180 "+y+" 1210 1209 1 0 "+(199+i)); 
+
+//    button:=GFButtonID(x-20,y,0x04ba,0x04b9,1);
+//    item_buttons.append(button.keyid);
+    if (i>25)
+       i:=0;
+       page_num:=page_num+1;
+       this_layout.append("button 540 500 252 253 0 "+page_num);
+       this_layout.append("page "+page_num);
+       this_layout.append("text 530 10 34 "+len(this_data));
+       this_data.append(page_num);
+       this_layout.append("button 540 100 250 251 0 "+(page_num-1));
+    endif
+  endforeach
+  var finished:=0;
+  var build_type;
+  while (!finished)
+    var retval:=SendDialogGump(who,this_layout,this_data);
+    if (retval[199])
+      graphics_on:=(!graphics_on);
+      for (i:=1;i<=len(graphics_lytidxs);i:=i+1)
+        if (graphics_on)
+          this_layout[graphics_lytidxs[i]]:=graphics_on_layout[i];
+        else
+          this_layout[graphics_lytidxs[i]]:="";
+        endif
+      endfor
+    else
+      finished:=1;
+      for (i:=1;i<=len(items);i:=i+1)
+        if (retval[i+199])    
+          finished:=0;
+          var where:=TargetCoordinates(who);
+          if (where)
+            var make_item:=CreateItemAtLocation(where.x,where.y,where.z,Cint(items[i]),1);
+            if (make_item)
+              if (!itemcfg[make_item.objtype])
+                make_item.movable:=0;
+              endif
+            else
+              sendsysmessage(who,"Can't create item "+hex(items[i])+" there!");
+            endif
+          endif
+        endif
+      endfor
+    endif
+  endwhile
+endfunction
+
+////////////////////////////////////////////////////////

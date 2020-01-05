@@ -1,0 +1,62 @@
+Gump-Spellbook @ Pergon   (Pol094DistroSP3 tested)
+=======================
+
+ahoi ihr Glücksbärchis,
+
+es is 'n bissl spät *aufdieuhrschaut*, ich hab keinen Bock diese Datei hier zu schreiben, und ich hab
+noch weniger Lust, sowas auch noch in Englisch zu machen, wo ich doch eh schon keinen Plan von dieser
+komischen Sprache hab... nundenn
+
+angefangen hatte das ganze mit der notwendigkeit 3 verschiedene magier-klassen, mit jeweils unterschiedlichen
+sprüchen, zu schaffen. das ganze fällt ins gesamtkonzept von Pergon, wo akt. um die 70 skills realisiert sind
+(macht schonmal jeweils 3 zum zaubern und rollenschreiben). da Pergon mittlerweile sehr stark von OSI und
+auch von der Distro abweicht, war es nicht so einfach, das Spellbook, als einzelobjekt, da einfach so
+rauszulösen. ich hab auch nur soweit anpassungen durchgeführt, damit der krams mit der Distro zusammenarbeitet
+und nutzbar ist. konkret heißt das, daß nachwievor 3 verschiedene bücher unterstützt werden, die aber alle
+akt. den selben inhalt aufweisen... wer das zurückbauen will... viel spaß - ich hab die entscheidenden stellen
+einfach auskommentiert.
+
+das spellbook-script ist hochgradig universell geschrieben (is sogar universeller, als wir es auf Pergon
+gebraucht haben - is halt vor vollendung des neuen magie-konzeptes entstanden). d.h. alles wird aus der
+spells.cfg rausgelesen. es sind mehr als 8 circle (oder weniger) möglich. pro circle sind so viele sprüche
+erlaubt, wie beliebt (also mehr als die 8 akt.). selbst die reagenzien werden aus der spells.cfg rausgelesen,
+so daß sich fehler im config-file schnell finden lassen (also, bei uns war das teil richtig mistig).
+jedes der 3 bücher ist prinzipiell einzigartig, die enthaltenen sprüche, reagenzien usw. usf. (wir ham
+ca. 25 verschiedene reags, viele gemeinsame und einige spezielle, bei 128 sprüchen (32 gemeinsame + jeweils
+32 spezielle).
+
+das spellbook selber besteht aus 2 teilen (der geschwindigkeit wegen). einem initialisierungsteil, der nur
+beim starten aufgerufen wird, weil eh immer gleich (der haut das ergebnis dessen in globalprops und benutzt
+die dann beim auruf einfach). dann gibts noch das SpellPanel. das ist relativ neu und noch nicht komplett
+unabhängig vom Buch benutzbar. es dient dazu, das "rausziehen" der sprüche nachzuahmen, indem 'n Panel
+bereitgestellt wird, das sich frei konfigurieren läßt... zum thema konfigurieren: undbedingt mal die
+konstanten anschauen... wir ham nämlich auch unsere ganzen spellsymbole usw.usf. neu gemalt.
+
+Gumps... im client-dir liegt 'ne verdata.mul, die 16 ganz wichtige Gumps enthält (GUMP_HIDDENBTN_LEFT:=2184 ff.)
+diese teile sehen genauso aus, wie das leere buch selber und liegen unter/hinter den index-einträgen im
+buch. erst durch diesen trick kann man ueber den index zu den sprüchen wechseln. die anderen teile in der
+verdata könnt ihr ignorieren (dürften nur noch die windmühlen-flügel sein).
+
+am besten ihr probiert das ganze einfach mal aus... alles reinkopieren und ".spellbooknew". dann sollten
+im backpack 3 bücher, vollgepackt mit sprüchen auftauchen... die nutzung des ganzen ist intuitiv,
+zumindest hams meine leutz kapiert ;o)
+
+da der ganze krams ja als basis für irgendwelche mit magie-rewrite dienen soll (was wir schon gemacht
+haben), müssen die sich schon irgendwie durch den code wurschteln, den ich verständlich finde. wenn
+irgendwer am Gump-code verzweifelt und sich seine gehirnwindungen verknoten, dann versteh ich das...
+hat mich auch 'ne weile gekostet, das sooo elegant hinzubekommen, so daß möglichst keine daten
+unnötig doppelt übertragen werden *g*
+und wenn ihr den Gump-code "krank" findet, dann kann ich euch noch viel krankere sachen präsentieren...
+ich LIEBE gumps und es gibt fast nix, was sich damit nicht machen läßt... hehe
+
+achja, irgendwie funzt das mit dem oninsert nich so richtig... weiß auch nich warum, weil wir das
+über ein use-script handlen, aber ihr könnt ja mal ins insertscroll-script schauen, um zu sehen,
+wie einfach das funzt... die includes liefern ja alles, wunderschön in funktionen verpackt.
+
+so, hab keinen bock mehr und ich glaub, das engliche äquivalent wird gaaaanz kurz
+
+tschö
+
+Shini aka Shinigami aka Jason
+
+p.s.: wer linksschreibfehler findet, darf sie behalten... ich les mir den kram da oben jetzt nimmer durch

@@ -1,0 +1,23 @@
+use uo;
+
+program textcmd_createstack( who, text )
+    local params := SplitWords( text );
+    local objtype := params[1];
+    local amount := CInt( params[2] );
+
+    if (CInt(objtype))
+        objtype := CInt(objtype);
+    endif
+
+    if (!amount)
+        amount := 1;
+    endif
+
+    local what := CreateItemInBackpack( who, objtype, amount );
+    SetObjProperty(what, "gmmade", who.name + " // " + who.acctname );
+    if (what)
+        PrintTextAbovePrivate( who, "Created " + what.desc + " in my backpack.", who );
+    else
+        PrintTextAbovePrivate( who, "Couldn't create that: " + what.errortext, who );
+    endif
+endprogram

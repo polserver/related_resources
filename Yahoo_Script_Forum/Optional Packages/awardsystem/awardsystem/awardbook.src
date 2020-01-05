@@ -1,0 +1,225 @@
+
+use uo;
+use cfgfile;
+
+include "include/gumps";
+include "include/objtype";
+include "include/client";
+include "include/math";
+
+program AwardBook(who, awardbook)
+
+  // contents in awardbook
+  var awardcfg := readconfigfile("awardsystem");
+  var count := GetObjProperty(awardbook, "count");
+  var pagenum := (count/16)+1;
+  
+  if( mod( count, 16))
+    pagenum := pagenum + 1;
+  endif
+  
+  var openawardbook := 1;
+  ReserveItem(awardbook);
+  
+  while (openawardbook)
+    openawardbook := 0;
+    
+    GFInitGump(100,100);
+    GFPage(0);
+    GFGumpPic(0,0,0x08AC);
+  
+  // Return to front page button
+    GFButtonPage(5,100,0x09ce,0x09ce,1);
+  
+    GFPage(1);
+  
+    if( count)
+      GFButtonPage(321,8,0x08bc,0x08bc,2);
+    endif
+  
+    var sigil := GetObjProperty(awardbook,"sigil");
+    if (!sigil)
+       sigil := 0x08e7;
+    endif
+    var customize := GFButtonID(101,112,sigil,sigil,1);
+    
+    var owner := GetObjProperty(awardbook,"owner");
+    var ownercolor := 0;
+    if (!owner)
+      owner := "Unmelded";
+      ownercolor := 748;
+    endif
+    GFTextMid(60,20,126,ownercolor,owner);
+  
+    var yval := 36;
+   
+    var showfealty := GetObjProperty(awardbook,"fealty");
+    if( showfealty) 
+      if( who.serial == GetObjProperty(awardbook,"ownerserial"))
+        if( !GetObjProperty(who,"fealty"))
+          setfealty(awardbook, "");
+          showfealty := "";
+        elseif( !showfealty[GetObjProperty(who, "fealty")])
+          setfealty(awardbook,GetObjProperty(who, "fealty"));
+          showfealty := GetObjProperty(awardbook,"fealty");
+        endif
+      endif
+      if( showfealty)
+        GFTextMid(60,yval,126,0,showfealty);
+      endif
+      yval := yval + 16;
+    endif
+  
+    var showtitle := GetObjProperty(awardbook,"title");
+    if (showtitle)
+      if( who.serial == GetObjProperty(awardbook,"ownerserial"))
+        var title := gettitle(who);
+        GFTextMid(60,yval,126,0,title);
+        yval := yval+16;
+      endif
+    endif
+  
+    var showguild := GetObjProperty(awardbook,"guild");
+    if( showguild)
+      if( who.serial == GetObjProperty(awardbook,"ownerserial"))
+        var guild := GetObjProperty(who,"guild");
+        if( guild)
+          setguild(awardbook,guild);
+          showguild := GetObjProperty(awardbook,"guild");
+        else
+          setguild(awardbook,"");
+          showguild := "";
+        endif
+      endif
+      if( showguild)
+        GFTextMid(60,yval,126,0,showguild);
+      endif
+    endif
+  
+    GFTextLine(222,20,748,"Award Book");
+    GFTextLine(222,36,0,"Here you'll find");
+    GFTextLine(222,52,0,"your awards for");
+    GFTextLine(222,68,0,"your race and/or");
+    GFTextLine(222,84,0,"class.");
+  
+    var bookreturn := dictionary;
+  
+    var idx;
+    var page;
+    var partpage;
+    var rows;
+    var name;
+    var award;
+    var retid;
+    var awardelem;
+    for( page := 1; page <= pagenum; page := page + 1)
+      GFPage(page+1);
+      
+      GFButtonPage(50,8,0x08bb,0x08bb,page);
+      if( page+1 < pagenum)
+        GFButtonPage(321,8,0x08bc,0x08bc,page+2);
+      endif
+  
+      yval := 36;
+  
+      partpage := ((page-1)*2)+1;
+      GFTextLine(80,20,748, "Page "+CStr( partpage));
+      
+      idx := (((page-1)*16)+1);
+      for( rows := 1; rows <= 8 && idx <= count; rows := rows + 1)
+        award := GetObjProperty( awardbook, "award" + CStr( idx));
+        awardelem := awardcfg[award];
+        name := awardelem.desc;
+        if( name)
+          GFTextLine(80,yval,0,name);
+          if( !awardelem.autorun)
+            retid := GFButtonID(53,yval+4,0x08b0,0x08b0,1);
+            bookreturn[retid.keyid] := awardelem.script;
+          endif
+          yval := yval + 16;
+        endif
+        idx := idx + 1;
+      endfor
+      if( idx <= count)
+        yval := 36;
+    
+        partpage := partpage + 1;
+        GFTextLine(222,20,748, "Page "+CStr( partpage));
+        for( rows := 1; rows <= 8 && idx <= count; rows := rows + 1)
+          award := GetObjProperty( awardbook, "award" + CStr( idx));
+          awardelem := awardcfg[award];
+          name := awardelem.desc;
+          if( name)
+            GFTextLine(222,yval,0,name);
+            if( !awardelem.autorun)
+              retid := GFButtonID(335,yval+4,0x08af,0x08af,1);
+              bookreturn[retid.keyid] := awardelem.script;
+            endif
+            yval := yval + 16;
+          endif
+          idx := idx + 1;
+        endfor
+      endif
+    endfor
+  
+    var retval := GFSendGump(who);
+  
+    if( !retval[0])
+      return;
+    endif
+    if( retval[0] == customize.keyid)
+      if( owner == "Unmelded")
+        GFInitGump(300,260);
+        GFGumpPic(0,0,0x0816);
+        GFTextLine(35,21,0,"Do you wish to");
+        GFTextLine(35,35,0,"meld with this");
+        GFTextLine(35,49,0,"awardbook now?");
+        var yesmeld := GFButtonID(35,75,0x081a,0x081b,1);
+        var cancelmeld := GFButtonID(85,75,0x0817,0x0818,1);
+      
+        var domeld := GFSendGump(who);
+        if( domeld[0] == yesmeld.keyid)
+          openawardbook := 1;
+          SetObjProperty(awardbook,"ownerserial",who.serial);
+          SetObjProperty(awardbook,"owner",who.name);
+        endif
+      else
+        GFInitGump(100,100);
+        GFResizePic(0,0,0x09d8,300,300);
+        // finish customization code
+      endif
+    else
+      if( GetObjProperty(awardbook,"ownerserial"))
+        if( who.serial != GetObjProperty(awardbook,"ownerserial"))
+          SendSysMessage( who, "This awardbook is melted with " + GetObjProperty(awardbook,"owner"));
+          SendSysMessage( who, "you cant read it");
+          return;
+        endif
+        var parms := { who, 0 };
+        start_script( bookreturn[retval[0]], who);
+      endif
+    endif
+       
+  endwhile
+
+endprogram
+
+function gettitle(char)
+  var title := char.title_prefix;
+  return title;
+
+endfunction
+
+function setfealty(book,phrase)
+  if ((phrase == "Moonglow") or (phrase == "Moon") or (phrase == "Britain") or (phrase == "Skara Brae") or (phrase == "Fawn") or (phrase == "Trinsic") or (phrase == "Montor East") or (phrase == "Jhelom") or (phrase == "Montor West") or (phrase == "Yew") or (phrase == "Cove") or (phrase == "Gray") or (phrase == "Vesper") or (phrase == "Magincia") or (phrase == "Minoc"))
+    phrase := "of " + phrase;
+  elseif (phrase == "Mondain")
+    phrase := "Legion of Mondain";
+  endif
+  SetObjProperty(book,"fealty",phrase);
+
+endfunction
+
+function setguild(book,phrase)
+
+endfunction

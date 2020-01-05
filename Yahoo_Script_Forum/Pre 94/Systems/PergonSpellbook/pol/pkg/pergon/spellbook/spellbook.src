@@ -1,0 +1,29 @@
+///////////////////////////////////////////
+//
+//   Click on SpellBook v1.0 (2001/12/09)
+//
+//     Author: Shinigami
+//     eMail : Shinigami@gmx.net
+//
+//   Modifications:
+//     2001/12/09 Shinigami: First Write
+//
+///////////////////////////////////////////
+
+/////////////
+// Includes
+/////////////
+
+Include "spellbook";
+
+//////////////////
+// Hauptprogramm
+//////////////////
+
+Program Click_SpellBook(who, spellbook)
+  If (who.isa(POLCLASS_MOBILE))
+    UseSpellBook(who, spellbook); // Normales Item-Script
+  Else
+    UseSpellBook(who[1], who[2]); // HookOpenSpellbookPergon
+  EndIf
+EndProgram

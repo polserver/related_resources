@@ -1,0 +1,104 @@
+//checkcfg v0.6
+//made by GM Scull
+//Checks raider cfgs for errors
+
+use uo;
+use cfgfile;
+
+program checkcfg(parms)
+
+	if (checkcfg(parms))
+		Setglobalproperty("RaidcfgOK", 1);
+	else
+		Setglobalproperty("RaidcfgOK", 2);
+	endif				
+
+endprogram
+
+function checkcfg(parms)
+
+	UnloadConfigFile( "groups" );
+	UnloadConfigFile( "locations" );
+	UnloadConfigFile( "difficulty" );
+
+	var locationcfg := ReadConfigFile( "locations" );
+	var groupcfg := ReadConfigFile( "groups" );
+	var difficultycfg := ReadConfigFile( "difficulty" );
+
+	if (!locationcfg)
+		print("Could not find locations.cfg");
+		return 0;
+	endif
+	if (!groupcfg)
+		print("Could not find groups.cfg");
+		return 0;
+	endif
+	if (!difficultycfg)
+		print("Could not find difficulty.cfg");
+		return 0;
+	endif
+
+	var settings := locationcfg[parms[1]];
+   	var raiders := groupcfg[parms[2]];
+	var difficulty := difficultycfg[ parms[3] ];
+
+	//Location.cfg
+	if (!settings.rect)
+		print ("CFGError: rect does not exist");
+		return 0;
+	endif
+
+	local temp := splitwords(settings.rect);
+	if  ( (cint(temp[3]) - cint(temp[1])) * (cint(temp[4]) - cint(temp[2])) < 1)
+		print ("CFGError: rect to small for monster spawn");
+		return 0;
+	endif
+
+	if (!settings.goal)
+		print ("CFGError: goal does not exist");
+		return 0;
+	endif
+
+	//Groups.cfg
+
+	var i;
+	var splitter := { };
+
+	UnloadConfigFile( "::npcdesc" );
+	var cfgfile := ReadConfigFile( "::npcdesc" );
+
+	local raiderarray := GetConfigStringArray( raiders, "npc" );
+	local raidertype := { };
+	for (i := 1; i <= len(raiderarray); i:=i+1)
+		splitter := splitwords(raiderarray[i]);
+		if (!FindConfigElem (cfgfile, splitter[1]))
+			print ("CFGError: Tempalte " + splitter[1] + " Does not exist");
+			return 0;
+		endif
+	endfor
+
+	raiderarray := GetConfigStringArray( raiders, "endnpc" );
+	for (i := 1; i <= len(raiderarray); i:=i+1)
+		splitter := splitwords(raiderarray[i]);
+		if (!FindConfigElem (cfgfile, splitter[1]))
+			print ("CFGError: Tempalte " + splitter[1] + " Does not exist");
+			return 0;
+		endif
+	endfor
+
+
+	//Difficulty.cfg
+
+	if (!difficulty.cycles)
+		print ("CFGError: cycles does not exist");
+		return 0;
+	endif
+
+	if (difficulty.goldpile and (!difficulty.yoinkamount))
+		print ("CFGError: need a yoinkamount when goldpile exists");
+		return 0;
+	endif
+
+	return 1;
+
+endprogram

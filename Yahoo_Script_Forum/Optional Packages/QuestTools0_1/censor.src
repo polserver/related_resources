@@ -1,0 +1,45 @@
+Use os;
+Use uo;
+
+include "include/eventid";
+
+// To add to the list, just put new elements into the array.
+
+var profanity := 
+{
+	"shit",
+	"fuck",
+	"asshole",
+	"goddamn",
+	"piss",
+	"cunt",
+	"Sigismund rules"
+};
+
+program censor(me)
+
+	local x, i;
+
+	RegisterForSpeechEvents(me, 50);
+	EnableEvents(EVID_SPEECH,5);
+	local ev;
+
+	while (1)
+        	ev := os::wait_for_event( 5 );
+
+	        if (ev)
+	        	case (ev.type)
+				EVID_SPEECH:
+					foreach x in profanity					
+                			if (ev.text[x]);
+						DisableEvents(EVID_SPEECH);
+						i := ev.source;
+						start_script("punishment", i);
+						EnableEvents(EVID_SPEECH,5);
+					endif
+					endforeach
+			endcase
+		endif
+	endwhile
+
+endprogram

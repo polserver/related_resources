@@ -1,0 +1,177 @@
+// Developer Arcadia - ZHS
+
+
+use uo;
+use os;
+use cfgfile;
+
+include "include/client";
+include "include/skillpoints";
+include "include/utility";
+include "include/eventid";
+
+
+program stealing(who)
+
+	freehands(who);
+	needgloves(who);
+	
+
+	SendSysmessage(who, "What item would you like to attempt to steal?");
+
+	var itemtaken  := Target(who);
+
+	if (!itemtaken) 
+		sendsysmessage(who, "canceled"); 
+	endif
+
+	if(!getobjproperty(itemtaken,"cansteal"))
+	sendsysmessage(who, "this item can not be stolen.");
+	return;
+	endif;
+
+	nearvictim(who);
+
+	var difficulty:= getobjproperty(itemtaken,"stealdiff");
+	var thepoints:= difficulty*20;
+
+	if (CheckSkill(who, SKILLID_STEALING, difficulty, thepoints))
+	// they succeed
+	
+	itemtaken.movable:= 1;
+	MoveItemToContainer(itemtaken, who.backpack);
+
+	SendSysmessage(who, "You have successfully stolen the item.");
+
+		var karma:=GetKarma(who);
+		var lossKarma:=0;
+
+			if (karma>-625)
+				lossKarma:=0-(Random(200)+1);
+			endif
+
+		AwardKarma(who, lossKarma);
+
+		var fame:=Getfame(who);
+		var lossfame:=0;
+		if (fame>-625)
+			lossfame:=0-(Random(200)+1);
+		endif
+		Awardfame(who, lossfame);
+
+		return;
+
+
+
+	else
+	// they have failed
+
+	tellplayers(who);
+	callguard(who);
+	who.setcriminal(1);
+
+	var karma2:=GetKarma(who);
+		var lossKarma2:=0;
+
+			if (karma2>-625)
+				lossKarma2:=0-(Random(200)+1);
+			endif
+
+		AwardKarma(who, lossKarma2);
+
+		var fame2:=Getfame(who);
+		var lossfame2:=0;
+		if (fame2>-625)
+			lossfame2:=0-(Random(200)+1);
+		endif
+		Awardfame(who, lossfame2);
+
+		return;
+	endif
+
+
+endprogram
+
+
+function freehands(who)
+
+	if(GetEquipmentByLayer(who, LAYER_HAND1) || GetEquipmentByLayer(who, LAYER_HAND2))
+		sendsysmessage(who, "You need empty hands to perform this action!");
+		return;
+	endif
+
+endfunction
+
+
+
+
+
+function needgloves(who)
+
+	var weargloves:= 0;
+
+    	foreach item in listequippeditems(who)
+
+    		if (item.objtype = 0xc53e) 
+			weargloves:= 1;
+		endif
+		
+	endforeach
+	
+	if(weargloves = 0)
+		sendsysmessage(who,"You need to equip thief gloves to do that");
+		exit;
+	endif
+
+	return 1;
+
+endfunction
+
+function tellplayers(who)
+
+	var targets:=ListMobilesNearLocation(who.x, who.y, who.z, 10);
+
+	foreach mobile in targets
+		if ((mobile.serial!=who.serial) and (mobile.dead=0) and (!mobile.criminal))
+			SendSysmessage(mobile, "You notice "+who.name+" stealing!");
+		elseif(mobile.serial=who.serial)
+			SendSysmessage(who, "You are caught stealing!");
+		endif
+	endforeach
+
+endfunction
+
+function callguard(who)
+
+var postarget:=ListMobilesNearLocation(who.x, who.y, who.z, 10);
+	foreach mobile in postarget
+		if ((mobile.serial!=who.serial) and (mobile.npctemplate) and ((mobile.graphic = 400) or (mobile.graphic = 401)))
+			printtextabove(mobile, "Guards! Stop "+who.name+" you thief!");
+		endif
+	endforeach
+
+endfunction
+
+function nearvictim(who)
+
+var close:= 0;
+var posvictim:=ListMobilesNearLocation(who.x, who.y, who.z, 2);
+
+	foreach mobile in posvictim
+		if ((mobile.serial!=who.serial) and (mobile.npctemplate) and ((mobile.graphic = 400) or (mobile.graphic = 401)))
+			close:= 1;
+		endif
+	endforeach
+
+	if (close = 1)
+		return 1; 
+	endif
+
+	if (close = 0) 
+	sendsysmessage(who, "Your victim is too far away");
+	exit;
+	endif
+
+endfunction
+
+

@@ -1,0 +1,29 @@
+use npc;
+use os;
+use uo;
+use cfgfile;
+use math;
+
+include "include/sysevent";
+include "include/eventid";
+include "include/randname";
+include "include/dist";
+include "include/anchors";
+include "main/killpcsloop";
+include "combat/fight";
+include "include/dist";
+include "combat/defaultcombatevent";
+include "setup/archersetup";
+include "main/loot";
+include "main/sleepmode";
+include "include/client";
+include "main/archerclosedistance";
+
+const HALT_THRESHOLD := 13; // Raio de procura pro vitimas
+
+program KillPlayers()
+
+	SetWarMode( 0 );
+    	main_AI_loop();
+        
+endprogram

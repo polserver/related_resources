@@ -1,0 +1,111 @@
+//////////////////
+//
+//	Enticement 
+//	Version: 0.1
+//	Author: LKx
+//	Email: lkx78@inwind.it
+//	For: Mondo Perduto shard (mp.gamersrevolt.it)
+//
+//////////
+
+
+
+use uo;
+use os;
+use util;
+
+include "include/client";
+include "include/objtype";
+include "include/skillpoints";
+include "include/bard";
+include "include/eventid";
+//include "include/skillcheck"; //LKx's SkillCheck, i remove it from here.
+
+
+Program enticement(who)
+
+
+	local subject := Target(who, TGTOPT_NOCHECK_LOS );
+	if ((!subject) or (!subject.npctemplate)) 
+		//SendSysMessage(who, "Cancellato.");
+		SendSysMessage(who, "Cancelled.");
+		return; 
+	endif	
+		
+	if (subject.script = ":enticement:enticedai")
+		//Sendsysmessage(who, "Sembra gia' sotto l'effetto.");
+		Sendsysmessage(who, "Seems already under influence.");
+		return;
+	endif
+	
+	local configfile := ReadConfigFile("::npcdesc");
+	local theobj:= subject.npctemplate;
+	local elem := FindConfigElem(configfile, theobj);
+	local difficulty;
+	
+	if (elem)
+		difficulty := elem.provoke;
+	else
+	        //sendsysmessage(who, "Non puoi incantarlo!");
+	        sendsysmessage(who, "You can't entice him!");
+	        return;
+	endif
+	
+	if (!difficulty)
+			//SendSysMessage(who, "Non puoi ipnotizzarlo");
+			sendsysmessage(who, "You can't entice him!");
+			return;
+	endif
+	
+	if (!can_sing(who, 5)) 
+	        	return;
+	endif
+	
+	local instrument := findinstrument(who);
+	
+	if (!instrument)
+	        	SendSysmessage(who, "You don't have an instrument to play!");
+	        	return;
+	endif
+	
+	
+	
+	//SkillCheck(who, SKILLID_ENTICEMENT, -2, 20); //50% chanche with LKx's Skillcheck
+	if ( Checkskill(who, SKILLID_ENTICEMENT, cint(difficulty), cint(difficulty *2)) 
+		&& (music(who, instrument, cint(difficulty) )))	
+	
+		local ev := array;
+			ev.+type := EVID_ALL_FOLLOW_CMD;
+			ev.+source := who;
+			ev.+x := who.x;
+			ev.+y := who.y;
+	
+		SetObjProperty( subject, "oldai", subject.script);
+		subject.script := ":enticement:enticedai";
+		RestartScript(subject);
+		sendevent(subject, ev);
+		//PrintTextAbove(subject, subject.name+" sembra incantato dalla musica");
+		PrintTextAbove(subject, subject.name+" seems enticed by the music");
+	else
+		//PrintTextAbovePrivate(subject, "Non riesci ad incantarlo...", who);
+		PrintTextAbovePrivate(subject, "Seems to don't work.", who);
+		if ((Randomint(10)+1)<= 3)
+			local ev := {};
+				ev.+source := who;
+				ev.+type := EVID_PEACEMADE;
+			sendevent(subject,ev);
+			ev.type := EVID_DAMAGED;
+			sendevent(subject, ev);
+			//PrintTextAbove(subject, subject.name+" e' irritato dalla musica di "+who.name);
+			PrintTextAbove(subject, subject.name+" is irritated by the music of "+who.name);
+		endif
+				
+	
+	endif
+	
+	
+
+	
+endprogram
+
+

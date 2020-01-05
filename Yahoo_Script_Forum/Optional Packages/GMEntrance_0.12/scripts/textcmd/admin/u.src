@@ -1,0 +1,34 @@
+use os;
+use uo;
+include "include/client";
+
+program textcmd_u( who )
+	SendSysMessage( who, "Where do you want to teleport?" );
+	var where := TargetCoordinates( who );
+	if(where)
+		PlayStationaryEffect( where.x, where.y, where.z, FX_EXPLODE_2, 0x0a, 0x1e );
+		sleepms(400);
+		PlayMovingEffectXYZ( where.x, where.y, where.z+10, where.x-2, where.y-2, where.z+10, FX_FIREBALL, 0x3, 0x2 );
+		PlayMovingEffectXYZ( where.x, where.y, where.z+10, where.x+2, where.y+2, where.z+10, FX_FIREBALL, 0x3, 0x2 );
+		PlayMovingEffectXYZ( where.x, where.y, where.z+10, where.x+2, where.y, where.z+10, FX_FIREBALL, 0x3, 0x2 );
+		PlayMovingEffectXYZ( where.x, where.y, where.z+10, where.x, where.y+2, where.z+10, FX_FIREBALL, 0x3, 0x2 );
+		PlayMovingEffectXYZ( where.x, where.y, where.z+10, where.x-2, where.y+2, where.z+10, FX_FIREBALL, 0x3, 0x2 );
+		PlayMovingEffectXYZ( where.x, where.y, where.z+10, where.x+2, where.y-2, where.z+10, FX_FIREBALL, 0x3, 0x2 );
+		PlayMovingEffectXYZ( where.x, where.y, where.z+10, where.x-2, where.y, where.z+10, FX_FIREBALL, 0x3, 0x2 );
+		PlayMovingEffectXYZ( where.x, where.y, where.z+10, where.x, where.y-2, where.z+10, FX_FIREBALL, 0x3, 0x2 );
+		sleepms(300);
+		PlayStationaryEffect( where.x-2, where.y-2, where.z+10, FX_FLAMESTRIKE, 0x0a, 0x1e );
+		PlayStationaryEffect( where.x+2, where.y+2, where.z+10, FX_FLAMESTRIKE, 0x0a, 0x1e );
+		PlayStationaryEffect( where.x+2, where.y, where.z+10, FX_FLAMESTRIKE, 0x0a, 0x1e );
+		PlayStationaryEffect( where.x, where.y+2, where.z+10, FX_FLAMESTRIKE, 0x0a, 0x1e );
+		PlayStationaryEffect( where.x-2, where.y+2, where.z+10, FX_FLAMESTRIKE, 0x0a, 0x1e );
+		PlayStationaryEffect( where.x+2, where.y-2, where.z+10, FX_FLAMESTRIKE, 0x0a, 0x1e );
+		PlayStationaryEffect( where.x-2, where.y, where.z+10, FX_FLAMESTRIKE, 0x0a, 0x1e );
+		PlayStationaryEffect( where.x, where.y-2, where.z+10, FX_FLAMESTRIKE, 0x0a, 0x1e );
+		sleepms(600);
+		var result := MoveCharacterToLocation( who, where.x, where.y, where.z );
+		if(!result)
+			result := MoveCharacterToLocation( who, where.x, where.y, where.z, MOVECHAR_FORCELOCATION );
+		endif
+	endif
+endprogram

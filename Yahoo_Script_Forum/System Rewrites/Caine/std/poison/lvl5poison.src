@@ -1,0 +1,17 @@
+use uo;
+use os;
+include "poison";
+include "include/client";
+
+global poison_sleep := cint(getglobalproperty("poisoninterval"));
+program poison(parms);
+
+local pn := "poison_level";
+var who := parms[1];
+var dmg := parms[2]*3;
+while(getobjproperty(who, pn) &&!who.dead)
+	 
+	do_poison_effect(who, dmg, pn);
+	sleep(poison_sleep-5 );
+endwhile
+endprogram

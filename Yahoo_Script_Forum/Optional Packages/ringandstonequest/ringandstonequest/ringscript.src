@@ -1,0 +1,35 @@
+// Ring and Stone quest
+// Copyright 2002 Velina
+// Used and created for the shellinkroth shard
+// http://shellinkroth.kicks-ass.org
+// feel free to use and distribute but do not remove these comments. Please
+// comment any modifications.
+
+use uo;
+use os;
+include "include/client";
+
+program double_click_ring (who, ring)
+
+var near_items := ListItemsNearLocation(who.x, who.y, who.z,3);
+    foreach item in near_items
+      if ( item.objtype == 0x580f )
+       sendsysmessage( who, "You place the ring on your finger and feel the energy flow through you");
+       PerformAction( who, 0x0011 );
+          sleepms(1200);
+          PlayStationaryEffect( who.x + 1, who.y + 1, who.z, FX_EXPLODE_1, 7, 0x20 );
+          PlayObjectCenteredEffect(who, 0x3709, 0x0a, 0x1e );
+          PlayObjectCenteredEffect(who, FX_DEATH_FUNNEL, 7, 0x10 );
+          PlayObjectCenteredEffect(who, FX_DEATH_FUNNEL, 7, 0x10 );
+          PlayLightningBoltEffect(who);
+	  sleepms(180);
+          PlaySoundEffect(who,SFX_20E);
+          sleepms(1200);
+        sendsysmessage( who, "You feel the stone calling to you");
+        setobjproperty( who, "stoned", 1);
+        destroyitem( ring );
+       else
+         sendsysmessage( who, "You must be near the calling stone to use this!");
+       endif
+     endforeach
+endprogram

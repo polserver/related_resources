@@ -1,0 +1,11 @@
+use uo;
+use os;
+
+include "include/newpoisons";
+
+program killmypoisonscript(who)
+
+local poisonscript := getpoisonscript(who);
+poisonscript.kill();
+unload_scripts("poison");
+endprogram

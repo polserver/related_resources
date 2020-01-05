@@ -1,0 +1,27 @@
+///////////////////////////////////////////////////////////
+// RestartSpawnPointManager.src
+//
+// Restarts the manager.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+use os;
+use uo;
+
+program textcmd_RestartSpawnPointManager(who)
+	unload_scripts("spawnpoint");
+
+	var pid := GetGlobalProperty("#SpawnPointManagerPID");
+	var proc := GetProcess(pid);
+	proc.kill();
+
+	start_script("SpawnPointManager");
+
+	SendSysMessage(who, "SpawnPointManager restarted.");
+endprogram

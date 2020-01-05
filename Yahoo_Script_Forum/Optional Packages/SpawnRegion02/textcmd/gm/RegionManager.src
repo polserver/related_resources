@@ -1,0 +1,565 @@
+///////////////////////////////////////////////////////////
+// RegionManager.src
+//
+// Displays a gump of the spawn regions and lets user
+// manage it.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+include "include/gumps";
+include "include/gumputil";
+include "include/client";
+include "../../SpawnRegion";
+
+const MAX_X		:= 240;
+const MAX_Y		:= 340;
+const TPERPAGE	:= 12;
+
+var AllDone := 0;
+var RegionDone := 0;
+
+program textcmd_RegionManager(who, param)
+	if (param)
+		case (param)
+			"start":
+				if (GetGlobalProperty("SpawnRegionOff"))
+					EraseGlobalProperty("SpawnRegionOff");
+					SendSysMessage(who, "SpawnRegionManager enabled.");
+				else
+					SendSysMessage(who, "SpawnRegionManager already enabled.");
+					return 0;
+				endif
+				
+			"stop":
+				if (!GetGlobalProperty("SpawnRegionOff"))
+					SetGlobalProperty("SpawnRegionOff", 1);
+					SendSysMessage(who, "SpawnRegionManager disabled.");
+				else
+					SendSysMessage(who, "SpawnRegionManager already disabled.");
+					return 0;
+				endif
+		endcase
+		return 1;
+	endif
+	
+	repeat
+		ComposeSpawnRegionGump(who);
+	until (AllDone);
+endprogram
+
+///////////////////////////////////////////////////////////
+// Purpose: Creates the gump.
+// Params:  who			Ref to mobile using command.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function ComposeSpawnRegionGump(who)
+	GFInitGump(0, 0);
+	GFNoDispose();
+	GFNoClose();
+	GFPage(0);
+	GFResizePic(0, 0, BKGND_STONESLAB, MAX_X, MAX_Y);
+	GFTextLine(32, 7, 0, "Spawn Region Manager");
+	GFTextLine(30, 5, COLOR_YELLOW, "Spawn Region Manager");
+
+	// Titles.
+	GFTextLine(20, 30, COLOR_BLUE_LIGHT, "Region Name");
+	GFTextLine(180, 30, COLOR_BLUE_LIGHT, "Go To");
+
+	// Footer.
+	var cancel := GFButtonID(20, MAX_Y - 30, G_RED_OVAL_CANCEL_0, G_RED_OVAL_CANCEL_1, 1);
+
+	var rcfg := ReadConfigFile(":spawnregion:spawnregions");
+	if (!rcfg)
+		syslog("Could not read :spawnregion:spawnregions.cfg");
+		exit;
+	endif
+
+	var regions := GetConfigStringKeys(rcfg);
+
+	// Count how many pages we need.
+	var numtemp := regions.size();
+	var numpages := 1;
+	while (numtemp > 0)
+		numtemp := numtemp - TPERPAGE;
+		if (numtemp > 0)
+			numpages := numpages + 1;
+		endif
+	endwhile
+
+	var bt := array;
+	var btgo := array;
+
+	var pg;
+	for (pg := 1; pg <= numpages; pg := pg + 1)
+		ComposeRegionsPage(pg, regions, bt, btgo, numpages);
+	endfor
+
+	var retkey := GFSendGump(who);
+
+	// Check for go button press.
+	var num;
+	for (num := 1; num <= btgo.size(); num := num + 1)
+		if (retkey[btgo[num]])
+			GoToRegion(who, regions[num]);
+			exit;
+		endif
+	endfor
+
+	// Check for CANCEL button press.
+	if (retkey[cancel.keyid])
+		AllDone := 1;
+		return 0;
+	endif
+
+	var idx;
+	for (num := 1; num <= bt.size(); num := num + 1)
+		if (bt[num] = retkey[0])
+			idx := num;
+			break;
+		endif
+	endfor
+
+	if (!idx)
+		return 0;
+	endif
+
+	// Get a list of groups.
+	var rgelem := FindConfigElem(rcfg, regions[idx]);
+	var reggroups := GetConfigStringArray(rgelem, "Group");
+	if (!reggroups)
+		syslog("Unable to find groups for: " + regions[idx]);
+		SendMsg(who, "Unable to find groups for: " + regions[idx]);
+		exit;
+	endif
+
+	// Do the group gump.
+	repeat
+		ComposeGroupGump(who, regions[idx], reggroups);
+	until (RegionDone);
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Compose a multi-page listing of regions.
+// Params:  page		Page to compose.
+//			reglist		Array of region names.
+//			buttons		Array for storage of button IDs.
+//			btgo		Array for storage of go button IDs.
+//			maxpages	Max number of pages.
+// Returns: <return>
+///////////////////////////////////////////////////////////
+function ComposeRegionsPage(page, byref reglist, byref buttons, byref btgo, maxpages)
+	var bX := 5;
+	var y := 60;
+	var tX := 25;
+	var yShift := 20;
+	var numtemp := TPERPAGE * page;
+	var starttemp := TPERPAGE * (page - 1) + 1;
+
+	GFPage(page);
+
+	// Set up the up/down arrows.
+	if (page = 1 and page != maxpages) // 1st page
+		GFButtonPage(MAX_X - 40, MAX_Y - 40, G_STONE_DOWN, G_STONE_DOWN, page + 1);
+	elseif (page = maxpages and page != 1) // last page
+		GFButtonPage(MAX_X - 40, 40, G_STONE_UP, G_STONE_UP, page - 1);
+	elseif (page > 1 and page < maxpages) // mid pages
+		GFButtonPage(MAX_X - 40, 40, G_STONE_UP, G_STONE_UP, page - 1);
+		GFButtonPage(MAX_X - 40, MAX_Y - 40, G_STONE_DOWN, G_STONE_DOWN, page + 1);
+	endif
+
+	var bt;
+	var tn;
+	var reg;
+	var txtcol;
+	for (tn := starttemp; tn <= numtemp; tn := tn + 1)
+		reg := reglist[tn];
+		if (!reg)
+			return;
+		endif
+
+		bt := GFButtonID(bX, y, G_STONE_RIGHT, G_STONE_RIGHT, 1);
+		buttons.append(bt.keyid);
+		GFTextCrop(tX, y - 3, 320, 20, COLOR_GREEN, reg);
+		bt := GFButtonID(bX + 190, y, G_STONE_SQUARE, G_STONE_SQUARE_CHECK, 1);
+		btgo.append(bt.keyid);
+		y := y + yShift;
+	endfor
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Goes to the center of a region.
+// Params:  who			Ref to mobile.
+//			region		Name of region.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function GoToRegion(who, region)
+	var rcfg := ReadConfigFile(":spawnregion:spawnregions");
+	var rdata := SplitWords((FindConfigElem(rcfg, region)).Rect);
+
+	var rect := struct;
+	rect.+x1 := CInt(rdata[1]);
+	rect.+y1 := CInt(rdata[2]);
+	rect.+x2 := CInt(rdata[3]);
+	rect.+y2 := CInt(rdata[4]);
+
+	var x := ((rect.x2 - rect.x1) / 2) + rect.x1;
+	var y := ((rect.y2 - rect.y1) / 2) + rect.y1;
+	var z := 0;
+	var tries := 0;
+	var sh;
+	var info;
+
+	if (!MoveCharacterToLocation(who, x, y, z, 0))
+		SendMsg(who, "Cannot move to centre, trying random location in region: " + region + "...");
+		repeat
+			// Randomly choose point to spawn at.
+			x := RandomInt(rect.x2 - rect.x1) + rect.x1;
+			y := RandomInt(rect.y2 - rect.y1) + rect.y1;
+			z := GetMapInfo(x, y).z;
+			tries := tries + 1;
+
+			// Never spawn on multis!
+			sh := GetStandingHeight(x, y, z);
+			info := hex(GetMapInfo(x , y).landtile);
+			if ((info < 0x406) or (info > 0x455))
+				if (MoveCharacterToLocation(who, x, y, z, 0))
+					SendMsg(who, "Success.");
+					return 1;
+				endif
+			endif
+		until (tries > 10);
+	endif
+
+	SendMsg(who, "Cannot move to region: " + region + ", try again.");
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Composes a list of groups in a region and their
+//			options.
+// Params:  who			Ref to mobile.
+//			region		Name of region.
+//			reggroups	Array of groups in that region.
+// Returns: <return>
+///////////////////////////////////////////////////////////
+function ComposeGroupGump(who, region, byref reggroups)
+	RegionDone := 0;
+
+	GFInitGump(0, 0);
+	GFNoDispose();
+	//GFNoClose();
+	GFPage(0);
+	GFResizePic(0, 0, BKGND_STONESLAB, 640, 420);
+	GFTextLine(232, 7, 0, "Spawn Region Manager");
+	GFTextLine(230, 5, COLOR_YELLOW, "Spawn Region Manager");
+
+	// Titles.
+	GFTextLine(20, 30, COLOR_GREEN, region);
+	GFTextLine(200, 30, COLOR_BLUE_LIGHT, "Time:");
+	GFTextLine(245, 30, COLOR_GREEN, GetTimeOfDay());
+
+	GFTextLine(8, 60, COLOR_BLUE_LIGHT, "S");
+	GFTextLine(30, 60, COLOR_BLUE_LIGHT, "Group Name");
+	GFTextLine(140, 60, COLOR_BLUE_LIGHT, "Spawns");
+	GFTextLine(220, 60, COLOR_BLUE_LIGHT, "Freq");
+	GFTextLine(280, 60, COLOR_BLUE_LIGHT, "HrS");
+	GFTextLine(340, 60, COLOR_BLUE_LIGHT, "HrE");
+	GFTextLine(400, 60, COLOR_BLUE_LIGHT, "Spawn");
+	GFTextLine(460, 60, COLOR_BLUE_LIGHT, "Despawn");
+	GFTextLine(530, 60, COLOR_BLUE_LIGHT, "Respawn");
+	GFTextLine(595, 60, COLOR_BLUE_LIGHT, "Detail");
+
+	// Footer.
+	var apply  := GFButtonID(10, 420 - 30, G_YELLOW_OVAL_APPLY_0, G_YELLOW_OVAL_APPLY_1, 1);
+	var prev := GFButtonID(70, 420 - 30, G_RED_OVAL_PREV_0, G_RED_OVAL_PREV_1, 1);
+	var cancel := GFButtonID(135, 420 - 30, G_RED_OVAL_CANCEL_0, G_RED_OVAL_CANCEL_1, 1);
+	GFTextLine(200, 420 - 30, COLOR_RED, "Red = Disabled");
+	GFTextLine(320, 420 - 30, COLOR_BLUE_LIGHT, "NOTE: Spawn/Respawn forces spawn.");
+
+	var yTxt := 80;
+	var xTxt := 30;
+	var yShift := 20;
+	var idx := 1;
+	var gdata;
+	var spawns;
+	var spawntxt;
+	var rdata;
+	var ctxt;
+	var status;
+	var freq;
+
+	var bt;
+	var btstatus := array;
+	var btspawn := array;
+	var btdespawn := array;
+	var btrespawn := array;
+	var btdetail := array;
+
+	foreach grp in reggroups
+		gdata := SplitWords(grp);
+
+		// Set the text colour and the status for this group based on status.
+		ctxt := COLOR_GREEN;
+		status := 1;
+		freq := GetGroupFreq(region, gdata[1]);
+		if (freq = -1)
+			ctxt := COLOR_RED_LIGHT;
+			status := 0;
+		endif
+
+		bt := GFCheckBox(6, yTxt, G_STONE_SQUARE, G_STONE_SQUARE_CHECK, status);
+		btstatus.append(bt.keyid);
+		GFTextLine(xTxt, yTxt, ctxt, gdata[1]);
+
+		// Get number of spawns and max.
+		spawns := GetGroupSpawns(region, gdata[1]);
+		var rdata := GetConfigStringArray(regcfg[region], "Group");
+		rdata := SplitWords(rdata[idx]);
+		spawntxt := spawns.size() + "/" + rdata[2];
+		GFTextLine(xTxt+124, yTxt, ctxt, spawntxt);
+
+		// Get frequency for group.
+		if (!rdata[3])
+			rdata[3] := DEFAULT_GRP_FREQUENCY;
+		endif
+		GFTextLine(xTxt+202, yTxt, ctxt, rdata[3]);
+
+		// HrStart & HrEnd
+		if (!rdata[4])
+			rdata[4] := "";
+		endif
+		if (!rdata[5])
+			rdata[5] := "";
+		endif
+		GFTextLine(xTxt+260, yTxt, ctxt, rdata[4]);
+		GFTextLine(xTxt+320, yTxt, ctxt, rdata[5]);
+
+		// Spawn button.
+		bt := GFCheckBox(xTxt+380, yTxt, G_STONE_SQUARE, G_STONE_SQUARE_CHECK, 0);
+		btspawn.append(bt.keyid);
+
+		// Despawn button.
+		bt := GFCheckBox(xTxt+455, yTxt, G_STONE_SQUARE, G_STONE_SQUARE_CHECK, 0);
+		btdespawn.append(bt.keyid);
+
+		// Respawn button.
+		bt := GFCheckBox(xTxt+525, yTxt, G_STONE_SQUARE, G_STONE_SQUARE_CHECK, 0);
+		btrespawn.append(bt.keyid);
+
+		// Detail Button.
+		bt := GFButtonID(xTxt+575, yTxt, G_STONE_RIGHT, G_STONE_RIGHT, 1);
+		btdetail.append(bt.keyid);
+
+		idx := idx + 1;
+		yTxt := yTxt + yShift;
+	endforeach
+
+	var retkey := GFSendGump(who);
+
+	// Check for detail button press.  If it is pressed, ignore all other options.
+	var num;
+	for (num := 1; num <= btdetail.size(); num := num + 1)
+		if (retkey[btdetail[num]])
+			ComposeGroupDetailGump(who, region, SplitWords(reggroups[num])[1]);
+			return 0;
+		endif
+	endfor
+
+	// If CANCEL was pressed, exit everything.
+	if (retkey[cancel.keyid])
+		exit;
+	endif
+
+	// If PREV was pressed, if so, go back to region list.
+	if (retkey[prev.keyid])
+		RegionDone := 1;
+		return 0;
+	endif
+
+	// APPLY was pressed...
+
+	// Process all the per-group buttons.
+	for (num := 1; num <= btstatus.size(); num := num + 1)
+		gdata := SplitWords(reggroups[num]);
+
+		// Status.
+		if (retkey[btstatus[num]])
+			EnableGroup(region, gdata[1]);
+		else
+			DisableGroup(region, gdata[1]);
+			DespawnGroup(region, gdata[1]);
+			continue;
+		endif
+
+		// Respawn, skip spawn and respawn if this one was chosen.
+		if (retkey[btrespawn[num]])
+			SendMsg(who, "Respawning: " + region + " - " + gdata[1]);
+			DisableGroup(region, gdata[1]); // This resets the freq counter.
+			EnableGroup(region, gdata[1]);
+			DespawnGroup(region, gdata[1]);
+			Sleep(2); // Should be enough time for all the death messages to be processed.
+			SpawnGroup(region, gdata[1], CInt(gdata[2]), CInt(gdata[3]), CInt(gdata[4]), CInt(gdata[5]));
+			SendMsg(who, "done.");
+			continue;
+		endif
+
+		// Spawn.
+		if (retkey[btspawn[num]])
+			SendMsg(who, "Spawning: " + region + " - " + gdata[1]);
+			DisableGroup(region, gdata[1]); // This resets the freq counter.
+			EnableGroup(region, gdata[1]);
+			SpawnGroup(region, gdata[1], CInt(gdata[2]), CInt(gdata[3]), CInt(gdata[4]), CInt(gdata[5]));
+			SendMsg(who, "done.");
+		endif
+
+		// Despawn
+		if (retkey[btdespawn[num]])
+			SendMsg(who, "Despawning: " + region + " - " + gdata[1]);
+			DespawnGroup(region, gdata[1]);
+			SendMsg(who, "done.");
+		endif
+	endfor
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Composes the detail listing of a group.
+// Params:  who			Ref to mobile.
+//			region		Name of region.
+//			group		Name of group.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function ComposeGroupDetailGump(who, region, group)
+	GFInitGump(0, 0);
+	GFPage(0);
+	GFNoDispose();
+	GFNoClose();
+	GFResizePic(0, 0, BKGND_STONESLAB, MAX_X, MAX_Y + 20);
+	GFTextLine(32, 7, 0, "Spawn Region Manager");
+	GFTextLine(30, 5, COLOR_YELLOW, "Spawn Region Manager");
+
+	// Titles.
+	GFTextLine(10, 30, COLOR_GREEN, region + " - " + group);
+	GFTextLine(5, 50, COLOR_BLUE_LIGHT, "Kill");
+	GFTextLine(45, 50, COLOR_BLUE_LIGHT, "Template");
+	GFTextLine(155, 50, COLOR_BLUE_LIGHT, "Go To");
+
+	// Footer.
+	var kill := GFButtonID(10, MAX_Y - 35 + 20, G_GREEN_OVAL_OK_0, G_GREEN_OVAL_OK_1, 1);
+	var cancel := GFButtonID(60, MAX_Y - 35 + 20, G_RED_OVAL_CANCEL_0, G_RED_OVAL_CANCEL_1, 1);
+
+	// Count how many pages we need.
+	var spawns := GetGroupSpawns(region, group);
+	var numtemp := spawns.size();
+	var numpages := 1;
+	while (numtemp > 0)
+		numtemp := numtemp - TPERPAGE;
+		if (numtemp > 0)
+			numpages := numpages + 1;
+		endif
+	endwhile
+
+	var bt := array;
+	var btgo := array;
+
+	var pg;
+	for (pg := 1; pg <= numpages; pg := pg + 1)
+		ComposeSpawnsPage(pg, spawns, bt, btgo, numpages);
+	endfor
+
+	var retkey := GFSendGump(who);
+
+	// Check for goto button press.
+	var num;
+	for (num := 1; num <= spawns.size(); num := num + 1)
+		if (retkey[btgo[num]])
+			var npc := SystemFindObjectBySerial(spawns[num]);
+			if (!npc)
+				SendMsg(who, "Unable to locate spawn: " + spawns[num]);
+				return 0;
+			endif
+			MoveCharacterToLocation(who, npc.x, npc.y, npc.z, MOVECHAR_FORCELOCATION);
+			exit;
+		endif
+	endfor
+
+	// if PREV button was pressed, do nothing and exit.
+	if (retkey[cancel.keyid])
+		return 0;
+	endif
+
+	// OK button was pressed.
+
+	// Kill selected spawns.
+	for (num := 1; num <= spawns.size(); num := num + 1)
+		if (retkey[bt[num]])
+			Despawn(spawns[num]);
+		endif
+	endfor
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Compose a multi-page listing of spawns
+// Params:  page		Page to compose.
+//			spawnlist	Array of spawn serials.
+//			buttons		Array for storage of button IDs.
+//			btgo		Array for storage of go buttons.
+//			maxpages	Max number of pages.
+// Returns: <return>
+///////////////////////////////////////////////////////////
+function ComposeSpawnsPage(page, spawnlist, byref buttons, byref btgo, maxpages)
+	var bX := 5;
+	var y := 80;
+	var tX := 45;
+	var yShift := 20;
+	var numtemp := TPERPAGE * page;
+	var starttemp := TPERPAGE * (page - 1) + 1;
+
+	GFPage(page);
+
+	// Set up the up/down arrows.
+	if (page = 1 and page != maxpages) // 1st page
+		GFButtonPage(MAX_X - 40, MAX_Y - 40, G_STONE_DOWN, G_STONE_DOWN, page + 1);
+	elseif (page = maxpages and page != 1) // last page
+		GFButtonPage(MAX_X - 40, 80, G_STONE_UP, G_STONE_UP, page - 1);
+	elseif (page > 1 and page < maxpages) // mid pages
+		GFButtonPage(MAX_X - 40, 80, G_STONE_UP, G_STONE_UP, page - 1);
+		GFButtonPage(MAX_X - 40, MAX_Y - 40, G_STONE_DOWN, G_STONE_DOWN, page + 1);
+	endif
+
+	var bt;
+	var tn;
+	var serial;
+	var txtcol;
+	var obj;
+	for (tn := starttemp; tn <= numtemp; tn := tn + 1)
+		serial := spawnlist[tn];
+		if (!serial)
+			return;
+		endif
+
+		obj := SystemFindObjectBySerial(serial);
+
+		bt := GFCheckBox(bX, y, G_STONE_SQUARE, G_STONE_SQUARE_CHECK, 0);
+		buttons.append(bt.keyid);
+		GFTextCrop(tX, y - 3, 320, 20, COLOR_GREEN, TemplateName(obj.npctemplate));
+		bt := GFButtonID(tx + 130, y - 3, G_STONE_LEFT, G_STONE_LEFT, 1);
+		btgo.append(bt.keyid);
+		y := y + yShift;
+	endfor
+endfunction
+
+
+///////////////////////////////////////////////////////////
+// Purpose: Sends a sys message to admin.
+// Params:  who			Ref to who.
+//			msg			Message to send
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function SendMsg(byref who, msg)
+	SendSysMessage(who, msg, FONT_NORMAL, COLOR_BLUE_LIGHT);
+endfunction

@@ -1,0 +1,20 @@
+// auction  version 1.0
+// by Zulu (zulu@zuluhotel.com)   November 12, 2000
+
+use os;
+use uo;
+
+program fixauction(who)
+
+SendSysMessage(who,"Fixing Auction.");
+
+local storage:=findstoragearea("Merchant Storage");
+
+DestroyRootItemInStorageArea(storage,"0AUCTION0");
+DestroyRootItemInStorageArea(storage,"1AUCTION1");
+DestroyRootItemInStorageArea(storage,"2AUCTION2");
+
+SendSysMessage(who,"Auction has been fixed.");
+SendSysMessage(who,"It is recommend that you restart POL.");
+
+endprogram

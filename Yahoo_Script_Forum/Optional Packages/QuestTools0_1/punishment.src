@@ -1,0 +1,13 @@
+use uo;
+use os;
+use util;
+
+program punishment(who)
+
+	PrintTextAbove(who, "The gods do not tolerate such foolishness.");
+	PlaySoundEffect(who, 0x002a);
+	PlayLightningBoltEffect(who);
+	who.graphic := 0x33;
+	who.color := RandomInt(200) + 1;	
+
+endprogram

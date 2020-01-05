@@ -1,0 +1,54 @@
+Changed by Shinigami (Shinigami@gmx.net)
+
+// It's just an sample source-code. searches for "<NEW> ... </NEW>" that's the
+// new line...
+
+
+
+  // [...]
+
+  Local next_restock;
+  If (meprototype.buynsold)
+    next_restock:=ReadGameClock()+RESPAWN_MINUTES*60;
+    RestockInventory(merchant_type, inv_fs);
+  EndIf
+
+  // [...]
+
+  While (1)
+
+    // [...]
+
+    Local ev;
+    Case (ev.type)
+      EVID_SPEECH:
+        If (ev.text="buy")
+          SendBuyWindow(ev.source, inv_fs, me, inv_pb);
+        ElseIf (ev.text="sell")
+          
+          // [...]
+
+          // <NEW>
+          ModifyPCSellList(merchant_type, (ev.source).backpack);
+          // </NEW>
+          
+          SendSellWindow(ev.source, me, inv_fs, inv_pb, inv_1c);
+
+          // [...]
+
+        EndIf
+
+      // [...]
+
+    EndCase
+
+    // [...]
+
+    If (ReadGameClock()>next_restock)
+      next_restock:=ReadGameClock()+RESPAWN_MINUTES*60;
+      RestockInventory(merchant_type, inv_fs);
+    EndIf
+
+    // [...]
+
+  EndWhile

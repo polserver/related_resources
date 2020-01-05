@@ -1,0 +1,19 @@
+use uo;
+use os;
+use basic;
+
+include "include/client";
+include "../../sench";
+
+program addsench( who, input )
+
+	SendSysMessage( who, "Select a weapon to enchant." );
+	var item := target(who);
+	if (!item)
+	        SendSysmessage(who, "Targetting cancelled.");
+        	return;
+	endif
+
+	SendSysMessage( who, addEnch( item, input ) );
+
+endprogram

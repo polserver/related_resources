@@ -1,0 +1,222 @@
+/////////////////////////////////////////////////////////////////////
+// enchantitem.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+/////////////////////////////////////////////////////////////////////
+// Notes:
+// - works in a distro happy fashion....
+
+use uo;
+use os;
+use cfgfile;
+
+//include "include/client";
+//include "include/string";
+include "../../include/enchantItem";
+//include "../pkg/foundations/gumps/gumps";
+
+const UOBJ_GMSTAFF:=0xbbaa;
+const DEFAULT_CHARGES:=100;
+
+var itemcfg:=ReadConfigFile(":*:itemdesc");
+
+program Enchant_Item(who)
+  var item:=Target(who,TGTOPT_CHECK_LOS);
+  if (!item)
+    return;
+  elseif (item.objtype=UOBJ_GMSTAFF)
+    sendsysmessage(who,"That is already enchanted, it's a gmstaff!");
+  elseif (item.container!=who.backpack)
+    sendsysmessage(who,"The item must be in your backpack to enchant it!");
+  else
+    if (ChooseEnchantment(who,item))
+      sendsysmessage(who,"You sucessfully enchant it!");
+    endif
+  endif
+endprogram
+
+function ChooseEnchantment(who,what)
+  var magic_type:= MagicAllowedandType(what,itemcfg);
+  if (!magic_type)
+    sendsysmessage(who,what.desc+" cannot be made magical!");
+    return;
+  endif
+  var checkmod:=GetObjProperty(what,"damagemod");
+  
+  var i,button,thistype,applybutton;
+  
+  var types:=array;
+  var radiobuttons:=array;
+  var pagetext:=array;
+  
+  var enchant_layout:={
+  "page 0",
+  "nodispose",
+  "resizepic 0 0 3600 400 400",
+  "resizepic 20 20 3600 120 100",
+  "tilepic 60 50 "+what.graphic,
+  "text 197 18 1 0",
+  "text 200 20 66 1",
+  "button 300 360 2122 2123 1 0 400",
+  "text 160 60 66 2"
+  };
+
+  var enchant_data:={
+  "Enchant Item",
+  "Enchant Item"};
+  
+  case (magic_type)
+    1: types:= { };
+       enchant_data.append("Weapon");
+    2: types:={ "protection" , "strength" , "blessing" ,"reflect" };
+       thistype:=FindInArray( types ,GetObjProperty(what,"type"));
+       types[4]:="magic reflection";
+       enchant_data.append("Armour");
+    3: types:={ "sight", "protection" , "strength" , "invisibility" , "blessing" , "reflect" };
+       thistype:=FindInArray(types,GetObjProperty(what,"type"));
+       types[1]:="night sight";
+       types[6]:="magic reflection";
+       enchant_data.append("Clothing");
+    4: types:={ "clumsiness", "feeblemindedness" , "healing" , "weakness" , "harming" , "fireballs" , "greater healing" , "lightning" , "mana draining" , "identification"};
+       enchant_data.append("Wand");
+       var spelltypes:={ 1, 3, 4, 8, 12, 18, 29, 30, 31, 65};
+       thistype:=FindInArray(spelltypes,Cint(GetObjProperty(what,"SpellId")));
+  endcase
+  if (len(types))
+    for (i:=1; i<=len(types); i:=i+1)
+      enchant_layout.append("text 140 "+((i*25)+100)+" 98 "+len(enchant_data));
+      enchant_data.append(types[i]);
+      enchant_layout.append("radio 80 "+((i*25)+100)+" 2152 2154 "+(i=thistype)+" "+(300+i));
+    endfor
+    enchant_layout.append("text 260 60 33 "+len(enchant_data));
+    enchant_data.append("rqd");
+    enchant_layout.append("text 300 60 98 "+len(enchant_data));
+    enchant_data.append("Charges");
+    enchant_layout.append("gumppic 300 80 2443");
+    enchant_layout.append("textentry 304 82 60 20 0 401 "+len(enchant_data));
+    var charges:=GetObjProperty(what,"charges");
+    if (!charges)
+      charges:=DEFAULT_CHARGES;
+    endif
+    enchant_data.append(charges);
+  else
+    enchant_layout.append("text 140 125 98 "+len(enchant_data));
+    enchant_data.append("Accuracy");
+    enchant_layout.append("gumppic 80 125 2154");
+  endif
+  if (magic_type=1)
+    i:=Cint(GetObjProperty(what,"gain"));
+    enchant_layout.append("text 300 110 98 "+len(enchant_data));
+    enchant_data.append("Accy mod");
+    enchant_layout.append("gumppic 300 130 2443");
+    enchant_layout.append("textentry 304 132 60 20 0 402 "+len(enchant_data));
+    enchant_data.append(Cstr(i));
+
+    enchant_layout.append("text 260 160 33 "+len(enchant_data));
+    enchant_data.append("rqd");
+    enchant_layout.append("text 300 160 98 "+len(enchant_data));
+    enchant_data.append("Dmg mod");
+    enchant_layout.append("gumppic 300 180 2443");
+    enchant_layout.append("textentry 304 182 60 20 0 403 "+len(enchant_data));
+    enchant_data.append(Cstr(what.dmg_mod));
+
+    enchant_layout.append("text 300 210 98 "+len(enchant_data));
+    enchant_data.append("HP mod");
+    enchant_layout.append("gumppic 300 230 2443");
+    enchant_layout.append("textentry 304 232 60 20 0 404 "+len(enchant_data));
+    enchant_data.append(Cstr(what.maxhp_mod));
+
+  elseif (magic_type=2)
+
+    enchant_layout.append("text 300 110 98 "+len(enchant_data));
+    enchant_data.append("Amr mod");
+    enchant_layout.append("gumppic 300 130 2443");
+    enchant_layout.append("textentry 304 132 60 20 0 405 "+len(enchant_data));
+    enchant_data.append(Cstr(what.ar_mod));
+
+    enchant_layout.append("text 300 160 98 "+len(enchant_data));
+    enchant_data.append("HP mod");
+    enchant_layout.append("gumppic 300 180 2443");
+    enchant_layout.append("textentry 304 182 60 20 0 406 "+len(enchant_data));
+    enchant_data.append(Cstr(what.maxhp_mod));
+  endif
+
+  var retval:=SendDialogGump(who,enchant_layout,enchant_data);
+  
+  if (!retval[400])
+    sendsysmessage(who,"Enchantment cancelled!");
+    return;
+  endif
+  
+  var radio_press:=0;
+  if (len(types))
+    for (i:=1; i<=len(types); i:=i+1)
+      if (retval[300+i])
+         radio_press:=i;
+      endif
+    endfor
+  endif
+
+  case (magic_type)
+    1: var accymod:=Cint(GetGumpText(retval[402]));
+       var dmgmod:=Cint(GetGumpText(retval[403]));
+       var hpmod:=Cint((GetGumpText(retval[404])));
+       if (!dmgmod)
+         sendsysmessage(who,"You must select a damage mod!");
+         return 0;
+       endif
+       ClearEnchantments(what);
+       EnchantWeapon(what, dmgmod, accymod, hpmod);
+       return 1;
+       
+    2: var charges:=Cint(GetGumpText(retval[401]));
+       var armod:=Cint(GetGumpText(retval[405]));
+       var hpmod:=Cint(GetGumpText(retval[406]));
+  
+       if (!radio_press or !charges)
+         sendsysmessage(who,"You must select an enchantement and a number of charges!");
+         return 0;
+       endif
+       ClearEnchantments(what);
+       EnchantArmor(what,radio_press,charges,hpmod,armod);
+       return 1;
+       
+    3: var charges:=Cint(GetGumpText(retval[401]));
+       if (!radio_press or !charges)
+         sendsysmessage(who,"You must select an enchantement and a number of charges!");
+         return 0;
+       endif
+       ClearEnchantments(what);
+       EnchantCloth(what,radio_press,charges); 
+       return 1;
+
+    4: var charges:=Cint(GetGumpText(retval[401]));
+       if (!radio_press or !charges)
+         sendsysmessage(who,"You must select an enchantement and a number of charges!");
+         return 0;
+       endif
+       ClearEnchantments(what);
+       EnchantWand(what,radio_press,charges);
+       return 1;
+
+  endcase  
+  return 0;  
+endfunction
+
+function FindInArray(thisarray,thisitem)
+  var i;
+  for (i:=1; i<=len(thisarray); i:=i+1)
+//    var check_array_elem:=thisarray[i];
+//    if (check_array_elem[thisitem])
+    if (thisarray[i]=thisitem)
+      return i;
+    endif
+  endfor
+  return 0;
+endfunction
+
+function GetGumpText(text)
+  return (text[Find(text,": ",1)+1,len(text)]);
+endfunction

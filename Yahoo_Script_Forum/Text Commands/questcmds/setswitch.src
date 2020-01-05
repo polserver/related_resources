@@ -1,0 +1,34 @@
+////////////////////////////////////////////////////////////////////////////////
+//Created 5/10/200 by Gambrinus
+// contact: Gambrinus@mytharria.org 
+//
+//This script is designed to set a switch on a location and have it "operate" an
+// object at another location. The operation is simply a create and destroy item
+// command that is used by the switch.ecl script. The move component is intended
+// to recreate the object at a second location thereby giving you the ability to
+// move an object such as a statue, to reveal a secret passage or something
+// similar. 
+////////////////////////////////////////////////////////////////////////////////
+include "include/modules";
+
+const PORTCULLIS := 0x06f5;
+
+program setswitch(who)
+	SendSysMessage(who, "Select the item that will be changed by this switch");
+	var what := Target(who, TGTOPT_NOCHECK_LOS);
+	SetObjProperty(what, "closegraph", what.graphic);
+	var graph := RequestInput(who, who.backpack, "Enter the graphic for the open door or 1 for invisible");
+	SendSysMessage(who,"Select the item that will be the switch");
+	var switch := Target(who,TGTOPT_NOCHECK_LOS );
+	var graphic := switch.graphic;
+	SetObjProperty(switch, "closegraph", graphic);
+	var open := RequestInput(who, who.backpack, "Enter the open graphic for this switch");
+	var sound1 := RequestInput(who, who.backpack, "Enter the sound effect to play when the switch is opened");
+	var sound2 := RequestInput(who, who.backpack, "Enter the sound effect to play when the switch is closed");
+	SetObjProperty(what, "opengraph", CInt(graph));
+	SetObjProperty(what, "opensound", CInt(sound1));
+	SetObjProperty(what, "closesound", CInt(sound2));
+	SetObjProperty(switch, "target", what.serial);
+	SetObjProperty(switch, "opengraph", CInt(open));
+	switch.usescript := ":switch:switch";
+endprogram

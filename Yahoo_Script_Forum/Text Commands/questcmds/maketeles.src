@@ -1,0 +1,15 @@
+///////////////////////////////////////////////////////////////////////////
+//  START.SRC - script that is run during startup of server.
+//
+//  Author: ???? ????/??/??
+//
+//  Recent Modifications
+//      1999/06/28 Ignatius added creation of system teleporters.
+////////////////////////////////////////////////////////////////////////////
+include "include/modules";
+include "include/teleporters";
+
+program make_teleporters(who)
+	CreateTeleporters();
+	SendSysMessage(who, "Teleporters created!");
+endprogram

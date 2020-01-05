@@ -1,0 +1,12 @@
+use uo;
+use util;
+
+program setcharges(newitem)
+
+	local MinCharges := Cint( GetObjProperty(newitem, "charges") );
+	local MaxCharges := Cint( GetObjProperty(newitem, "MaxCharges") );
+
+	local charges := RandomInt(MaxCharges - MinCharges) + MinCharges + 1;
+	SetObjProperty(newitem, "charges", CStr(charges) );
+
+endprogram

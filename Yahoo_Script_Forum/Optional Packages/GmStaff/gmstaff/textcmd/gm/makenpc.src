@@ -1,0 +1,104 @@
+//////////////////////////////////////////
+// makeNpc.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+//////////////////////////////////////////
+// 
+// - Select an NPC from a gump generated
+// from npcdesc
+// - green colour indicates good alignment
+//
+//////////////////////////////////////////
+
+use uo;
+use os;
+use cfgfile;
+
+const NUM_PER_PAGE:=51;
+const MAX_PAGES:=8; // up to 408 npcs
+
+var npcs:=ReadConfigFile("::npcdesc");
+
+program createnpc(who,npctype)
+  if (!npctype)
+    npctype:=ChooseNPCtype(who);
+    if (!npctype)
+      return;
+    endif
+  endif
+  if (!npcs[npctype])
+    sendsysmessage(who,"There is no "+npctype+" npc template!");
+    return;
+  endif
+  var trgt:=TargetCoordinates(who);
+  if (trgt and npctype)
+    var check:=CreateNpcFromTemplate(npctype, trgt.x, trgt.y, trgt.z);
+    if (check.errortext)
+      sendsysmessage(who,check.errortext);
+    endif
+  endif
+endprogram
+
+function ChooseNPCtype(who)
+  var choose_buttons:=array;
+  var npc_keys:=GetConfigStringKeys(npcs);
+  var keylen:=len(npc_keys);
+  var choose_layout:={
+    "page 0",
+    "nodispose",
+    "resizepic 0 0 3600 440 440",
+    "text 80 20 63 0",
+  };
+  var choose_data:={
+    "Make NPC from template!",
+  };
+  
+  var i,pagenum:=1;
+
+  while (pagenum and pagenum<MAX_PAGES)
+    choose_layout.append("page "+pagenum);
+    var start_i:=((pagenum-1)*NUM_PER_PAGE)+1;
+    var end_i:=(pagenum*NUM_PER_PAGE);
+    if (pagenum>1)
+      choose_layout.append("button 420 120 250 251 0 "+(pagenum-1));
+    endif
+    if (end_i<keylen)
+      choose_layout.append("button 420 370 252 253 0 "+(pagenum+1));
+      pagenum:=pagenum+1;
+    else
+      end_i:=keylen;
+      pagenum:=0;
+    endif
+    var x:=40;
+    var y:=60;
+    for (i:=start_i;i<=end_i;i:=i+1)
+      choose_layout.append("croppedtext "+x+" "+y+" 100 20 "+GetAlignmentColor(npc_keys[i])+" "+len(choose_data));
+      choose_data.append(npc_keys[i]);
+      choose_layout.append("button "+(x-20)+" "+(y+2)+" 2103 2104 1 0 "+(i+500));
+      y:=y+20;
+      if (y>380)
+        x:=x+130;
+        y:=60;
+      endif
+    endfor
+  endwhile
+  var retval:=SendDialogGump(who,choose_layout,choose_data);
+  for (i:=1;i<=keylen;i:=i+1)
+    if (retval[i+500])
+      return (npc_keys[i]);
+    endif
+  endfor
+  return 0;
+endfunction
+
+function GetAlignmentColor(npctype)
+  var elem:=FindConfigElem(npcs,npctype);
+  var align:=lower(elem.alignment);
+  if (align="good")
+    return 63;
+  else
+    return 92;
+  endif
+endfunction

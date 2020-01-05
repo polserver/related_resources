@@ -1,0 +1,12 @@
+use uo;
+
+program bcastas(who, msg)
+	if( msg )
+      	Broadcast( msg );
+	else
+		msg := SendTextEntryGUmp( who, "What is your broadcast message?" );
+		if( msg )
+			Broadcast( msg );
+		endif
+	endif
+endprogram

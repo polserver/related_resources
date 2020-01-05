@@ -1,0 +1,36 @@
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//addspeech////New Seer command for adding keywords and replies to NPCs which recognize speech.	//
+//Maintained by Exar Kun jrigger@earthlink.net	4/18/00							//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+include "include/modules";
+
+var expire_days, keyword;
+
+program addspeech ( who, params )
+	if( params )
+		keyword := SplitWords( params );
+		keyword := lower( keyword[1] );
+		expire_days := CInt( params [2] );
+	else
+		keyword := SendTextEntryGump( who, "What keyword would you like the NPC to respond to?" );
+		keyword := lower( keyword );
+	endif
+	SendSysMessage( who, "Who do you want to add speech to?" );
+ 	var whom := Target( who );
+	if( !whom )
+		SendSysMessage( who, "Cancelled." );
+		return;
+    	endif
+	var text := SendTextEntryGump( who, "What will be the NPC's response?" );
+	if ( !keyword || !text )
+		SendSysMessage( who, "Cancelled." );
+		return;
+	endif
+	SendSysMessage( who, whom.name + " will respond '" + text + "' to '" + keyword + "'." );
+	var wordlist := GetObjProperty( whom, "wordlist" );
+	if ( !wordlist )
+		wordlist := {};
+    	endif
+    	wordlist.append ( { keyword,text } );
+	SetObjProperty( whom, "wordlist", wordlist );
+endprogram

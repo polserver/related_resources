@@ -1,0 +1,19 @@
+include "include/modules";
+include "include/coreconstants";
+include "include/attributes";
+
+program textcmd_copy( who )
+	SendSysMessage( who, "Select an item to copy" );
+	var tgt := TargetCoordinates( who );
+	if( tgt.isa(POLCLASS_ITEM) )
+		var objtype	:= tgt.objtype;
+		var color	:= tgt.color;
+		var oldmaxHP := tgt.maxHP;
+		SendSysMessage( who, "Select the spot for the copied item" );
+		var where := TargetCoordinates( who );
+		var newitem := CreateItemAtLocation( tgt.objtype, where.x, where.y, where.z, 1 );
+		newitem.color := color;
+		newitem.maxhp := oldmaxHP;
+		newitem.hp := oldmaxHP;
+	endif
+endprogram

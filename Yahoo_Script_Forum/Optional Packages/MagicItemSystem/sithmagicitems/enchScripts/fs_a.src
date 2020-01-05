@@ -1,0 +1,24 @@
+////////////////////////////////////////////////
+//5 percent chance of flame-striking attacker!//
+////////////////////////////////////////////////
+
+use uo;
+use util;
+
+include "sdmg";
+include "include/client";
+
+program five_pc_fs_a( parms )
+
+	var attacker := parms[1];
+	var defender := parms[2];
+
+	if( RandomInt(100) < GetObjProperty(parms[7], "fs_chance") || GetObjProperty(parms[7], "fs_chance")==100 )
+	  //Budget flamestrike for now...
+	  PlayObjectCenteredEffect(attacker, 0x3709, 0x0a, 0x1e );
+	  PlaySoundEffect( defender, SFX_SPELL_FLAME_STRIKE );
+	  doSpellDamage( defender, attacker, 30, 7 );
+	endif
+
+	return;
+endprogram

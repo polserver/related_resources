@@ -1,0 +1,49 @@
+//Spellcaster Raider AI v0.6
+//GM Scull
+//These fellas dont loot, they just standback and provide some cover for the melle dudes
+
+use npc;
+use os;
+use cfgfile;
+use math;
+
+include "include/eventid";
+include "include/randname";
+include "include/dist";
+include "include/npccast";
+include "include/dist";
+include "include/anchors";
+include "ai/main/mainloopraider";
+include "include/anchors";
+include "ai/combat/raiderfight";
+include "ai/combat/spellcombatevent";
+include "ai/setup/spellsetup";
+
+const HALT_THRESHOLD := 6; // how close before he attacks?
+
+program RaidKillPlayers()
+
+	SetProperty ("noloot", 1);
+
+	if (getobjproperty(me, "frozen"))
+		me.frozen := 1;
+	endif
+
+    	SetWarMode( 0 );
+    	main_AI_loop();
+
+endprogram
+
+function CloseDistance( opponent )
+
+	local edist := Distance( me, opponent );
+	if (edist > 6)
+		return 2;
+	elseif (edist > 1)
+       	RunToward( opponent );
+	    return 0;
+	else
+		return 1;
+	endif
+
+endfunction

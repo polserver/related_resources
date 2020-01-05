@@ -1,0 +1,34 @@
+use uo;
+use os;
+
+include "include/eventid";
+
+Program entice(who)
+
+	local subject := Target(who, TGTOPT_NOCHECK_LOS );
+	if ((!subject) or (!subject.npctemplate)) 
+		print("error");
+		return; 
+	endif
+	
+	if (subject.script = "enticedai")
+		Sendsysmessage(who, "gia in uso");
+		return;
+	endif
+	
+	local ev := array;
+		ev.+type := EVID_ALL_FOLLOW_CMD;
+		ev.+source := who;
+		ev.+x := who.x;
+		ev.+y := who.y;
+
+	
+	SetObjProperty( subject, "oldai", subject.script);
+	
+	subject.script := ":enticement:enticedai";
+	
+	RestartScript(subject);
+	
+	sendevent(subject, ev);
+	
+endprogram

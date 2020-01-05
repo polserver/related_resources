@@ -1,0 +1,26 @@
+Min. SpawnTime [Minutes]
+Max. SpawnTime [Minutes]
+Max. Amount [NPCs/Items]
+SpawnRange [Landtiles]
+Note [String]
+SpawnType = NPC/Item/Container
+
+NPC
+  Flags -> Grouping
+	   Anchoring
+  Template = (template-name from npcdesc.cfg) or (number -> groups.cfg)
+  Group Amount
+
+Items
+  Flags -> Grouping
+           In Container
+           Hold old Items [in Container]
+  Template = (template-name from ::itemdesc.cfg) or (number -> igroups.cfg)
+  Group Amount
+
+Container
+  Flags -> Moving Spawn
+           Empty Container
+           Hold old Items
+  Template = template-name from ::itemdesc.cfg for Container
+  Loot-Group = number -> nlootgroup.cfg (starteqp.inc)           

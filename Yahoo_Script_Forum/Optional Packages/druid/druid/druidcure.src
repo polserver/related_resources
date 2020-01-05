@@ -1,0 +1,45 @@
+use uo;
+use util;
+use os;
+
+include "include/client";
+include "druid";
+
+const KillSound := 0x202;
+const KillEffect := 0x375a;
+const SFX_SPELL_FAIL := 0x005b;
+
+program cast_dcure( caster )
+
+	if(!checkstaff(caster))
+		return;
+	endif
+	
+        checkdruidopts(caster, 1);
+		
+	SendSysMessage(caster, "Select target.");	
+	local target1 := target(caster);	
+        usemana(caster, 1);
+        local cast := caster;
+
+
+    	local die_string := "d20+2";
+    	local healed := RandomDiceRoll( die_string ) ;
+    
+        PlaySoundEffect(caster, SFX_SPELL_CURE);
+        PlayObjectCenteredEffect( target1, FX_BLESS_EFFECT, 10,10);
+
+        local poison_descr := GetObjProperty( target1,"poison_level" ) ;
+        local poison_level := Cint(poison_descr);
+        if (poison_level >= 1)
+                poison_level := poison_level - 1;
+                if (poison_level >= 1)
+                 Sendsysmessage(caster, "Some poison was cured, but not all");
+                else
+                 SendSysmessage (caster, "Target cured."); 
+                endif
+                SetObjProperty(target1, "poison_level", Cstr(poison_level));
+        endif        
+
+
+endprogram

@@ -1,0 +1,292 @@
+// Advanced Cooking Package - Version 1.0
+// Made by Fedson Nathanyel, based on Charles Haustron's Advanced Alchemy
+// In case of any doubts, contact me at fabio.amaral@bol.com.br
+
+use uo;
+use os;
+use util;
+use cfgfile;
+use basic;
+
+include "include/client";
+
+Const UOBJECT_BOWL_OF_FLOUR := 0x0a1e;
+Const SOUND_EFFECT_MIX := 0x21;
+Const SOUND_EFFECT_COOKEND := 0x248;
+
+// ovens
+Const UOBJECT_OVEN1 := 0x0461;
+Const UOBJECT_OVEN2 := 0x046f;
+Const UOBJECT_OVEN3 := 0x092b;
+Const UOBJECT_OVEN4 := 0x0930;
+// fire sources
+Const UOBJECT_CAMPFIRE := 0x0de3;
+Const UOBJECT_BRAZIER := 0x0e31;
+Const UOBJECT_FIRE_PIT := 0x0fac;
+Const UOBJECT_FORGE := 0x0fb1;
+
+
+var layout :={
+	"page 0",
+      "nodispose",
+	"gumppic 150 150 2203",
+	"gumppic 185 285 58",
+	"gumppic 200 285 58",
+	"gumppic 215 285 58",
+	"gumppic 230 285 58",
+	"gumppic 245 285 58",
+	"gumppic 260 285 58",
+	"gumppic 275 285 58",
+	"gumppic 290 285 58",
+	"gumppic 340 285 58",
+	"gumppic 355 285 58",
+	"gumppic 370 285 58",
+	"gumppic 385 285 58",
+	"gumppic 400 285 58",
+	"gumppic 415 285 58",
+	"gumppic 430 285 58",
+	"gumppic 445 285 58",
+};
+
+var data := {};
+
+var cfg := ReadConfigFile("cooking2");
+var itemdesc := ReadConfigFile("::itemdesc");
+program BookOpen(who,book)
+BuildGump(book);
+
+var rez := SendDialogGump(who, layout, data);
+
+var potion := rez[0];
+if(!potion) return; endif
+
+var x := who.x;
+var y := who.y;
+var amount := cint(SendTextEntryGump(who,"How many food would you like to make? Max 10.",2));
+if(!amount or amount >10)
+      return;
+endif
+
+var i:=0;
+while(i<amount and x = who.x and y = who.y)
+      if(!make_potion(who,potion))
+            break;
+      endif
+      i := i + 1;
+endwhile
+
+endprogram
+
+
+function BuildGump(byref book)
+
+var recipes := GetObjProperty(book,"recipes");
+if(recipes.size() = error)
+      ConvertRecipes(recipes,book);
+elseif(recipes.size() = 0)
+      return;
+endif
+
+//left side button
+//layout.append("button 290 275 5032 5300 1 0 " + 1);
+//right side button
+//layout.append("button 445 275 5032 5300 1 0 " + 1);
+
+//this will make sure all pages of the loop will have stuff on both sides
+//after it we see if an aditional page is needed
+var plen := cint(recipes.size()/2);
+var leftp,rightp,lpotion,rpotion,regs,amount;
+for i:=1 to plen //loop throu all the pages
+      //the header
+      layout.append("page "+i);
+      if(i !=1) //needs back button
+            layout.append("button 172 155 2205 2205 0 "+(i-1));
+      endif
+      if(i <plen)  //need next button
+            layout.append("button 444 155 2206 2206 0 "+(i+1));
+      endif
+
+      //define the foods
+      lpotion := recipes[i*2-1];
+      rpotion := recipes[i*2];
+
+      //load the foods decriptor
+      leftp := FindConfigElem(cfg,lpotion);
+      rightp := FindConfigElem(cfg,rpotion);
+
+      //add the food icon
+      layout.append("tilepic 220 225 "+leftp.icon);
+      layout.append("tilepic 380 225 "+rightp.icon);
+
+      //add the buttons
+      layout.append("button 290 275 5032 5300 1 0 " + lpotion);
+      layout.append("button 445 275 5032 5300 1 0 " + rpotion);
+
+      //text
+      //potion name
+      data.append(leftp.name);
+      layout.append("text 180 172 0 "+(data.size()-1));
+
+      data.append(rightp.name);
+      layout.append("text 340 172 0 "+(data.size()-1));
+
+      //regs
+      regs := GetConfigStringArray(leftp,"reagent");
+      amount := GetConfigStringArray(leftp,"amount");
+
+      for k:=1 to len(regs)
+            data.append(amount[k]+" "+itemdesc[cint(regs[k])].name);
+            layout.append("text 180 "+(282+k*12)+" 0 "+(data.size()-1));
+      endfor
+
+      regs := GetConfigStringArray(rightp,"reagent");
+      amount := GetConfigStringArray(rightp,"amount");
+      for k:=1 to len(regs)
+            data.append(amount[k]+" "+itemdesc[cint(regs[k])].name);
+            layout.append("text 340 "+(282+k*12)+" 0 "+(data.size()-1));
+      endfor
+
+endfor
+
+if(recipes.size() %2)
+      layout.append("button 444 155 2206 2206 0 "+(plen+1));
+      layout.append("page "+(plen+1));
+      layout.append("button 172 155 2205 2205 0 "+plen);
+
+
+      //define the foods
+      lpotion := recipes[plen*2+1];
+
+      //load the foods decriptor
+      leftp := FindConfigElem(cfg,lpotion);
+
+      //add the food icon
+      layout.append("tilepic 220 225 "+leftp.icon);
+
+      //add the buttons
+      layout.append("button 290 275 5032 5300 1 0 " + lpotion);
+      //text
+      //food name
+      data.append(leftp.name);
+      layout.append("text 180 172 0 "+(data.size()-1));
+      //regs
+      regs := GetConfigStringArray(leftp,"reagent");
+      amount := GetConfigStringArray(leftp,"amount");
+
+      for k:=1 to len(regs)
+            data.append(amount[k]+" "+itemdesc[cint(regs[k])].name);
+            layout.append("text 180 "+(282+k*12)+" 0 "+(data.size()-1));
+      endfor
+endif
+
+endfunction
+
+
+function ConvertRecipes(byref recipes,byref book)
+
+if(recipes = "blank")
+      recipes := {};
+else
+      recipes := SplitWords(recipes);
+      recipes.sort();
+endif
+SetObjProperty(book,"recipes",recipes);
+
+endfunction
+
+
+function make_potion(byref who, foodID)
+
+if(!is_item(who,UOBJECT_BOWL_OF_FLOUR))
+      SendSysMessage(who,"You do not have the necessary ingredients");
+      return 0;
+endif
+
+var elem := cfg[foodID];
+var regs := GetConfigStringArray(elem,"reagent");
+var amount := GetConfigStringArray(elem,"amount");
+
+/// Verifies if the food needs an oven or a fire source.
+local fogo := Cint(cfg[foodID].fogo);
+case (fogo)
+0: // does not need anything.
+1: if (temfogo(who)=0)
+        SendSysmessage( who, "You need to be near a fire source in order to cook this food." );
+        exit;
+   endif
+2: if (temforno(who)=0)
+        SendSysmessage( who, "You need to be near an oven to cook this food." );
+        exit;
+    endif
+
+default: SendSysMessage(who, "Oh no! Call Fedson!");
+
+endcase
+
+
+for i:=1 to regs.size()
+      if(!ConsumeSubstance(who.backpack, cint(regs[i]),cint(amount[i])))
+            SendSysMessage(who,"You do not have enough ingredients");
+            //Give consumed reagents back
+            For j:=1 to i-1
+              CreateItemInBackpack(who, cint(regs[j]), cint(amount[j]));
+            EndFor
+            return 0;
+      endif
+endfor
+
+for i:=1 to 4
+      playsoundeffect(who, SOUND_EFFECT_MIX);
+      SendSysMessage(who, "You mix the ingredients",who);
+      sleep(2);
+endfor
+var skill := CDbl(GetElemProperty(elem,"skill"));
+var SkillCheck:=CheckSkill(who,SKILLID_COOKING, skill, skill*4 );
+
+If(SkillCheck<=0)
+      var Potion := CreateItemInBackpack(who,cint(elem.objtype), 1);
+      potion.name:=elem.name;
+      PlaySoundEffect(who, SOUND_EFFECT_COOKEND);
+      SendSysMessage(who, "You cook the food and put it in your backpack");
+      return 1;
+endif
+
+endfunction
+
+function is_item(byref who, what)
+
+foreach item in EnumerateItemsInContainer(who.backpack)
+      if(item.objtype = what)
+            if(ReserveItem(item))
+                  return item;
+            endif
+      endif
+endforeach
+
+return 0;
+endfunction
+
+
+//function RandomEffect(byref user,byref bottle, objtype)
+//var elem := itemdesc[objtype];
+//endFunction
+
+function temforno(character)
+    Local Near_Items := ListItemsNearLocation(character.x, character.y, character.z,2);
+    foreach item in Near_Items
+         if ((item.objtype = UOBJECT_OVEN1) or (item.objtype = UOBJECT_OVEN2) or (item.objtype = UOBJECT_OVEN3) or (item.objtype = UOBJECT_OVEN4))
+              Return 1;
+         endif
+    endforeach
+    return 0;
+endfunction
+
+function temfogo(character)
+    Local Near_Items := ListItemsNearLocation(character.x, character.y, character.z,2);
+    foreach item in Near_Items
+         if ((item.objtype = UOBJECT_CAMPFIRE) or (item.objtype = UOBJECT_BRAZIER) or (item.objtype = UOBJECT_FIRE_PIT) or (item.objype = UOBJECT_FORGE))
+              Return 1;
+         endif
+    endforeach
+    return 0;
+endfunction

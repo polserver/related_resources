@@ -1,0 +1,9 @@
+//Check if corpse was a townraider spawn v0.7
+	if ( GetGlobalProperty("raidsonnow") )
+		var rpId := GetObjProperty( corpse, "#townraider" );
+		if (rpId)
+			set_critical(1);
+				SetGlobalProperty("raiddead"+rPiD, GetGlobalProperty("raiddead"+rpId) + 1);
+			set_critical(0);
+		endif
+	endif

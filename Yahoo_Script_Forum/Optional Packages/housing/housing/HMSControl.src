@@ -1,0 +1,542 @@
+// POL - HOUSE MENU SYSTEM v1.0
+// Created by: ???
+// Modified by: Vaticus
+// Supported POL versions: v.092/.093/.094
+
+// FILE LAST UPDATED: Monday, May 13, 2002
+// Pol House Menu System modified by Vaticus
+
+use uo;
+use os;
+use basic;
+
+include "include/eventID";
+include "include/attributes";
+include "include/sysEvent";
+include "include/objtype";
+
+program System_Speech(sign)
+  var house := GetObjProperty(sign, "house_serial");
+  if (house)
+    house := SystemFindObjectBySerial(house);
+  endif
+  if(!house)
+    return;
+  endif
+  RegisterForSpeechEvents(sign, 30);
+  var owneracct, who, ev, friendinfo, decaytime, indf, indc;
+  while(sign)
+    owneracct := GetObjProperty(house,"owneracct");
+    ev := wait_for_event(120);
+    if(ev)
+      who := ev.source;
+      if((who.multi).serial == house.serial)
+        if(who.acctname == owneracct)
+          handle_speech(ev, house, sign, 3);
+        elseif(statuscheck(house, who, 1) = 1)
+          handle_speech(ev, house, sign, 2);
+        elseif(statuscheck(house, who, 2) = 1)
+          handle_speech(ev, house, sign, 1);
+        else
+          handle_speech(ev, house, sign, 0);
+        endif
+      endif
+    endif
+    decaytime := GetObjProperty(sign,"decay");
+    if(!decaytime)
+      decaytime := (ReadGameClock() + 864000);
+      SetObjProperty(sign, "decay", decaytime);
+    endif
+    if(!GetObjProperty(sign,"nodecay"))
+      var tname;
+      var newname := GetObjProperty(sign,"signname");
+      if(!newname)
+        newname := "a house";
+        SetObjProperty(sign, "signname", newname);
+      endif
+      if (ReadGameClock() > decaytime)
+        HouseDecay(house);
+      elseif((decaytime - ReadGameClock() ) > 861000 )
+        tname := newname + ", [this house is like new]";
+        SetName(sign, tname);
+      elseif((decaytime - ReadGameClock() ) > 604800 )
+        tname := newname + ", [this house is slightly worn]";
+        SetName(sign, tname);
+      elseif((decaytime - ReadGameClock() ) > 259200 )
+        tname := newname + ", [this house is fairly worn]";
+        SetName(sign, tname);
+      elseif((decaytime - ReadGameClock() ) > 86400 )
+        tname := newname + ", [this house is greatly worn]";
+        SetName(sign, tname);
+      else
+        tname := newname + ", [this house is in danger of collapsing]";
+        SetName(sign, tname);
+      endif
+    endif
+    cleareventque();
+  endwhile
+endprogram
+
+function cleareventque()
+  var ev;
+  repeat
+  until(!(ev := os::wait_for_event(0)));
+endfunction
+
+function handle_speech(event, house, sign, level)
+  var text := lower(event.text );
+  if(level == 0)
+    SendSysMessage(event.source, "You must be in your own house to do this.", font := 3, color := 0);
+    return;
+  endif
+  if((text["i ban thee"]) && (level >= 1))
+    SendSysMessage(event.source, "Target the individual to ban from this house.", font := 3, color := 0);
+    BanCmd(house, sign, event);
+    return;
+  endif
+  if((text["remove thyself"]) && (level >= 1))
+    SendSysMessage(event.source, "Target the individual to eject from this house.", font := 3, color := 0);
+    EjectCmd(house, sign, event);
+    return;
+  endif
+  if((text["i wish to lock this down"]) && (level >= 2))
+    SendSysMessage(event.source, "Lock what down?", font := 3, color := 0);
+    LockDown(house, sign, event);
+    return;
+  elseif((text["i wish to lock this down"]) && (level == 1))
+    SendSysMessage(event.source, "You must own the house to do this.", font := 3, color := 0);
+    return;
+  endif
+  if((text["i wish to secure this"]) && (level >= 2))
+    SendSysMessage(event.source, "Choose the item you wish to secure.", font := 3, color := 0);
+    Secure(house, sign, event);
+    return;
+  elseif((text["i wish to secure this"]) && (level == 1))
+    SendSysMessage(event.source, "You may only secure a container in a home of which you are a co-owner.", font := 3, color := 0);
+    return;
+  endif
+  if((text["i wish to release this"]) && (level >= 2))
+    SendSysMessage(event.source, "Choose the item you wish to release.", font := 3, color := 0);
+    Release(house, sign, event);
+    return;
+  elseif((text["i wish to release this"]) && (level == 1))
+    SendSysMessage(event.source, "You must own the house to do this.", font := 3, color := 0);
+    return;
+  endif
+  if((text["i wish to place a trash barrel"]) && (level >= 1))
+    trashbarrel(house, event);
+    return;
+  endif
+endfunction
+
+function trashbarrel(house, event)
+  var trashuid := GetObjProperty(house, "barrelserial");
+  if(trashuid)
+    var trashcan := 0;
+    foreach object in (house.items)
+      if(object.serial == trashuid)
+        trashcan := 1;
+        break;
+      endif
+    endforeach
+    if(trashcan == 1)
+      SendSysMessage(event.source, "You already have a trash barrel!", font := 3, color := 0);
+      return;
+    endif
+  endif
+  var items := ListItemsNearLocation(event.source.x, event.source.y, event.source.z, 1);
+  var check := 0;
+  foreach object in items
+    if(object.objtype == 0x8889)
+      check := 1;
+    endif
+  endforeach
+  if(check == 0)
+    var trash := CreateItemAtLocation(event.source.x, event.source.y, event.source.z, 0x9998, 1);
+    if(trash)
+      SendSysMessage(event.source, "You have a new trash barrel. Fifteen seconds after you put something in the barrel, the trash will be emptied. Be forewarned, this is permanant!", font := 3, color := 0);
+      SetObjProperty(trash, "houseserial", house.serial);
+      SetObjProperty(house, "barrelserial", trash.serial);
+      return;
+    endif
+  else
+    SendSysMessage(event.source, "You cannot place this here. Something is in the way.", font := 3, color := 0);
+    return;
+  endif
+endfunction
+
+function LockDown(house, sign, event)  //later check for strongboxes
+  var targetitem := Target(event.source, TGTOPT_NOCHECK_LOS);
+  if(!targetitem)
+    return;
+  endif
+  if((!InHouse(targetitem, house)) || (!targetitem.multi.serial = house.serial))
+    SendSysMessage(event.source, "That is not in your house.", font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.isA(POLCLASS_DOOR))
+    PrintTextAbovePrivate(event.source, "You can not lock down a door!", event.source, font := 3, color := 0);
+    PrintTextAbovePrivate(targetitem, "I refuse to lock this down.", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.isA(POLCLASS_CORPSE))
+    PrintTextAbovePrivate(event.source, "You can not lock down a corpse!", event.source, font := 3, color := 0);
+    PrintTextAbovePrivate(targetitem, "I refuse to lock this down.", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem == sign)
+    PrintTextAbovePrivate(targetitem, "You can not lock this down!", event.source, font := 3, color := 0);
+    PrintTextAbovePrivate(targetitem, "I refuse to lock this down.", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.objtype == 0xa390)
+    PrintTextAbovePrivate(event.source, "You cannot lock down a guildstone!", event.source, font := 3, color := 0);
+    PrintTextAbovePrivate(targetitem, "I refuse to lock this down.", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(IsInContainer(event.source.backpack, targetitem))
+    PrintTextAbovePrivate(event.source, "You can not lock this down, place it on the ground first.", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.isA(POLCLASS_MOBILE))
+    SendSysMessage(event.source, "You cannot lock creatures down.", font := 3, color := 0);
+    return;
+  endif
+  if(GetObjProperty(house, "numlockdowns") < GetObjProperty(house, "maxnumlockdowns"))
+    if(targetitem.movable == 1)
+      targetitem.movable := 0;
+      SetObjProperty(targetitem, "lockeddown", 1);
+      SetObjProperty(targetitem, "houseserial", house.serial);
+      SetObjProperty(house, "numlockdowns", GetObjProperty(house, "numlockdowns") + 1);
+      PrintTextAbovePrivate(targetitem, "Locked down!", event.source, font := 3, color := 0);
+    elseif((targetitem.movable == 0) && (GetObjProperty(targetitem, "lockeddown") == 1))
+      PrintTextAbovePrivate(event.source, "That is already locked down.", event.source, font := 3, color := 0);
+      return;
+    elseif((targetitem.movable == 0) && (GetObjProperty(targetitem, "secure") == 1))
+      PrintTextAbovePrivate(event.source, "That is already locked down.", event.source, font := 3, color := 0);
+      return;
+    else
+      PrintTextAbovePrivate(targetitem, "I refuse to lock this down.", event.source, font := 3, color := 0);
+      return;
+    endif
+  else
+    PrintTextAbovePrivate(targetitem, "You may not lock down this item!", event.source, font := 3, color := 0);
+    PrintTextAbovePrivate(targetitem, "The maximum number of locked down items would be exceeded!", event.source, font := 3, color := 0);
+  endif
+endfunction
+
+function Release(house, sign, event)  //later check for strongboxes
+  var targetitem := Target(event.source, TGTOPT_NOCHECK_LOS);
+  if(!targetitem)
+    return;
+  endif
+  if((!InHouse(targetitem, house)) || (!targetitem.multi.serial = house.serial))
+    SendSysMessage(event.source, "That is not in your house.", font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.isA(POLCLASS_DOOR))
+    PrintTextAbovePrivate(event.source, "This is not locked down or secured!", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.isA(POLCLASS_CORPSE))
+    PrintTextAbovePrivate(event.source, "This is not locked down or secured!", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem == sign)
+    PrintTextAbovePrivate(event.source, "This is not locked down or secured!", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.objtype == 0xa390)
+    PrintTextAbovePrivate(event.source, "You cannot release that!", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.isA(POLCLASS_MOBILE))
+    SendSysMessage(event.source, "You cannot release a creature.", font := 3, color := 0);
+    return;
+  endif
+  if(GetObjProperty(targetitem, "lockeddown") && (targetitem.movable == 0))
+    if(GetObjProperty(targetitem, "secure") == 1)
+      EraseObjProperty(targetitem, "secure");
+      var oldscript := GetObjProperty(targetitem, "oldscript");
+      if(oldscript == error)
+        oldscript := "";
+      endif
+      targetitem.usescript := oldscript;
+      SetObjProperty(house, "numlockdowns", GetObjProperty(house, "numlockdowns") - 124);
+      SetObjProperty(house, "numsecure", GetObjProperty(house, "numsecure") - 1);
+      EraseObjProperty(targetitem, "oldscript");
+      EraseObjProperty(targetitem, "boxserial");
+    endif
+    targetitem.movable := 1;
+    EraseObjProperty(targetitem, "houseserial");
+    EraseObjProperty(targetitem, "lockeddown");
+    SetObjProperty(house, "numlockdowns", GetObjProperty(house, "numlockdowns") - 1);
+    PrintTextAbovePrivate(targetitem, "[no longer locked down]", event.source, font := 3, color := 0);
+    return;
+  elseif((targetitem.movable == 0) && (GetObjProperty(targetitem, "secure") == 1))
+    EraseObjProperty(targetitem, "secure");
+    var oldscript := GetObjProperty(targetitem, "oldscript");
+    if(oldscript == error)
+      oldscript := "";
+    endif
+    targetitem.movable := 1;
+    targetitem.usescript := oldscript;
+    SetObjProperty(house, "numlockdowns", GetObjProperty(house, "numlockdowns") - 125);
+    SetObjProperty(house, "numsecure", GetObjProperty(house, "numsecure") - 1);
+    EraseObjProperty(targetitem, "oldscript");
+    EraseObjProperty(targetitem, "boxserial");
+    EraseObjProperty(targetitem, "houseserial");
+    PrintTextAbovePrivate(targetitem, "[no longer locked down]", event.source, font := 3, color := 0);
+    return;
+  elseif(targetitem.movable == 1)
+    PrintTextAbovePrivate(event.source, "This is not locked down or secured!", event.source, font := 3, color := 0);
+    return;
+  else
+    PrintTextAbovePrivate(event.source, "You cannot release that!", event.source, font := 3, color := 0);
+    return;
+  endif
+endfunction
+
+function Secure(house, sign, event)
+  var targetitem := Target(event.source, TGTOPT_NOCHECK_LOS);
+  if(!targetitem)
+    return;
+  endif
+  if((!InHouse(targetitem, house)) || (!targetitem.multi.serial = house.serial))
+    SendSysMessage(event.source, "That is not in your house.", font := 3, color := 0);
+    return;
+  endif
+  if(IsInContainer(event.source.backpack, targetitem))
+    PrintTextAbovePrivate(event.source, "You can not lock this down, place it on the ground first.", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.isA(POLCLASS_MOBILE))
+    SendSysMessage(event.source, "You cannot secure creatures.", font := 3, color := 0);
+    return;
+  endif
+  if(!targetitem.isA(POLCLASS_CONTAINER))
+    PrintTextAbovePrivate(event.source, "This isn't a container!", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(GetObjProperty(house, "numlockdowns") >= (GetObjProperty(house, "maxnumlockdowns") - 124))
+    PrintTextAbovePrivate(targetitem, "You may not secure this container!", event.source, font := 3, color := 0);
+    PrintTextAbovePrivate(targetitem, "The maximum number of locked down items would be exceeded!", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(GetObjProperty(house, "numsecure") >= GetObjProperty(house, "maxnumsecure"))
+    PrintTextAbovePrivate(targetitem, "You may not secure this container!", event.source, font := 3, color := 0);
+    PrintTextAbovePrivate(targetitem, "The maximum number of locked down items would be exceeded!", event.source, font := 3, color := 0);
+    return;
+  endif
+  if(targetitem.movable == 0)
+    if(GetObjProperty(targetitem, "lockeddown") == 1)
+      SetObjProperty(house, "numlockdowns", GetObjProperty(house, "numlockdowns") - 1);
+      EraseObjProperty(targetitem, "lockeddown");
+    elseif(GetObjProperty(targetitem, "secure") == 1)
+      PrintTextAbovePrivate(event.source, "That is already secured.", event.source, font := 3, color := 0);
+      return;
+    else
+      PrintTextAbovePrivate(targetitem, "I refuse to secure this.", event.source, font := 3, color := 0);
+      return;
+    endif
+    targetitem.movable := 0;
+    targetitem.usescript := ":housing:HMSSecure";
+    SetObjProperty(targetitem, "secure", 1);
+    SetObjProperty(targetitem, "oldscript", targetitem.script);
+    SetObjProperty(targetitem, "boxserial", targetitem.serial);
+    SetObjProperty(targetitem, "houseserial", house.serial);
+    SetObjProperty(house, "numsecure", GetObjProperty(house, "numsecure") + 1);
+    SetObjProperty(house, "numlockdowns", GetObjProperty(house, "numlockdowns") + 125);
+    PrintTextAbovePrivate(targetitem, "Secure!", event.source, font := 3, color := 0);
+    SendSysMessage(event.source, "House secure container count : " + GetObjProperty(house, "maxnumsecure"), font := 3, color := 0);
+    SendSysMessage(event.source, "Number of secures left : " + (GetObjProperty(house, "maxnumsecure") - GetObjProperty(house, "numsecure")), font := 3, color := 0);
+    return;
+  else
+    targetitem.movable := 0;
+    targetitem.usescript := ":housing:HMSSecure";
+    SetObjProperty(targetitem, "secure", 1);
+    SetObjProperty(targetitem, "oldscript", targetitem.script);
+    SetObjProperty(targetitem, "boxserial", targetitem.serial);
+    SetObjProperty(targetitem, "houseserial", house.serial);
+    SetObjProperty(house, "numsecure", GetObjProperty(house, "numsecure") + 1);
+    SetObjProperty(house, "numlockdowns", GetObjProperty(house, "numlockdowns") + 125);
+    PrintTextAbovePrivate(targetitem, "Secure!", event.source, font := 3, color := 0);
+    SendSysMessage(event.source, "House secure container count : " + GetObjProperty(house, "maxnumsecure"), font := 3, color := 0);
+    SendSysMessage(event.source, "Number of secures left : " + (GetObjProperty(house, "maxnumsecure") - GetObjProperty(house, "numsecure")), font := 3, color := 0);
+    return;
+  endif
+endfunction
+
+function EjectCmd(house, sign, event)
+  var friendlist := GetObjProperty(house, "friendlist");
+  var coownlist := GetObjProperty(house, "coownlist");
+  var targetchr := Target(event.source);
+  if(!targetchr)
+    return;
+  endif
+  if(!targetchr.isA(POLCLASS_MOBILE))
+    SendSysMessage(event.source, "You can only eject people!", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.npctemplate = "playervendor")
+    SendSysMessage(event.source, "You cannot eject a vendor.", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.multi.serial == house.serial)
+    if(targetchr.acctname == GetObjProperty(house, "owneracct"))
+      SendSysMessage(event.source, "You cannot eject yourself!", font := 3, color := 0);
+      return;
+    elseif((targetchr.serial in friendlist) || (targetchr.serial in coownlist))
+      SendSysMessage(event.source, "You cannot ekect friends from the house.", font := 3, color := 0);
+      return;
+    elseif(targetchr.cmdlevel > 2)
+      SendSysMessage(event.source, "It would not be wise to eject a staff member.", font := 3, color := 0);
+      SendSysMessage(event.source, "Contact your shard administrator if a staff member is behaving inappropriately.", font := 3, color := 54);
+      return;
+    endif
+    MoveCharacterToLocation(targetchr, sign.x, sign.y, GetMapInfo(sign.x, sign.y).z, MOVECHAR_FORCELOCATION);
+    SendSysMessage(event.source, targetchr.name + " has been ejected from the house.", font := 3, color := 0);
+    SendSysMessage(targetchr, "You have been ejected from the house.", font := 3, color := 0);
+  else
+    SendSysMessage(event.source, "You may not eject someone who is not in your house!", font := 3, color := 0);
+    return;
+  endif
+endfunction
+
+function BanCmd(house, sign, event)
+  var friendlist := GetObjProperty(house, "friendlist");
+  var coownlist := GetObjProperty(house, "coownlist");
+  var banlist := GetObjProperty(house, "banlist");
+  if(!banlist)
+    banlist := {};
+  endif
+  if(len(banlist) >= 20)  // Expand to 50 later ??
+    SendSysMessage(event.source, "Your banning list is full.", font := 3, color := 0);
+    return;
+  endif
+  var targetchr := Target(event.source);
+  if(!targetchr)
+    return;
+  endif
+  if(!targetchr.isA(POLCLASS_MOBILE))
+    SendSysMessage(event.source, "You can only ban people!", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.npctemplate = "playervendor")
+    SendSysMessage(event.source, "You cannot eject a vendor.", font := 3, color := 0);
+    return;
+  endif
+  if(targetchr.serial in banlist)
+    SendSysMessage(event.source, "That person is already banned.", font := 3, color := 0);
+    SendSysMessage(targetchr, "You have been banned from this house!", font := 3, color := 0);
+    MoveCharacterToLocation(targetchr, sign.x, sign.y, GetMapInfo(sign.x, sign.y).z, MOVECHAR_FORCELOCATION);
+    return;
+  endif
+  if((!InHouse(targetchr, house)) || (!targetchr.multi.serial = house.serial))
+    if(targetchr.acctname == GetObjProperty(house, "owneracct"))
+      SendSysMessage(event.source, "You cannot eject yourself!", font := 3, color := 0);
+      return;
+    elseif((targetchr.serial in friendlist) || (targetchr.serial in coownlist))
+      SendSysMessage(event.source, "You cannot ban friends from the house.", font := 3, color := 0);
+      return;
+    elseif(targetchr.cmdlevel > 2)
+      SendSysMessage(event.source, "It would not be wise to eject a staff member.", font := 3, color := 0);
+      SendSysMessage(event.source, "Contact your shard administrator if a staff member is behaving inappropriately.", font := 3, color := 54);
+      return;
+    endif
+    banlist.append(targetchr.serial);
+    SetObjProperty(house, "banlist", banlist);
+    MoveCharacterToLocation(targetchr, sign.x, sign.y, GetMapInfo(sign.x, sign.y).z, MOVECHAR_FORCELOCATION);
+    SendSysMessage(event.source, targetchr.name + " has been banned from the house.", font := 3, color := 0);
+    SendSysMessage(targetchr, "You have been banned from the house.", font := 3, color := 0);
+  else
+    SendSysMessage(event.source, "You may not eject someone who is not in your house!", font := 3, color := 0);
+    return;
+  endif
+endfunction
+
+function InHouse(who, house)
+  var lists := GetObjProperty(house, "footage");
+  var holder := 0;
+  foreach thing in lists
+    foreach thing in ListObjectsInBox(thing[1], thing[2], thing[3], thing[4], thing[5],thing[6])
+      if(thing = who)
+        holder := 1;
+        break;
+      endif
+    endforeach
+    if(holder = 1)
+      break;
+    endif
+  endforeach
+  return holder;
+endfunction
+
+function HouseDecay(house)
+  var lists := GetObjProperty(house, "footage");
+  var itemlist := {};
+  foreach entry in lists
+    foreach thing in ListObjectsInBox(entry[1], entry[2], entry[3], entry[4], entry[5],entry[6])
+      itemlist.append(thing);
+    endforeach
+  endforeach
+  var chk;
+  var builtdeed := GetObjProperty(house, "builtdeed");
+  if(builtdeed)
+    if(!DestroyItem(SystemFindObjectBySerial(builtdeed)))
+      DestroyItem(SystemFindObjectBySerial(builtdeed, 1));
+    endif
+  endif
+  foreach thing in itemlist
+    if(GetObjProperty(thing, "houseserial") == house.serial)
+      if ((GetObjProperty(thing, "secure") == 1) && (thing.movable == 0))
+        EraseObjProperty(thing, "secure");
+        if(GetObjProperty(thing, "houseserial" ) == house.serial)
+          var oldscript := GetObjProperty(thing, "oldscript");
+          if (oldscript == error)
+            oldscript := "";
+          endif
+          thing.usescript := oldscript;
+          thing.movable := 1;
+          EraseObjProperty(thing, "houseserial" );
+          EraseObjProperty(thing, "oldscript" );
+        endif
+      elseif ((GetObjProperty(thing, "lockeddown" ) == 1) && (thing.movable == 0))
+        thing.movable := 1;
+        EraseObjProperty(thing, "houseserial");
+        EraseObjProperty(thing, "lockeddown");
+      elseif (thing.movable == 0)
+        if(thing.objtype == 0xa390)
+          MoveCharacterToLocation(thing, thing.x, thing.y, GetMapInfo(thing.x, thing.y).z, MOVEITEM_FORCELOCATION);
+        else
+          DestroyItem(thing);
+        endif
+      endif
+    endif
+  endforeach
+  DestroyMulti(house );
+  return;
+endfunction
+
+function statuscheck(house, who, type)
+  var nfo := {};
+  case(type)
+    1: nfo := GetObjProperty(house, "coownlist");
+    2: nfo := GetObjProperty(house, "friendlist");
+    3: nfo := GetObjProperty(house, "banlist");
+  endcase
+  if(who.serial in nfo)
+    return 1;
+  else
+    return 0;
+  endif
+endfunction
+
+function IsInContainer(container, item)
+  foreach thing in EnumerateItemsInContainer(container)
+    if(thing.serial == item.serial)
+      return 1;
+    endif
+  endforeach
+  return 0;
+endfunction

@@ -1,0 +1,14 @@
+use uo;
+
+include "../../sench";
+
+program makeRandomSenchantedWeapon( who, level )
+
+	var theWep := makeRandomArmour( who.backpack );
+
+	if( theWep )
+		var theEnch := getRandomEnchantment( level, "arm" );
+		addEnch( theWep, theEnch );
+	endif
+
+endprogram

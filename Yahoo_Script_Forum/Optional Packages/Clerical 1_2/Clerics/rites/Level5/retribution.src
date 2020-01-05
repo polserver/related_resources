@@ -1,0 +1,35 @@
+use uo;
+use util;
+use os;
+
+include "../../cleric";
+
+program retribution(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif
+	
+	var targ :=ClericalTarget(who, info.npctarget, "Select a target", TGTOPT_CHECK_LOS + TGTOPT_HARMFUL);
+	
+	if (!targ.ip && !targ.npctemplate)
+		SendSysMessage(who, "Cancelled");
+		return;
+	elseif (!DistanceCheck(who, targ, piety+3))
+		SendSysMessage(who, "Too far away.");
+		return;
+	endif
+	
+	piety := piety+2;
+	
+	var thepain := RandomDiceRoll("1d10")+50; // 50-60 damage
+	
+	PlayMovingEffect(who, targ, 14036,10,30);
+	PlaySoundEffect(targ,552);
+	ApplyDamage(targ, thepain);	
+endprogram

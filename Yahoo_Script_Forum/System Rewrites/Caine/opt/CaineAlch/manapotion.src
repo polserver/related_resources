@@ -1,0 +1,33 @@
+use os;
+use uo;
+use util;
+use cfgfile;
+include "drinkpotion";
+
+program drink_blue (character, potion)
+if (!checkifcandrink(character,potion))
+        return;
+endif
+    local potion_strength := get_potion_strength(potion);
+
+
+    if (is_poison(potion))
+        do_poison(character, potion);
+    else
+        empty_bottle(character, potion);
+        local old_mana := character.mana;
+
+        local thestring := cstr(potion_strength) + "d6";
+        local increase :=  RandomDiceRoll(thestring);
+        SendSysMessage(character, "You have gained " + increase + " mana");
+        character.mana := character.mana + increase;
+        detach();
+
+        sleep(50 * potion_strength);
+        if (character.mana > character.intelligence)
+                character.mana := character.intelligence;
+        endif
+
+    endif
+
+endprogram

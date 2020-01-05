@@ -1,0 +1,44 @@
+use uo;
+use os;
+use cfgfile;
+use basic;
+use util;
+
+program useArenaRegistry(who, ArenaControl)
+
+	local i, x;
+	local QueueList := GetObjProperty(ArenaControl, "QueueList");
+	if (!QueueList)
+		QueueList := {};
+	else
+		QueueList := SplitWords (QueueList);
+	endif
+
+	foreach x in QueueList
+		if (Cint(x) = who.serial)
+			SendSysMessage(who, "You're already registered.");
+			return;
+		endif
+	endforeach	
+
+	local QueueLen := Len (QueueList);
+
+	if (QueueLen > 7)
+		SendSysMessage(who, "This Arena is full.  Please try again after a few matches.");
+		return;
+	endif
+
+	if (QueueLen >= 1)
+		SendSysMessage(who, "You have been registered.  There are " + QueueLen + " matches scheduled ahead of you.");
+		QueueLen := QueueLen + 1;
+		QueueList[QueueLen] := CStr(who.serial);
+		SetObjProperty(ArenaControl, "QueueList", CStr(QueueList) );
+		SendSysMessage(who, "QueueList = " + QueueList);		
+	else
+		SendSysMessage(who, "Preparing the registry.   One moment please.");
+		QueueList := Cstr(who.serial);
+		SetObjProperty(ArenaControl, "QueueList", QueueList);
+		SendSysMessage(who, "QueueList = " + QueueList);
+	endif
+
+endprogram

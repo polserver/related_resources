@@ -1,0 +1,42 @@
+use uo;
+use util;
+use os;
+
+include "include/client";
+
+program thunderstorm( who , params )
+    var names := {};
+    local B := names.size();
+    local i := 5;
+
+broadcast( "A thunderstorm moves into " + params );
+
+while ( i >= 1 )
+    var rand := RandomInt( 26 );
+    var res := 
+      SetRegionWeatherLevel( params, // region name
+                                1,   // weather type = rain
+                               50,   // severity
+                                0,   // aux
+                             rand ); // lightoverride
+
+    foreach item in EnumerateOnlineCharacters()
+         local pick := RandomInt(3);
+             case(pick)
+               0: PlaySoundEffect(who, SFX_29);
+   	       1: PlaySoundEffect(who, SFX_2A);
+	       2: PlaySoundEffect(who, SFX_207);
+            endcase
+         PlayLightningBoltEffect(item);
+         sleep(3);
+    endforeach
+    if (!res)
+        SendSysMessage( who, "Error: " + res.errortext );
+    endif
+    i := i - 1;
+    sleep(2);
+endwhile
+
+start_script(":daynight:daynight");
+
+endprogram

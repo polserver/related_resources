@@ -1,0 +1,80 @@
+
+use uo;
+use http;
+use os;
+include "include/eventid";
+include "include/randname";
+include "include/utility";
+include "include/mrcspawn";
+include "include/dist";
+include "include/client";
+ 
+ 
+writehtml("<html><head><title>Mytharrian Vendors</title></head><body bgcolor=\"#000000\" text=\"#FFFFFF\">");
+
+    
+
+
+
+var ven := queryparam("vs") ;
+var vendor := systemfindobjectbyserial(cint(ven));
+var vnm := vendor.name;
+vnm[",",1000] := "";
+var x := vendor.x;
+var y := vendor.y;
+x := cint( x / 8.125);
+y := cint(y / 8.008);
+writehtml("<P STYLE=\"position:absolute; top:" + y + "; left:" + X + "\">X   " + vnm + "</P>");
+writehtml("<IMG SRC=\"mythmap.jpg\" STYLE=\"position:absolute; top:0; left:0; z-index:-1\">");
+
+var mastername := getobjproperty(vendor, "mn");
+var contact := getobjproperty(vendor, "cont");
+var storage := FindStorageArea( "Merchant Storage" );
+var  inv_fs := find_or_create_item( storage,vendor.serial + " 1C", 0xE7C );
+writehtml("Vendor Name: " + vnm);
+writehtml("<br>Master : " + mastername);
+if (contact)
+        writehtml("<br>Contact " + contact);
+endif
+writehtml("</br>Location: (" + vendor.x + "," + vendor.y + "," + vendor.z + ")");
+writehtml("<span STYLE=\"position:absolute; top:520; left:0\">");
+writehtml("<table border=\"1\"><tr><td>Item</td><td>Price</td><td>Quantity</td></tr>");
+var item;
+var theline;
+if (!inv_fs)
+	writehtml("Error! Could not find inventory");
+endif
+var tname;
+var tquant;
+
+
+foreach item in EnumerateItemsInContainer( inv_fs )
+	tname := item.desc;
+	if (!tname)
+		tname := item.name;
+	endif
+	tquant := item.amount;
+	if (!tquant)
+		tquant := 1;
+	endif
+	if (item.container.serial = inv_fs.serial)
+        	theline := "<tr><td>" + tname+ "</td><td>" + item.sellprice  + "</td><td>" + tquant + "</td></tr>";
+	endif
+        writehtml(theline);
+endforeach
+writehtml("</table>");
+
+var buylist := GetObjProperty(vendor,"buylist");
+var buyprice := GetObjProperty(vendor,"buyprice");
+var i;
+if (buylist)
+      writehtml("<br><br><br>" + vnm + " will buy the following items:");
+      writehtml("<table border=\"1\"><tr><td>Buying</td><td>Pays</td></tr>");
+      for (i := 1; i <= len(buylist); i := i + 1)
+                writehtml("<tr><td>" + buylist[i] + "</td><td>" + buyprice[i] + "</td></tr>");
+      endfor  
+      writehtml("</table></html>");
+endif
+writehtml("<br><br><br><b>Best when viewed with a CSS-compliant browser, such as MSIE 5.0</b>");
+writehtml("</BODY></HTML>");
+

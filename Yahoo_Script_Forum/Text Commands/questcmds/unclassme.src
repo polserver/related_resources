@@ -1,0 +1,6 @@
+use uo;
+
+program unclassme(who)
+	EraseObjProperty( who, "class" );
+	EraseObjProperty( who, "class_skills" );
+endprogram

@@ -1,0 +1,148 @@
+///////////////////////////////////////////////////////////
+// NpcUtil.src
+//
+// Displays a gump of all the npc templates in npcdesc.cfg
+// all allows for the spawning of them.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 19-Apr-2000
+// Updated: 19-Apr-2000
+//
+///////////////////////////////////////////////////////////
+
+use uo;
+use os;
+use cfgfile;
+
+include "include/gumps";
+include "include/gumputil";
+
+const NPCDESC			:= "::npcdesc";
+const C_YELLOW 			:= 52;
+const C_RED				:= 37;
+const C_BLUE			:= 87;
+const C_GRAY			:= 50;
+const TPERPAGE			:= 20;
+const MAX_X				:= 200;
+const MAX_Y				:= 420;
+
+var npccfg := ReadConfigFile(NPCDESC);
+var templates := GetConfigStringKeys(npccfg);
+
+program NpcUtil(who)
+	SendSysMessage(who, "Please wait...");
+
+	GFInitGump(0, 0);
+	GFPage(0);
+	GFResizePic(0, 0, BKGND_BLACKSLAB, MAX_X, MAX_Y);
+	GFTextLine(40, 8, 0, "NPC Templates");
+	GFTextLine(42, 10, C_YELLOW, "NPC Templates");
+	GFTextLine(15, MAX_Y - 60, C_BLUE, "Good");
+	GFTextLine(60, MAX_Y - 60, C_GRAY, "Neutral");
+	GFTextLine(120, MAX_Y - 60, C_RED, "Evil");
+	GFTextLine(15, MAX_Y - 40, C_YELLOW, "#Templates: " + templates.size());
+
+	// Count how many pages we need.
+	var numtemp := templates.size();
+	var numpages := 1;
+	while (numtemp > 0)
+		numtemp := numtemp - TPERPAGE;
+		if (numtemp > 0)
+			numpages := numpages + 1;
+		endif
+	endwhile
+
+	var buttons := {};
+
+	var pg;
+	for (pg := 1; pg <= numpages; pg := pg + 1)
+		ComposeRunesPage(pg, templates, buttons, numpages);
+	endfor
+
+	var retkey := GFSendGump(who);
+
+	var key;
+	var num;
+	for (num := 1; num <= buttons.size(); num := num + 1)
+		if (buttons[num] = retkey[0])
+			key := num;
+			break;
+		endif
+	endfor
+
+	if (key = 0 or key = error)
+		return;
+	endif
+
+	CreateNpc(who, templates[key]);
+endprogram
+
+///////////////////////////////////////////////////////////
+// Purpose: Composes a page of templates
+// Params:  page		Page number to compose.
+// Returns: 0/1
+///////////////////////////////////////////////////////////
+function ComposeRunesPage(page, templates, byref buttons, maxpages)
+	var bX := 20;
+	var y := 50;
+	var tX := 40;
+	var yShift := 15;
+	var numtemp := TPERPAGE * page;
+	var starttemp := TPERPAGE * (page - 1) + 1;
+
+	GFPage(page);
+
+	// Set up the up/down arrows.
+	if (page = 1 and page != maxpages) // 1st page
+		GFButtonPage(MAX_X - 40, MAX_Y - 40, G_TRIANGLE_DOWN, G_TRIANGLE_DOWN, page + 1);
+	elseif (page = maxpages and page != 1) // last page
+		GFButtonPage(MAX_X - 40, 40, G_TRIANGLE_UP, G_TRIANGLE_UP, page - 1);
+	elseif (page > 1 and page < maxpages) // mid pages
+		GFButtonPage(MAX_X - 40, 40, G_TRIANGLE_UP, G_TRIANGLE_UP, page - 1);
+		GFButtonPage(MAX_X - 40, MAX_Y - 40, G_TRIANGLE_DOWN, G_TRIANGLE_DOWN, page + 1);
+	endif
+
+	var bt;
+	var tn;
+	var template;
+	var txtcol;
+	for (tn := starttemp; tn <= numtemp; tn := tn + 1)
+		template := templates[tn];
+		if (!template)
+			return;
+		endif
+
+		case (npccfg[template].alignment)
+			"good" : txtcol := C_BLUE;
+					 break;
+			"evil" : txtcol := C_RED;
+					 break;
+			default: txtcol := C_GRAY;
+		endcase
+
+		bt := GFButtonId(bX, y, G_SMALL_GEM_0, G_SMALL_GEM_1, 1);
+		buttons.append(bt.keyid);
+		GFTextCrop(tX, y - 3, 320, 20, txtcol, template);
+		y := y + yShift;
+	endfor
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Creates an NPC from the template.
+// Params:  who			ref to user.
+//			template	Template name from npcdesc.cfg
+// Returns: 0/1
+///////////////////////////////////////////////////////////
+function CreateNpc(who, template )
+
+    local props array;
+    props.+facing := who.facing;
+    local loc := TargetCoordinates(who);
+
+    local result := CreateNpcFromTemplate( template, loc.x, loc.y, loc.z, props );
+    if (!result)
+        SendSysMessage( who, "NPC Creation Failed: " + result.errortext );
+    endif
+endfunction

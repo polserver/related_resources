@@ -1,0 +1,4 @@
+
+program Rotate0( Item )
+	Item.facing := 3;
+endprogram

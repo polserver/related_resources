@@ -1,0 +1,102 @@
+//////////////////////////////////////////////////////////////////////
+//
+//      Advanced Teleporting ReWrite of the SoM-Scripting-Team o|0|o
+//
+//      Features:
+//
+//        -Teleport-Flame while teleporting as usual
+//        -Multi-Teleporting on/off by clicking on yourself
+//
+//////////////////////////////////////////////////////////////////////
+
+
+use uo;
+use os;
+
+include "include/client";
+
+program textcmd_tele(who)
+
+    SendSysMessage(who, "Where do you want to teleport?");
+
+    
+    var i;
+    var flame1;
+    var flame2;
+    var result;
+    var where := TargetCoordinates(who);
+  
+    if (where)
+
+            if ((where.x = who.x) and (where.y = who.y))
+
+                    SendSysMessage(who, "Multi-Teleporting activated");
+
+                    while(1)
+                       
+                           where := TargetCoordinates(who);
+
+                           if ((where.x = who.x) and (where.y = who.y))
+
+                                   SendSysMessage(who, "Multi-Teleporting inactivated");
+
+                                   break;
+
+                           elseif (where)
+
+                                   result := MoveCharacterToLocation(who, where.x, where.y, where.z, MOVECHAR_FORCELOCATION);
+                                   
+                                   if (!result)
+                                           SendSysMessage(who, result.errortext);
+                                   endif
+
+                           else
+
+                                   break;
+
+                           endif
+                                     
+                    endwhile
+
+                    return;
+                                       
+            endif
+
+            if ((who.cmdlevel>1) and (who.concealed<>1))
+
+                    flame1 := CreateItemAtLocation(who.x, who.y, who.z, 0xFF03, 1);
+
+                    PlaySoundEffect(who, SFX_228);
+
+                    SleepMs(300);
+            
+            endif
+
+            
+            local result := MoveCharacterToLocation(who, where.x, where.y, where.z);
+
+
+            if ((who.cmdlevel>1) and (who.concealed<>1))
+
+                    flame2 := CreateItemAtLocation(who.x, who.y, who.z, 0xFF03, 1);
+
+                    PlaySoundEffect(who, SFX_228);
+
+            endif
+
+            if (!result)
+                    result := MoveCharacterToLocation(who, where.x, where.y, where.z, MOVECHAR_FORCELOCATION);
+            endif
+
+            SleepMs(2000);
+            DestroyItem(flame1);
+
+            SleepMs(700);
+            DestroyItem(flame2);
+
+            if (!result)
+                    SendSysMessage(who, result.errortext);
+            endif
+    endif
+
+endprogram

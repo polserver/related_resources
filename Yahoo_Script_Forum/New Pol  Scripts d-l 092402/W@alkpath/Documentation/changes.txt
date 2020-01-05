@@ -1,0 +1,23 @@
+NPCWalkPath_AI package:
+
+Note: All details are always added to the complete readme.txt file.
+
+04/28/00
+- added [color] command
+- added [graphic] command
+- added [say] command
+- updated documentation
+    - added demo
+    - added command explinations and examples
+    - updated email address
+
+04/30/00
+- added [rename] command
+- updated .addpath command to use params more efficiently fixing the [say] command.
+- updated the .setnpcpath command to set NPC paths and reset to new paths
+- updated documentation
+- added this file changes.txt
+- moved some console output to system message output
+
+
+Email: casswhite@home.com

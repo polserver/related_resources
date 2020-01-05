@@ -1,0 +1,36 @@
+///////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////
+//  START.SRC - script that is run during startup of server.
+//
+//  Author: ???? ????/??/??
+//
+//  Recent Modifications
+//      1999/06/28 Ignatius added creation of system teleporters.
+//
+////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////
+
+Use uo;
+Use os;
+
+include "util/bank";
+include "include/utility";
+
+include "include/teleporters";
+
+// ** Hotspots include file **
+include "include/hotspots";
+
+// todo: force shutdown if unable, or make sure this can't fail.
+OpenWorldBank();
+
+find_or_create_storage( "Merchant Storage" );
+
+
+// Enables dungeonteleporters.
+CreateTeleporters();
+
+// ** Create Hotspots **
+CreateHotspots();
+
+

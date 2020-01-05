@@ -1,0 +1,21 @@
+use uo;
+
+var foccilist :=
+{
+	"PowerFocus",
+	"SpiritFocus",
+	"LifeFocus",
+	"ArcaneFocus",
+	"TimeFocus",
+	"EarthFocus",
+};
+
+program makefocci(who, type)
+	if (!type || type == "all")
+		foreach focci in foccilist
+			createiteminbackpack(who, getobjtypebyname(focci), 50);
+		endforeach
+	else
+		createiteminbackpack(who, getobjtypebyname(type), 50);
+	endif
+endprogram

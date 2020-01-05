@@ -1,0 +1,1 @@
+Now you've installed everything (hopefully :P), its time to recompile, once youve done that, just boot your shard back up and away you go! Checkout the 'docs' folder for more info on creating your own enchantments and effects.

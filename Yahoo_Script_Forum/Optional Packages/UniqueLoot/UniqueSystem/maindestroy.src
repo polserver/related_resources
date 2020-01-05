@@ -1,0 +1,15 @@
+use uo;
+use os;
+
+include "include/unique";
+
+program maindestroy( item ) 
+
+if (GetObjProperty(item,"unique") && !GetObjProperty(item,"justdestroy"))
+toUniqueBox(item);
+return 0;
+else
+return 1;
+endif
+
+endprogram

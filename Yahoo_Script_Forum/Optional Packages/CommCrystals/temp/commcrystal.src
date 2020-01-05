@@ -1,0 +1,89 @@
+use uo;
+use basic;
+
+const CrystalObj := 0xC001;
+const ReceiverObj := 0xC002;
+
+program use_commcrystal(who, crystal)
+
+local CrystalStatus := GetObjProperty(crystal, "Status");
+local Charges := GetObjProperty(crystal, "Charges");
+Charges := Cint(Charges);
+local LinkString := GetObjProperty(crystal, "Links");
+local Links := Splitwords(LinkString);
+local LinkCount := Len(Links);
+local CrystalId := crystal.serial;
+local i, blank, placeholder, receiver;
+
+SendSysMessage(who, "Select object.");
+local TargetItem := target(who);
+
+if (TargetItem.objtype = 0x0f30)
+	Charges := Charges + 100;
+	SendSysMessage(who, "Recharging Crystal.  You now have " + Charges + " charges remaining.");
+	SetObjProperty(crystal, "Charges", CStr(Charges) );
+	DestroyItem(TargetItem);
+	return;
+endif
+
+if ( (TargetItem.objtype <> CrystalObj) and (TargetItem.objtype <> ReceiverObj) )
+	SendSysMessage(who, "That is not a communication crystal.");
+	return;
+endif
+
+if (TargetItem.serial = crystal.serial)
+	if (CrystalStatus = "OFF")
+		SendSysMessage(who, "Crystal activated.  You are linked to " + (LinkCount-1) + " receivers.");
+		SetObjProperty(crystal, "Status", "ON");
+		SendSysMessage(who, "You have " + Charges + " charges remaining.");
+		return;
+	else
+		SendSysMessage(who, "Crystal deactivated.");
+		SetObjProperty(crystal, "Status", "OFF");
+		return;
+	endif
+endif
+
+if (TargetItem.objtype = ReceiverObj)
+	local Master := GetObjProperty(TargetItem, "Master");
+	Master := Cint(Master);
+
+	if (Master = 0)
+		If (LinkCount > 10)
+			SendSysMessage(who, "Too many receivers.   Aborted.");
+			return;
+		endif
+		SendSysMessage(who, "Linked.");
+		SetObjProperty(TargetItem, "Master", CrystalId);
+		LinkString := Cstr(LinkString) + " " + Cstr(TargetItem.serial);
+		SetObjProperty(crystal, "Links", LinkString);
+		return;
+	endif
+
+	if (Master = CrystalId)
+		receiver := CStr(TargetItem.serial);
+		placeholder := "";
+		i := 1;
+		LinkCount := LinkCount + 1;
+		SetObjProperty(TargetItem, "Master", 0);
+
+		While (i < LinkCount)
+			blank := CStr(Links[i]);
+				if (blank = receiver)
+					blank := "nothing";
+					//we ignore this one
+				else
+					placeholder := placeholder + " " + blank;
+				endif
+			i := i + 1;
+		endwhile
+		SetObjProperty(crystal, "Links", placeholder);
+		SendSysMessage(who, "Unlinked.");
+		return;
+
+	else
+		SendSysMessage(who, "That receiver is in use.");
+		return;
+	endif
+endif
+endprogram

@@ -1,0 +1,45 @@
+
+use cfgfile;
+use uo;
+
+include "nature";
+include "include/std";
+
+program nature_logon(who)
+
+	var cfg := ReadConfigFile("nature");
+	var elem := FindConfigElem(cfg, "seasons");
+	var seasons := GetConfigInt(elem, "seasonal");
+	UnloadConfigFile(cfg);
+
+	if (!GetGlobalProperty("Desolation"))
+	   if (seasons)
+		var calendar := GetGlobalProperty("Calendar");
+		case (calendar[MONTH])
+			12:
+		 	 1:
+		 	 2:
+		    	   if (seasons = 1)
+                        	   Season(who, SEASON_WINTER);
+			   elseif (seasons = 2)
+				   Season(who, SEASON_FALL);
+		       	   elseif (seasons = 3)
+			   	   Season(who, SEASON_FELUCCA);
+                       	   endif
+			 3:
+			 4:
+			 5:
+				Season(who, SEASON_SPRING);
+			 6:
+			 7:
+			 8:
+				Season(who, SEASON_SUMMER);
+			 9:
+			10:
+			11:
+				Season(who, SEASON_FALL);
+		endcase
+	   endif
+	endif
+	
+endprogram

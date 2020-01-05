@@ -1,0 +1,8 @@
+use uo;
+
+program mark(caster)
+	var cast_on := Target(caster, TGTOPT_NOCHECK_LOS);
+	SetObjProperty(cast_on, "x", caster.x);
+	SetObjProperty(cast_on, "y", caster.y);
+	SetObjProperty(cast_on, "z", caster.z);
+endprogram

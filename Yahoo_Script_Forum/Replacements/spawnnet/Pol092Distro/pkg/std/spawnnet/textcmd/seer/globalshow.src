@@ -1,0 +1,26 @@
+Use uo;
+
+include "include/spawnnet";
+
+
+
+program global_show(who)
+
+
+local runeserial := GetGlobalProperty("runeserial");
+
+local counter:=0,dummy;
+foreach rune in runeserial
+	if(!rune)
+		continue;
+	endif
+	dummy := SystemFindObjectBySerial(rune);
+	if(!dummy)
+		continue;
+	endif
+	dummy.graphic := 0x20f8;
+	counter:=counter+1;
+endforeach
+
+SendSysMessage(who,"Insg. "+counter+" Runen aufgedeckt.");
+endprogram

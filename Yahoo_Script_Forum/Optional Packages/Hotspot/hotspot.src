@@ -1,0 +1,335 @@
+/*
+ *  System Hotspots - fires when someone walks onto a hotspot
+ *
+ *  Author: Brian    brian@pcsys.demon.co.uk   (8th Oct 2001)
+ */
+
+use os;
+use uo;
+
+include "include/spellrestrictions";
+include "include/spellattack";
+include "include/createnpc";
+include "include/statmod";
+include "include/abs";
+include "include/firewall";
+include "include/fields";
+include "include/fields";
+include "include/objtype";
+include "include/clock";
+
+set_debug(1);
+
+program hotspots( mobile, hotspot )
+
+local lastused := 0;
+
+If (GetObjProperty(hotspot,"lastused"))
+        lastused := CInt(GetObjProperty(hotspot,"lastused"));
+endif
+
+
+// The Delay in seconds as to when the hotspot will be active again.
+if (ReadGameClock() - 180 > lastused)
+
+    if (mobile.npctemplate)
+        return;
+    endif
+    local action, amount, npctype, npc, circle, dmg, magery, mod_amount, duration, victims, i, fields1, fields2, fields3, fields4, fieldnsobj, fieldewobj, soundfxobj;
+    action := GetObjProperty( hotspot, "Action" );
+    npctype := GetObjProperty( hotspot, "NPCType");
+    amount := CInt(GetObjProperty( hotspot, "Amount"));
+
+    if (action = "random")
+        case(RandomInt(10)+1)
+                1:
+                        action := "clumsy";
+                2:
+                        action := "feeblemind";
+                3:
+                        action := "weaken";
+                4:
+                        action := "agility";
+                5:
+                        action := "cunning";
+                6:
+                        action := "strength";
+                7:
+                        action := "harm";
+                8:
+                        action := "heal";
+                9:
+                        action := "lightning";
+                10:
+                        action := "poison";
+                        amount := 2;
+        endcase
+    endif
+
+    if (action = "firefield")
+        fieldnsobj := UOBJ_FIREFIELD_NS;
+        fieldewobj := UOBJ_FIREFIELD_EW;
+        soundfxobj := SOUND_EFFECT_FIREFIELD;
+        action := "Field";
+    endif
+    if (action = "poisfield")
+        fieldnsobj := UOBJ_POISONFIELD_NS;
+        fieldewobj := UOBJ_POISONFIELD_EW;
+        soundfxobj := SOUND_EFFECT_FIREFIELD;
+        action := "Field";
+    endif
+    if (action = "parafield")
+        fieldnsobj := UOBJ_PARAFIELD_NS;
+        fieldewobj := UOBJ_PARAFIELD_EW;
+        soundfxobj := SFX_20C;
+        action := "Field";
+    endif
+    if (action = "enerfield")
+        fieldnsobj := UOBJ_EFIELD_NS;
+        fieldewobj := UOBJ_EFIELD_EW;
+        soundfxobj := SFX_SPELL_ENERGY_FIELD;
+        action := "Field";
+    endif
+    if (action = "stonewall")
+        fieldnsobj := UOBJ_STONEWALL_NS;
+        fieldewobj := UOBJ_STONEWALL_EW;
+        soundfxobj := SFX_SPELL_WALL_OF_STONE;
+        action := "Field";
+    endif
+
+//    Diagnostic code:
+//    print("Action:" + action + ", npctype:" + npctype + ", amount:" + amount);
+
+    case(action)
+
+        "Field":
+                If (npctype = "north" or npctype = "all")
+                        fields1 := CreateNorthSouthField(mobile, fieldnsobj, mobile.x, mobile.y - 3, GetMapInfo(mobile.x, mobile.y - 3).z, 5);
+                endif
+
+                If (npctype = "south" or npctype = "all")
+                     fields2 := CreateNorthSouthField(mobile, fieldnsobj, mobile.x, mobile.y + 4, GetMapInfo(mobile.x, mobile.y + 4).z, 5);
+                endif
+
+                If (npctype = "east" or npctype = "all")
+                        fields3 := CreateEastWestField(mobile, fieldewobj, mobile.x + 4, mobile.y, GetMapInfo(mobile.x + 4, mobile.y).z, 5);
+                endif
+
+                If (npctype = "west" or npctype = "all")
+                        fields4 := CreateEastWestField(mobile, fieldewobj, mobile.x - 3, mobile.y, GetMapInfo(mobile.x - 3, mobile.y).z, 5);
+                endif
+                detach();
+
+                for (i := 1; i <= 5; i := i + 1)
+                        PlaySoundEffect(fields1[i], soundfxobj);
+                        sleep(amount/4);
+                endfor
+
+                If (npctype = "north" or npctype = "all")
+                        foreach fieldpart in fields1
+                                DestroyItem(fieldpart);
+                        endforeach
+                endif
+                If (npctype = "south" or npctype = "all")
+                        foreach fieldpart in fields2
+                                DestroyItem(fieldpart);
+                        endforeach
+                endif
+                If (npctype = "east" or npctype = "all")
+                        foreach fieldpart in fields3
+                                DestroyItem(fieldpart);
+                        endforeach
+                endif
+                If (npctype = "west" or npctype = "all")
+                        foreach fieldpart in fields4
+                                DestroyItem(fieldpart);
+                        endforeach
+                endif
+
+
+          
+        "earthquake":
+                magery := GetSkill(mobile, SKILLID_MAGERY);
+                victims := ListMobilesNearLocation( mobile.x , mobile.y , mobile.z , amount );
+                
+                PlaySoundEffect( mobile, SFX_220 );
+                foreach mobile1 in victims
+                        if( mobile1.serial != mobile.serial )
+                                send_attack(mobile1,mobile, 57);
+                                dmg := CalcSpellDamage(circle,mobile,mobile1);
+                                PrintTextAbovePrivate( mobile1 ,
+                                 "You are tossed about as the earth trembles below your feet!" , mobile1 );
+                                PlaySoundEffect( mobile1, SFX_SPELL_EARTHQUAKE );
+                                PlayObjectCenteredEffect( mobile1, FX_SMOKE, 7, 7);
+                                ApplyRawDamage( mobile1 , Resisted(circle,mobile,mobile,dmg,"earthquake") );
+                        endif
+                endforeach
+
+                sleep(2);
+                PlaySoundEffect( mobile, SFX_223 );
+
+        "lightstrk":
+                local range := amount;
+                circle := 7;
+                If (npctype = "out")
+                        range := 15;
+                endif
+                victims := ListMobilesNearLocationEx( mobile.x , mobile.y , mobile.z , range , 0x03);
+                foreach mobile1 in victims
+                        If (npcType = "In" or
+                           (npcType = "Out" and (ABS(mobile.x - mobile1.x) > amount or ABS(mobile.y - mobile1.y) > amount)))
+                                dmg := CalcSpellDamage(circle,mobile,mobile1);
+                                send_attack(mobile1,mobile, 49);
+                                PlayLightningBoltEffect( mobile1 );
+                                PlaySoundEffect(mobile1, SFX_SPELL_LIGHTNING);
+                                PlayLightningBoltEffect( mobile1);
+                                ApplyRawDamage( mobile1 , Resisted(circle,mobile,mobile1,dmg,"chain_lightning") );
+                        endif
+                endforeach
+                
+
+        "invisible":
+                PlaySoundEffect(mobile, SFX_SPELL_INVISIBILITY);
+                mobile.hidden := 1;
+
+                detach();
+                sleep (amount);
+                mobile.hidden := 0;
+
+        "clumsy":
+                circle := 1;
+                PlaySoundEffect(mobile, SFX_SPELL_CLUMSY);
+                PlayObjectCenteredEffect( mobile, FX_CURSE_EFFECT, 7,7);
+                if (!CanMod(mobile, "dex"))
+                        return;
+                endif
+                magery := GetSkill(mobile, SKILLID_MAGERY);
+                mod_amount := GetModAmount( magery );
+                duration := GetModDuration( magery );
+                DoTempMod(mobile, "dex", 0 - mod_amount, duration);
+
+        "feeblemind":
+                circle := 1;
+                PlaySoundEffect(mobile, SFX_SPELL_FEEBLEMIND);
+                PlayObjectCenteredEffect( mobile, FX_CURSE_EFFECT, 7,7);
+                if (!CanMod(mobile, "int"))
+                        return;
+                endif
+                magery := GetSkill(mobile, SKILLID_MAGERY);
+                mod_amount := GetModAmount( magery );
+                duration := GetModDuration( magery );
+                DoTempMod(mobile, "int", 0 - mod_amount, duration);
+
+        "weaken":
+                circle := 2;
+                PlaySoundEffect(mobile, SFX_SPELL_WEAKEN);
+                PlayObjectCenteredEffect( mobile, FX_BLESS_EFFECT, 7,7);
+                if (!CanMod(mobile, "str"))
+                        return;
+                endif
+                local magery := GetSkill(mobile, SKILLID_MAGERY);
+                local mod_amount := GetModAmount( magery );
+                local duration := GetModDuration( magery );
+                DoTempMod(mobile, "str", 0 - mod_amount, duration);
+
+        "agility":
+                circle := 1;
+                PlaySoundEffect(mobile, SFX_SPELL_AGILITY);
+                PlayObjectCenteredEffect( mobile, FX_BLESS_EFFECT, 7,7);
+                if (!CanMod(mobile, "dex"))
+                        return;
+                endif
+                magery := GetSkill(mobile, SKILLID_MAGERY);
+                mod_amount := GetModAmount( magery );
+                duration := GetModDuration( magery );
+                DoTempMod(mobile, "dex", mod_amount, duration);
+
+        "cunning":
+                circle := 2;
+                PlaySoundEffect(mobile, SFX_SPELL_CUNNING);
+                PlayObjectCenteredEffect( mobile, FX_BLESS_EFFECT, 7,7);
+                if (!CanMod(mobile, "int"))
+                        return;
+                endif
+                magery := GetSkill(mobile, SKILLID_MAGERY);
+                mod_amount := GetModAmount( magery );
+                duration := GetModDuration( magery );
+                DoTempMod(mobile, "int", mod_amount, duration);
+
+        "strength":
+                circle := 2;
+                PlaySoundEffect(mobile, SFX_SPELL_STRENGTH);
+                PlayObjectCenteredEffect( mobile, FX_BLESS_EFFECT, 7,7);
+                if (!CanMod(mobile, "str"))
+                        return;
+                endif
+                local magery := GetSkill(mobile, SKILLID_MAGERY);
+                local mod_amount := GetModAmount( magery );
+                local duration := GetModDuration( magery );
+                DoTempMod(mobile, "str", mod_amount, duration);
+
+        "harm":
+                circle := 2;
+                dmg := CalcSpellDamage(circle,mobile,mobile);
+                PlaySoundEffect(mobile, SFX_SPELL_HARM);
+                PlayObjectCenteredEffect( mobile, FX_GLOW_SPIKE, 0x0a,0x1e);
+                ApplyRawDamage( mobile, Resisted(circle,mobile,mobile,dmg,"harm") );
+
+        "heal":
+                circle := 1;
+		local die_string := "4d6";
+		local healed := RandomDiceRoll( die_string ) ;
+		HealDamage( mobile , healed );
+		PlayObjectCenteredEffect( mobile , FX_SPARK_EFFECT , 7 , 0x10 );
+		PlaySoundEffect( mobile , SFX_SPELL_HEAL );
+
+        "lightning":
+                circle := 4;
+		dmg := CalcSpellDamage(circle,mobile,mobile);
+		PlaySoundEffect(mobile, SFX_SPELL_LIGHTNING);
+		PlayLightningBoltEffect( mobile);
+	        ApplyRawDamage( mobile, Resisted(circle,mobile,mobile,dmg,"lightning") );
+
+        "poison":
+                circle := 3;
+                PlayObjectCenteredEffect( mobile, FX_CURSE_EFFECT, 0x0a,0x1e);
+                local p_level := Resisted(circle,mobile,mobile,cint(GetSkill( mobile, SKILLID_MAGERY ) /15),"poison");
+                local poison_level := Cint(GetObjProperty(mobile, "poison_level"));
+                if (p_level < poison_level)
+                        p_level := poison_level;
+                else
+                        SendSysmessage (mobile, "You have been poisoned!");
+                        SetObjProperty(mobile, "poison_level",cstr(p_level));
+                endif
+                start_script( "poisondamage", mobile ); 
+
+        "summon":
+                npc := CreateNpc(npctype, mobile.x + 1, mobile.y, mobile.z);
+                If (amount > 1)                
+                        npc := CreateNpc(npctype, mobile.x - 1, mobile.y, mobile.z);
+                endif
+                If (amount > 2)                
+                        npc := CreateNpc(npctype, mobile.x, mobile.y + 1, mobile.z);
+                endif
+                If (amount > 3)                
+                        npc := CreateNpc(npctype, mobile.x, mobile.y - 1, mobile.z);
+                endif
+                if (amount > 4)
+                        npc := CreateNpc(npctype, mobile.x + 1, mobile.y + 1, mobile.z);
+                endif
+                If (amount > 5)                
+                        npc := CreateNpc(npctype, mobile.x + 1, mobile.y - 1, mobile.z);
+                endif
+                If (amount > 6)                
+                        npc := CreateNpc(npctype, mobile.x - 1, mobile.y + 1, mobile.z);
+                endif
+                If (amount > 7)                
+                        npc := CreateNpc(npctype, mobile.x - 1, mobile.y - 1, mobile.z);
+                endif
+    endcase
+    SetObjProperty(hotspot,"lastused",ReadGameClock());
+
+
+endif
+
+endprogram

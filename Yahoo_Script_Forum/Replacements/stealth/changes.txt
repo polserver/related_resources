@@ -1,0 +1,33 @@
+std-stealth (POL092)
+====================
+    Verified ready for release
+    Second packaged version
+    - Porthios <inferno_13_86@yahoo.ca>
+
+    * * CHANGES * * 
+
+	->  Stealthsteps are now randomized
+	->  Harder to do if mobiles are around (see 1)
+	->  Checks to see if in stealth mode
+	->  possibility to uncomment chr.stealthsteps := 0 and delete private message
+		this would trick the character using stealth so that he would not
+		know if he got stealth or not
+
+std-stealth (POL076)
+====================
+    Verified ready for release
+    First packaged version
+    - Syzygy <syzygy@pobox.com> 19990705
+
+
+
+
+
+/////////////////////////////
+
+1:   The check goes like so:
+
+	a random integer is took from the # of mobiles multiplied by 2
+	if this number is less than the # of mobiles than it will go onto skill checks.
+
+     This means the chance is always 50 %, but the lower the number, the better the chance of getting greater than that number, because the # of possible numbers drawed from random are less.

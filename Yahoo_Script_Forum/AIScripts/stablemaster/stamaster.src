@@ -1,0 +1,168 @@
+// /------------------------------------------------\
+// || Stable Keeper script (aka Puppies Collector) ||
+// ||                                              ||
+// || Creator - RoTTer (daros@cebinet.com.br)      ||
+// ||                                              ||
+// || Version - 0.18                30/11/99 (BR)  ||
+// ||                                              ||
+// \------------------------------------------------/
+
+use npc;
+use os;
+use uo;
+
+include "include/randname";
+include "include/eventid";
+include "include/client";
+
+const MONEY := 0xeed;
+
+global pet := 0;          // Pet to stable
+global player := 0;       // Whoever said "stable"
+
+global stabler := Self();
+
+// Prepare self
+EquipFromTemplate (stabler, "tailor"); //? feel free to change this :P
+
+if (stabler.name["<random>"])
+        SetName (stabler, RandomName (stabler) );
+endif
+// done
+
+
+EnableEvents (EVID_SPEECH, 5);
+EnableEvents (EVID_ITEM_GIVEN);
+
+
+while (1) // Looooop forever
+
+        local event := 0;                   // Event handler (right name? hehe)
+        event := os::wait_for_event (10);   // 10? Copied this "10"... wtf is it?
+
+        if (event.text["stable"]) // So we have an event running, huh?
+
+                player := event.source;
+                TurnToward (event.source);
+
+                Say ("Show me your pet!");
+
+                pet := Target (player);     // Ask the player to target the pet to stable
+
+              if (pet)
+
+                local tempdata := GetObjProperty (pet, "master");
+                local summoned := GetObjProperty (pet, "summoned");
+
+                if ( (pet.script = "tamed") and (tempdata = player.serial) and (!summoned) )   // previously tamed pets seems to
+                                                                                               // still succeed (sp?) on this check
+
+                        local price := pet.strength*2;         // Seems fair?
+                        Say ("I charge " + price + " to take care of " + pet.name + ".");
+
+                        if (!GetPayment (player, price))
+
+                                Say ("Keep this ticket and give it to me when you want " + pet.name + " back.");
+
+                                local ticket := CreateItemInBackpack (player, 0x186E, 1);  // 186E = "virtue stone" objtype... I didnt
+                                                                                           // know what objtype to put :P
+                                Save_Pet_Data (ticket, pet);
+                        endif
+
+                elseif ( (pet.graphic = CID_HUMAN_MALE) or (pet.graphic = CID_HUMAN_FEMALE) )
+                        Say ("Do I look like an Inn Keeper?!");
+                else
+                        Say ("I could stable " + pet.name + " but that is not your pet.");
+                endif
+
+              endif
+
+        endif
+
+        if (event.item)
+                TurnToward (event.source);
+                Load_Ticket_Data (event.source, event.item);
+
+        endif
+
+endwhile
+
+
+function Save_Pet_Data (ticket, pet)
+
+        var tempdata;
+                                   
+        ticket.name := "Pet claim ticket for : " + pet.name;
+        ticket.graphic := 5360; // deed gfx
+
+        SetObjProperty (ticket, "petname", pet.name);
+        SetObjProperty (ticket, "pethp", pet.hp);
+        SetObjProperty (ticket, "petmana", pet.mana);
+
+        tempdata := pet.npctemplate;
+        SetObjProperty (ticket, "pettemplate", tempdata);
+
+        // I suppose theres a better way for doing this, also
+        SetObjProperty (pet, "guardkill", 1);
+        pet.graphic := 1000;            // invis the pet before killing
+        Damage (pet, pet.hp);
+
+endfunction
+
+
+function Load_Ticket_Data (player, ticket)
+
+        local tempdata := 0;
+        local newpet := 0;
+
+        if ( (ticket.objtype = 0x186E) and (ticket.graphic = 5360) ) //Ok, ok, I believe it's a pet deed
+
+                tempdata := GetObjProperty (ticket, "petname");
+                Say ("Oh, let me find " + tempdata + " for you. One moment, please.");
+                Sleep (1);
+
+                tempdata := GetObjProperty (ticket, "pettemplate");
+                newpet := CreateNPCFromTemplate (tempdata, stabler.x, stabler.y, stabler.z);
+
+                tempdata := GetObjProperty (ticket, "petname");
+                newpet.name := tempdata;
+
+                tempdata := GetObjProperty (ticket, "pethp");
+                newpet.hp := tempdata;
+
+                tempdata := GetObjProperty (ticket, "petmana");
+                newpet.mana := tempdata;
+
+                SetObjProperty (newpet, "master", player.serial);
+                SetObjProperty (newpet, "prevtamed", 1);
+                newpet.script := "tamed";
+                RestartScript (newpet);
+
+                tempdata := GetObjProperty (ticket, "petname");
+                Say ("Take care of " + tempdata + " and be sure to feed it!");
+
+                DestroyItem (ticket);
+        else
+                Say ("I have no use for that.");
+        endif
+
+endfunction
+
+
+function GetPayment (player, price)
+
+        // I suppose there's a simpler way to get money from the player... =]
+
+        local backpack := EnumerateItemsInContainer (player.backpack);
+
+        foreach item in backpack
+                if ( (item.objtype = MONEY) and (GetAmount (item) > price) )
+                        SubtractAmount (item, price);
+                        return 0;
+                endif
+        endforeach
+
+        Say ("You dont have " + price + " gold coins!");
+        return 1;            
+
+endfunction

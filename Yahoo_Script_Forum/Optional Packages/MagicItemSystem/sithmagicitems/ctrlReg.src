@@ -1,0 +1,9 @@
+use uo;
+program ctrlReg()
+	var zlink := struct;
+	zlink.+sName := "Siths Magic Items";
+	zlink.+sVer := "1.14";
+	zlink.+bCtrl := 0;
+	zlink.+sScript := "";
+	return zlink;
+endprogram

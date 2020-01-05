@@ -1,0 +1,29 @@
+// .showspawn <range>
+//
+// This command will reveal all spawnpoints within the given range.
+
+use uo;
+
+// Change this if you change the objtype for the spawnpoint.
+const UOBJ_SPAWNPOINT := 0xA401;
+
+program textcmd_showspawn( who, range )
+
+	local i := 0;
+
+	range := Cint(range);
+
+	if (range > 10)
+		SendSysMessage(who, "Invalid range.   Using a maximum range of 10.");
+		range := 10;
+	endif
+
+	foreach x in ListItemsNearLocationOfType(who.x, who.y, who.z, range, UOBJ_SPAWNPOINT)
+		x.graphic := 0x1ea7;
+		PrintTextAbove(x, "Hello, I am a spawnpoint!");
+		i := i + 1;
+	endforeach
+
+	SendSysMessage(who, "Revealed " + i + " spawns.");
+
+endprogram

@@ -1,0 +1,26 @@
+use uo;
+use util;
+
+include "include/client";
+include "include/chaoseffects";
+
+program use_mutationoil(who, oil);
+
+	SendSysMessage(who, "Where do you wish to throw the oil");
+	local casttarg := targetcoordinates (who);
+
+	if (!casttarg)
+		SendSysMessage(who, "Cancelled.");
+		return;
+	endif
+
+	destroyitem(oil);
+	PlayMovingEffectXYZ( who.x, who.y, who.z+15, casttarg.x, casttarg.y, casttarg.z, 0x0f0d, 8, 0, 0 );
+
+	foreach victim in ListMobilesNearLocation(casttarg.x, casttarg.y, casttarg.z, 2);
+		PlaySoundEffect(victim, 0x202);
+		PlayObjectCenteredEffect(victim, 0x375a, 1, 0x10);
+		ChaosMutation(victim);
+	endforeach
+
+endprogram

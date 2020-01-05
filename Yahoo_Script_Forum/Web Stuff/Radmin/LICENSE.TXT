@@ -1,0 +1,54 @@
+License agreement
+
+PLEASE READ THE FOLLOWING LICENSE AGREEMENT CAREFULLY.
+
+YOU ARE GRANTED THE FOLLOWING LIMITED RIGHTS:
+
+a. A non-exclusive, non-transferable right to use the shareware version 
+   of the Remote Administrator for evaluation period of 30 days.
+   (The trial period does not apply if you have registered the software).
+
+b. The right to distribute the software in its shareware form to third parties,
+   provided the latter agree to accept the terms of this Agreement.
+
+c. One purchased license gives right to installing a registered version of 
+   Remote Administrator on 2 computers (client and server for each computer).
+
+d. A SITE license. If the user purchases 20 licensies, he purchases 
+   a SITE license, which gives a user the right to a SITE usage, which 
+   means, that he can use Remote Administrator on an unlimited number 
+   of computers at the same physical SITE location.  
+   This SITE location would be defined as a single building.
+
+e. A COMPANY license. If the user purchases a COMPANY license,
+   he acquires the right to use Remote Administrator inside the COMPANY, 
+   which means, that he can use Remote Administrator on an unlimited 
+   number of computers, regardless of location, but owned or under 
+   the control of the purchaser. 
+   
+
+IT IS STRICTLY PROHIBITED TO:
+
+a. Modify the software partially or completely.
+
+b. Decompile or reverse engineer the software.
+
+c. Refer your registration number to third parties if you are a registered user.
+
+SHOULD YOU FAIL TO COMPLY WITH ANY OF THE ABOVE-MENTIONED YOUR USER'S RIGHTS  WOULD BE AUTOMATICALLY TERMINATED.  THIS TERMINATION WILL BE IN ADDITION TO ANY CRIMINAL, CIVIL OR OTHER REMEDIES.
+
+LIMITED WARRANTY:
+
+LIMITATION OF LIABILITY FOR INDIRECT DAMAGES: The author cannot be held 
+  responsible under any circumstances for damages of any character arising out 
+  of the use of this product.
+
+This software is provided under license on an "AS IS" basis, without warranty 
+  of any kind, expressed or implied .
+
+PROPERTY:
+
+This software, including its code, documentation, appearance, structure, 
+  and organization is an exclusive product of the Dmitry Znosko, who retains   
+  the property rights to the software, its copies, modifications, 
+  or merged parts.

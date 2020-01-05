@@ -1,0 +1,6 @@
+use uo;
+include "include/client";
+include "include/unique";
+program textcmd_openuniques( who )
+	openUniqueBox( who );
+endprogram

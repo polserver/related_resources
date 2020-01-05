@@ -1,0 +1,42 @@
+use uo;
+use util;
+use os;
+
+include "include/client";
+include "druid";
+
+const KillSound := 0x202;
+const KillEffect := 0x375a;
+const SFX_SPELL_FAIL := 0x005b;
+
+program cast_dheal( caster )
+
+	if(!checkstaff(caster))
+		return;
+	endif
+	
+	checkdruidopts(caster, 1);	
+	
+	SendSysMessage(caster, "Select target.");
+	local target1 := target(caster);
+	usemana(caster, 1);
+    	local cast := caster;
+
+
+    	local die_string := "d20+2";
+    	local healed := RandomDiceRoll( die_string ) + CInt(GetEffectiveSkill(caster, SKILLID_ANIMALLORE));
+    
+    	//checks if the target is undead and if yes damages it
+    	if(GetObjProperty(target1, "Undead"))
+    		Damage(target1, healed);
+    		PlayObjectCenteredEffect( target1 , FX_SPARK_EFFECT , 7 , 0x10 ); //remember to change this to more suitable anim :)
+    		return;
+    	endif
+    
+    	HealDamage( target1, healed );
+    	PlayObjectCenteredEffect( target1 , FX_SPARK_EFFECT , 7 , 0x10 );
+    	PlaySoundEffect( target1 , SFX_SPELL_HEAL );
+	
+    	SendSysmessage(Caster, "Nature Healing has restored " + healed + " damage." );
+    	
+endprogram

@@ -1,0 +1,115 @@
+// Ring and Stone quest
+// Copyright 2002 Velina
+// Used and created for the shellinkroth shard
+// http://shellinkroth.kicks-ass.org
+// feel free to use and distribute but do not remove these comments. Please
+// comment any modifications.
+
+use uo;
+use os;
+include "include/client";
+
+program double_click_stone (who, stone)
+var i;
+      if ( getobjproperty(who, "stoned") )
+       sendsysmessage( who, "You place your hand on the stone and the power passes from you to it!" );
+       var travx := CInt(getobjproperty(stone, "mvex"));
+       var travy := CInt(getobjproperty(stone, "mvey"));
+       var travz := CInt(getobjproperty(stone, "mvez"));
+       sendsysmessage(who, travx);
+       sendsysmessage(who, travy);
+       sendsysmessage(who, travz);
+       setobjproperty (who, "oldx", who.x);
+       setobjproperty (who, "oldy", who.y);
+       setobjproperty (who, "oldz", who.z);
+       for( i := who.x - 1; i <= who.x + 1; i := i + 1 )
+		PlayStationaryEffect( i, who.y + 1, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( i, who.y, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( i, who.y - 1, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+	endfor
+          PlaySoundEffect(who,SFX_24B);
+          sleepms(1200);
+          PlayObjectCenteredEffect(who, 0x3709, 0x0a, 0x1e );
+ 	  PlayObjectCenteredEffect(who, FX_FIRE_F_EW, 7, 0x10 );
+      	  PlayObjectCenteredEffect(who, FX_FIRE_F_NS, 7, 0x10 );
+	  PlayLightningBoltEffect(who);
+          var oldgraph := who.graphic;
+          who.graphic := 403;
+          sleepms(180);
+          PlaySoundEffect(who,SFX_20E);
+          MoveCharacterToLocation(who, travx, travy, travz);
+                 for( i := who.x - 1; i <= who.x + 1; i := i + 1 )
+		PlayStationaryEffect( i, who.y + 1, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( i, who.y, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( i, who.y - 1, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+	endfor
+          PlaySoundEffect(who,SFX_24B);
+          sleepms(1200);
+          PlayObjectCenteredEffect(who, 0x3709, 0x0a, 0x1e );
+ 	  PlayObjectCenteredEffect(who, FX_FIRE_F_EW, 7, 0x10 );
+      	  PlayObjectCenteredEffect(who, FX_FIRE_F_NS, 7, 0x10 );
+	  PlayLightningBoltEffect(who);
+          sleepms(1200);
+          who.graphic := oldgraph;
+        sendsysmessage( who, "You have survived the journey!");
+        eraseobjproperty( who, "stoned");
+        setobjproperty( who, "bakedandstoned", 1);
+       else
+        if ( getobjproperty(who, "bakedandstoned") )
+        sendsysmessage( who, "You place your hand on the stone and the power passes from you to it lighting the symbols.");
+       var travx := getobjproperty(who, "oldx");
+       var travy := getobjproperty(who, "oldy");
+       var travz := getobjproperty(who, "oldz");
+       eraseobjproperty (who, "oldx");
+       eraseobjproperty (who, "oldy");
+       eraseobjproperty (who, "oldz");
+        for( i := who.x - 1; i <= who.x + 1; i := i + 1 )
+		PlayStationaryEffect( i, who.y + 1, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( i, who.y, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( i, who.y - 1, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+	endfor
+          PlaySoundEffect(who,SFX_24B);
+          sleepms(1200);
+          PlayObjectCenteredEffect(who, 0x3709, 0x0a, 0x1e );
+ 	  PlayObjectCenteredEffect(who, FX_FIRE_F_EW, 7, 0x10 );
+      	  PlayObjectCenteredEffect(who, FX_FIRE_F_NS, 7, 0x10 );
+	  PlayLightningBoltEffect(who);
+          var oldgraph := who.graphic;
+          who.graphic := 403;
+          sleepms(180);
+          PlaySoundEffect(who,SFX_20E);
+          MoveCharacterToLocation(who, travx, travy, travz);
+                 for( i := who.x - 1; i <= who.x + 1; i := i + 1 )
+		PlayStationaryEffect( i, who.y + 1, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( i, who.y, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+		PlayStationaryEffect( i, who.y - 1, who.z, FX_FLAMESTRIKE, 7, 0x30 );
+	endfor
+          PlaySoundEffect(who,SFX_24B);
+          sleepms(1200);
+          PlayObjectCenteredEffect(who, 0x3709, 0x0a, 0x1e );
+ 	  PlayObjectCenteredEffect(who, FX_FIRE_F_EW, 7, 0x10 );
+      	  PlayObjectCenteredEffect(who, FX_FIRE_F_NS, 7, 0x10 );
+	  PlayLightningBoltEffect(who);
+          sleepms(1200);
+          who.graphic := oldgraph;
+          eraseobjproperty(who, "bakedandstoned");
+         elseif (who.cmdlevel >= 4)
+          var targetrune := Target(who);
+          if (!targetrune)
+           sendsysmessage(who, "Canceled");
+          elseif (targetrune.objtype == 0x1f14)
+           var progx := CInt(getobjproperty(targetrune, "x"));
+           var progy := CInt(getobjproperty(targetrune, "y"));
+           var progz := CInt(getobjproperty(targetrune, "z"));
+           setobjproperty(stone, "mvex", progx);
+           setobjproperty(stone, "mvey", progy);
+           setobjproperty(stone, "mvez", progz);
+           sendsysmessage(who, "Stone Programmed with co-ordinates");
+          else
+           sendsysmessage(who, "That's not a rune you idiot");
+          endif
+       else
+         sendsysmessage( who, "You have not charged yourself by the magical ring!!");
+       endif
+    endif
+endprogram

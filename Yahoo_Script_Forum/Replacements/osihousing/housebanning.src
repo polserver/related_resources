@@ -1,0 +1,31 @@
+use os;
+use uo;
+
+program walk_on_moongate( who, tile)
+
+
+
+
+local hserial := getobjproperty( tile , "house_serial" );
+local house := systemfindobjectbyserial( cint(hserial) );
+
+
+  local signserial := getobjproperty(house,"signserial");
+  local sign := SystemFindObjectBySerial(Cint(signserial));
+  
+    local i, nothing:=0;
+    for(i := 0; i < 15; i := i + 1)
+
+    local whoban := systemfindobjectbyserial(getobjproperty(house,"Banned"+i));
+    if (whoban.name = who.name)
+    nothing :=1;
+    endif
+    endfor
+
+
+  if (nothing > 0)
+    MoveCharacterToLocation( who, sign.x, sign.y, sign.z, MOVECHAR_FORCELOCATION );
+    SendSysMessage(who, "You are banned from that house and cannot enter it!");
+  endif
+endprogram
+

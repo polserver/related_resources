@@ -1,0 +1,50 @@
+<html><head><title>Stable Master - version .18</title></head>
+
+<body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+
+Stable Master - version .18<br>
+<font size="1" face="helvetica">Updated by <a href="mailto:daros@cebinet.com.br">RoTTer</a> Dec 8</font><br><br>
+
+This is RoTTer's Stable Keeper aka Puppies Collector script. You can place the Stable Masters around the country and players can stable their pets by using the command stable. They are given a ticket they need to give back to claim their pet. Players can claim their pet from any stable master, not just the one they took their pet to.<p>
+
+<strong>How to set up the script:</strong>
+
+<ol>
+<li>Copy the <strong>stamaster.src</strong> and <strong>stamaster.ecl</strong> to the <strong>\pol\scripts\ai</strong> directory.</li>
+<li>GM's can use the command <strong>.createnpc</strong> stablemaster</li>
+<li>Add the following item to the file <strong>\pol\config\npcdesc.cfg</strong></li>
+</ol>
+
+NpcTemplate stablemaster<br>
+{<br>
+    Name        <random> the Tamer<br>
+    script      stamaster<br>
+<br>
+    ObjType     0x190<br>
+    Color       33784<br>
+    TrueColor   33784<br>
+    Gender      0<br>
+    STR         200<br>
+    INT         200<br>
+    DEX         200<br>
+    HITS        200<br>
+    MANA        200<br>
+    STAM        200<br>
+<br>
+    Tactics       100<br>
+    MaceFighting  140<br>
+    <br>
+    AttackSpeed         55<br>
+    AttackDamage        2d100<br>
+    AttackSkillId       MaceFighting<br>
+    AR                  32<br>
+    Privs               invul<br>
+    Settings            invul<br>
+<br>
+    MagicResistance 120<br>
+    guardignore     1<br>
+    dstart          10<br>
+}<br>
+<br>
+</body>
+</html>

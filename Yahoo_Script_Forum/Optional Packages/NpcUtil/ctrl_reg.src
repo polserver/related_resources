@@ -1,0 +1,33 @@
+// NPCUTIL
+//
+// CTRL_REG.SRC
+//
+// Script to register this package with the control package
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 24-Apr-2000
+//
+
+use uo;
+
+// This is a run-to-completion script, so
+// don't do anything special (or long) here!! :-P"
+
+program ctrl_reg()
+
+	// Userfriendly name of package (string)
+	// Version number (string)
+	// Does it have a command interface? 0=No/1=Yes (integer)
+	// Unqualified script-name of interface (string)
+
+	var zLink := {};
+	zLink.+sName := "NPCUtil Package";
+	zLink.+sVer := "0.1";
+	zLink.+bCtrl := 0;
+	zLink.+sScript := "";
+
+	return zLink;
+
+endprogram

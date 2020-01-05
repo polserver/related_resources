@@ -1,0 +1,90 @@
+////////////////////////////////////
+// BEGGING
+// Author: Pcrest
+// Email : pascal.crest@wanadoo.fr
+////////////////////////////////////
+
+use uo;
+use os;
+use util;
+
+include "include/client";
+include "include/skillpoints";
+
+program begging( character )
+ 
+    local strdesc;
+    local dexdesc;
+    local thepoints := get_default_points(SKILLID_BEGGING);
+
+    SendSysMessage( character, "Choisissez une personne." );
+    local subject := Target(character);
+
+    if (!subject)
+      SendSysMessage(character,"Cible abandonnee.");
+      return;   
+    endif
+    if (((subject.graphic <> 400) and (subject.graphic <> 401)))
+      SendSysMessage(character,"Vous ne pouvez pas mendier cela !!!");
+      return;   
+    endif
+    if (subject == character)
+      SendSysMessage(character,"Vous ne pouvez pas vous mendier vous meme !!!");
+      return;   
+    endif
+    if (!subject.npctemplate)
+      SendSysMessage(character,"Cela n'est utilisable que sur les NPC !!!");
+      return;   
+    endif
+    if (Distance(character,subject) > 2)
+      SendSysMessage(character,"Vous etes trop loin de lui !!!");
+      return;   
+    endif
+    
+    local i := randomint(4)+1;
+    while (i > 0)
+      case randomint(10)
+        0: printtextabove(character,"Pitie pour moi bonnes gens ...");
+        1: printtextabove(character,"J'ai beaucoup d'enfants a nourrir ...");
+        2: printtextabove(character,"Un peu de pain s'il vous plait ...");
+        3: printtextabove(character,"Euh t'as pas cent p o ?");
+        4: printtextabove(character,"Une bonne action ne fait pas de mal vous savez ...");
+        5: printtextabove(character,"Merci d'avance pour votre geste ...");
+        6: printtextabove(character,"Je n'ai pas de toit et j'ai faim ...");
+        7: printtextabove(character,"Je suis un grand invalide de guerre ...");
+        8: printtextabove(character,"Quelques pieces s'il vous plait ...");
+        9: printtextabove(character,"Ma famille n'a pas de toit ni de nourriture ...");
+      endcase
+      sleep(1);
+      i := i - 1;
+    endwhile
+    if (CheckSkill(character,SKILLID_BEGGING, -1, thepoints))
+      local somme := randomint(20)+1;
+      case randomint(10)
+        0: printtextabove(subject,"Tenez, mon brave ...");
+        1: printtextabove(subject,"Desole, je ne peux vous donner plus ...");
+        2: printtextabove(subject,"C'est tout ce que j'ai ...");
+        3: printtextabove(subject,"Ca vous suffira ?");
+        4: printtextabove(subject,"Voila ...");
+        5: printtextabove(subject,"Tenez, et n'y revenez plus ...");
+        6: printtextabove(subject,"Ne depensez pas tout a boire ...");
+        7: printtextabove(subject,"Faites en bon usage ...");
+        8: printtextabove(subject,"C'est tout ce que j'ai ...");
+        9: printtextabove(subject,"Desole, je ne peux vous donner plus ...");
+      endcase
+      CreateItemInBackpack(character, 0xeed, somme);
+    else
+      case randomint(10)
+        0: printtextabove(subject,"hein? ...");
+        1: printtextabove(subject,"Ah mais j'ai rien sur moi la ...");
+        2: printtextabove(subject,"Vous avez pas mieux comme argument? ...");
+        3: printtextabove(subject,"oh eh j'ai rien moi ...");
+        4: printtextabove(subject,"Je ne suis pas mieux loti que vous vous savez ...");
+        5: printtextabove(subject,"Eloignez vous et allez vous laver !!!");
+        6: printtextabove(subject,"Pour que vous alliez boire??? ah mais non ...");
+        7: printtextabove(subject,"Moi aussi j'ai une famille a nourrir ...");
+        8: printtextabove(subject,"Puisque je vous dit que je n'ai rien ...");
+        9: printtextabove(subject,"Desole, je n'ai plus une piece sur moi ...");
+      endcase
+    endif
+endprogram;

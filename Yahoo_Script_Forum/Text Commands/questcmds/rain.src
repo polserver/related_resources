@@ -1,0 +1,13 @@
+include "include/modules";
+
+program rain( who ) 
+    	var res := SetRegionWeatherLevel( "Background", // region name
+                                1,            // weather type = rain
+                                3,            // severity
+                                0,            // aux
+                                -1 );         // lightoverride
+    	Broadcast( "A light rain begins to fall in Sosaria" );
+    	if (!res)
+        	SendSysMessage( who, "Error: " + res.errortext );
+    	endif
+endprogram

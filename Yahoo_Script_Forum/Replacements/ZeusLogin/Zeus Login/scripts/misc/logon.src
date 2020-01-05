@@ -1,0 +1,88 @@
+use uo;
+
+
+program logon( character )
+      
+	var ingameadmin:=     GetGlobalProperty( "onlineadmin" );
+	var ingamegm:=        GetGlobalProperty( "onlinegm" );
+	var ingameseer:=      GetGlobalProperty( "onlineseer" );
+	var ingamecouncil:=   GetGlobalProperty( "onlinecouncil" );
+	var ingamedeveloper:= GetGlobalProperty( "onlinedeveloper" );
+
+    SendSysMessage( character, "Welcome to Dark Spawn " + character.name + "!" );
+    SetObjProperty( character,"logontime",ReadGameClock());
+
+   //Playerstuff
+   if (character.cmdlevel=0)
+
+
+    Broadcast( character.name + " Has Joined Dark Spawn");
+    if (character.enabled("hearghosts"))
+      character.disable("hearghosts");
+      character.revokepriv("hearghosts");
+    endif
+
+if( character.x>=5272 and character.x<=5310 and character.y>=1160 and character.y<=1190 and character.cmdlevel=0)
+   if(release<>0)
+	timeremaining := (((release - readgameclock())/86400) + 1);
+	MoveCharacterToLocation( character, 5304, 1184, 0, 0);
+	SendSysmessage(character, "You have " + timeremaining + " day(s) left in jail.");
+	joinmessage( character, 1);
+	return;
+  else
+	// release from jail
+	acc.setprop("Release",0);
+        MoveCharacterToLocation( character, 5299, 1184, 0, 0);
+        SendSysmessage(character, "Page for release.");
+  endif
+endif
+
+
+	return;
+   endif
+
+
+   //Staff stuff
+   if (character.cmdlevel>=1)
+      character.GrantPrivilege("invul");
+      character.enable("invul");
+   endif
+
+   if (character.cmdlevel>=4)
+      character.GrantPrivilege("hearghosts");
+      character.GrantPrivilege("seeghosts");
+      character.GrantPrivilege("seeinvisitems");
+      character.GrantPrivilege("dyeany");
+      character.enable("hearghosts");
+      character.enable("seeghosts");
+      character.enable("seeinvisitems");
+      character.enable("dyeany");
+   endif
+   
+
+   foreach chraracter in EnumerateOnlineCharacters()
+      case(character.cmdlevel)
+		1: ingamecouncil := ingamecouncil + 1;
+	        2: ingameseer := ingameseer + 1;
+		3: ingamegm := ingamegm + 1;
+		4: ingameadmin := ingameadmin + 1;
+		5: ingamedeveloper := ingamedeveloper + 1;
+	  endcase	
+   endforeach
+
+   SetGlobalProperty( "onlinecouncil", ingamecouncil );
+   SetGlobalProperty( "onlineseer", ingameseer );  
+   SetGlobalProperty( "onlinegm", ingamegm );
+   SetGlobalProperty( "onlineadmin", ingameadmin );
+   SetGlobalProperty( "onlinedeveloper", ingamedeveloper );
+
+	case(character.cmdlevel)
+		1:	Broadcast( "There are now " + ingamecouncil + " Counselors online." , 5, 67);
+		2:	Broadcast( "There are now " + ingameseer + " Seers online.", 5, 82);
+		3:	Broadcast( "There are now " + ingamegm + " Game Masters online.", 5, 37);
+		4:	Broadcast( "There are now " + ingameadmin + " Administrators online.", 5, 42);
+		5:	Broadcast( "There are now " + ingamedeveloper + " Developers online.", 4, 53);
+	endcase
+
+
+endprogram

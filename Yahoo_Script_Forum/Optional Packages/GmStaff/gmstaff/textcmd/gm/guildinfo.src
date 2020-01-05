@@ -1,0 +1,299 @@
+/////////////////////////////////////////////////////////
+// guildinfo.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+/////////////////////////////////////////////////////////
+// Notes:
+// - works from distro pol\items\guildstones
+// - guilds as defined in 094 distro guildstones pkg
+// - this textcommand is still in testing
+//   ( travel to guildstone may well not work under
+//   certain cirumstances! )
+//
+
+use uo;
+use os;
+
+include "util/bank";
+
+const GUILD_CHECK_RANGE:=100;
+const UOBJ_GUILD_STONE:=0xa390;
+const UOBJ_BUILT_DEED:=0x14ef;
+
+program viewGuilds(who)
+
+  var all_guilds:=ListGuilds();
+  if (!len(all_guilds))
+    sendsysmessage(who,"There are currently no guilds!");
+    return;
+  endif
+
+  var this_layout:={
+  "page 0",
+  "nodispose",
+  "resizepic 0 0 3600 400 500",
+  "text 190 20 63 0",
+  "page 1" };
+
+  var this_data:={
+  "Guilds" };
+
+  var i:=0;
+  var pagecount:=1;
+  var pagei:=1;
+
+  foreach thisguild in (all_guilds)
+     i:=i+1;
+     var guild_name:=thisguild.getprop("guildname");
+     this_layout.append("croppedtext 60 "+((i*20)+40)+" 270 20 98 "+len(this_data));
+     this_data.append(guild_name);
+     this_layout.append("button 40 "+((i*20)+40)+" 1210 1209 1 0 "+(i+200));
+     pagei:=pagei+1;
+     if (pagei=20)
+       pagei:=1;
+       this_layout.append("text 265 10 0 "+len(this_data));
+       this_data.append(pagecount);
+       this_layout.append("button 265 445 252 253 0 "+(pagecount+1));
+       pagecount:=pagecount+1;
+       this_layout.append("page "+pagecount);
+       this_layout.append("button 265 50 250 251 0 "+(pagecount-1));
+     endif
+   endforeach
+
+  var retval:=SendDialogGump(who,this_layout,this_data);
+
+  for (i:=1;i<=len(all_guilds);i:=i+1)
+    if (retval[i+200])
+      while (ViewGuildGump(who,all_guilds[i]))
+      endwhile
+    endif
+  endfor
+
+endprogram
+
+function ViewGuildGump(who,thisguild)
+  var guild_message:=thisguild.getprop("gc");
+  var guild_gmserial:=thisguild.getprop("gm");
+  var guild_master:=SystemFindObjectBySerial(guild_gmserial,SYSFIND_SEARCH_OFFLINE_MOBILES );
+  var guild_type:=thisguild.getprop("type");
+  if (!guild_type)
+    guild_type:="standard";
+  endif
+//var guild_recruits:=thisguild.getprop("recruits");
+  var guild_members:=thisguild.members;
+  var allied_guilds:=thisguild.allyguilds;
+  var enemy_guilds:=thisguild.enemyguilds;
+  var enemy_page_start:=3+Cint(len(allied_guilds-1)/20);
+  var gm_notes:=thisguild.getprop("gmnotes");
+  if (!gm_notes)
+    gm_notes:={"","","","",""};
+  endif
+
+  var this_layout:={
+  "page 0",
+  "nodispose",
+  "resizepic 0 0 3600 400 500",
+  "croppedtext 30 20 240 20 63 0",
+  "gumppic 330 10 "+thisguild.getprop("guildicon"),
+  "text 100 40 98 1",
+  "croppedtext 100 60 200 20 98 2",
+  "page 1",
+
+  "text 90 140 98 3",
+  "button 60 140 2223 2223 0 2",
+
+  "text 90 170 98 4",
+  "button 60 170 2223 2223 0 "+(enemy_page_start),
+
+  "text 90 200 98 5",
+  "button 60 200 1210 1209 1 0 300",
+
+  "text 90 230 98 6",
+  "button 60 230 1210 1209 1 0 301",
+
+  "resizepic 40 280 3600 320 180",
+  "text 140 280 98 7",
+  "button 240 440 239 238 1 0 302",
+  "textentry 50 300 280 20 98 8 8",
+  "textentry 50 320 280 20 98 9 9",
+  "textentry 50 340 280 20 98 10 10",
+  "textentry 50 360 280 20 98 11 11",
+  "textentry 50 380 280 20 98 12 12",
+
+  "page 2",
+  "resizepic 0 100 2520 400 400",
+  "button 40 104 1302 1301 0 1",
+  "text 150 110 63 13" };
+
+  var this_data:={
+  thisguild.guildid+" - "+thisguild.getprop("guildname"),
+  "Guild Type:"+guild_type,
+  "Guild Master:"+guild_master.name,
+  "View Allied Guilds ["+len(allied_guilds)+"]",
+  "View Enemy Guilds ["+len(enemy_guilds)+"]",
+  "View Guild Members ["+len(guild_members)+"]",
+  "Travel to GuildStone",
+  "Guild Notes",
+  gm_notes[1],
+  gm_notes[2],
+  gm_notes[3],
+  gm_notes[4],
+  gm_notes[5],
+  "Allied Guilds",
+  };
+
+  var page:=2;
+  var i:=0;
+  foreach guild in allied_guilds
+    i:=i+1;
+    this_layout.append("croppedtext 60 "+((i*20)+20)+" 300 20 98 "+len(this_data));
+    this_data.append(guild.getprop("guildname"));
+    if (i=20)
+      i:=0;
+      this_layout.append("text 265 10 33 "+len(this_data));
+      this_data.append(page);
+      this_layout.append("button 265 450 252 253 0 "+(page+1));
+      page:=page+1;
+      this_layout.append("page "+page);
+      this_layout.append("resizepic 0 100 2520 400 400");
+      this_layout.append("button 40 100 1302 1301 0 1");
+      this_layout.append("button 265 50 250 251 0 "+(page-1));
+    endif
+  endforeach
+
+  page:=enemy_page_start;
+  this_layout.append("page "+page);
+  this_layout.append("resizepic 0 100 2520 400 400");
+  this_layout.append("button 40 104 1302 1301 0 1");
+  this_layout.append("text 150 110 63 "+len(this_data));
+  this_data.append("Enemy Guilds");
+  i:=0;
+    foreach guild in enemy_guilds
+    i:=i+1;
+    this_layout.append("croppedtext 60 "+((i*20)+20)+" 300 20 98 "+len(this_data));
+    this_data.append(guild.getprop("guildname"));
+    if (i=20)
+      i:=0;
+      this_layout.append("text 265 10 33 "+len(this_data));
+      this_data.append(page);
+      this_layout.append("button 265 470 252 253 0 "+(page+1));
+      page:=page+1;
+      this_layout.append("page "+page);
+      this_layout.append("resizepic 0 100 2520 400 400");
+      this_layout.append("button 40 104 1302 1301 0 1");
+      this_layout.append("button 265 50 250 251 0 "+(page-1));
+    endif
+  endforeach
+
+  if (page>9)
+    syslog("Warning! Sending gump with "+page+" pages!");
+  endif
+
+  var retval:=SendDialogGump(who,this_layout,this_data);
+
+  if (retval[300])
+    ViewPlayersGump(who,thisguild,guild_members);
+    return 1;
+  elseif (retval[301])
+    var guild_stone:=FindGuildStone(guild_master,thisguild);
+    if (!guild_stone)
+      sendsysmessage(who,"Can't locate the guildstone!");
+      return;
+    endif
+    MoveCharacterToLocation(who,guild_stone.x,guild_stone.y,guild_stone.z,MOVECHAR_FORCELOCATION);
+    return 1;
+  elseif (retval[302])
+    print("Apply notes....");
+    print(ExtractGumpText(retval[8]));
+    print(ExtractGumpText(retval[9]));
+    print(ExtractGumpText(retval[10]));
+    print(ExtractGumpText(retval[11]));
+    print(ExtractGumpText(retval[12]));
+    gm_notes:={ 
+      ExtractGumpText(retval[8]),
+      ExtractGumpText(retval[9]),
+      ExtractGumpText(retval[10]),
+      ExtractGumpText(retval[11]),
+      ExtractGumpText(retval[12])
+    };
+    thisguild.setprop("gmnotes",gm_notes);
+  endif
+  return 0;
+endfunction
+
+function ViewPlayersGump(who,thisguild,theseplayers)
+  var these_members:=thisguild.members;
+  var this_layout:={
+  "page 0",
+  "nodispose",
+  "resizepic 0 0 2520 400 500",
+  "croppedtext 30 10 240 20 0 0",
+  "gumppic 320 10 "+thisguild.getprop("guildicon"),
+  "text 120 40 0 1",
+  "page 1" };
+
+  var this_data:={
+  thisguild.guildid+" - "+thisguild.getprop("guildname"),
+  "GUILD MEMBERS",
+  "Online",
+  "Offline"};
+
+  var i:=0;
+  var page:=1;
+  foreach member in (theseplayers)
+    i:=i+1;
+    this_layout.append("croppedtext 40 "+((i*20)+50)+" 260 20 0 "+len(this_data));
+    this_data.append(member.name);
+    if (getobjproperty(member,"Online"))
+      this_layout.append("text 300 "+((i*20)+50)+" 0 1");
+    else
+      this_layout.append("text 300 "+((i*20)+50)+" 0 2");
+    endif
+    if (i=20)
+      i:=0;
+      this_layout.append("text 265 10 33 "+len(this_data));
+      this_data.append(page);
+      this_layout.append("button 265 470 252 253 0 "+(page+1));
+      page:=page+1;
+      this_layout.append("page "+page);
+      this_layout.append("button 40 45 2223 2223 0 1");
+      this_layout.append("button 265 50 250 251 0 "+(page-1));      
+    endif
+  endforeach
+  var retval:=SendDialogGump(who,this_layout,this_data);
+endfunction
+
+function FindGuildStone(guild_master,thisguild)
+  var guildstone_serial:=thisguild.getprop("stoneserial");
+  var guildstone;
+  if (guildstone_serial)
+    guildstone:=SystemFindObjectBySerial(guildstone_serial);
+  endif
+  if (!guildstone)
+    var gm_bankbox:=FindBankbox(guild_master);
+    foreach item in EnumerateItemsInContainer(gm_bankbox)
+      if (item.objtype=UOBJ_BUILT_DEED)
+        var house:=SystemFindObjectBySerial(getobjproperty(item,"builtserial"));
+        if (house)
+          foreach check_item in ListItemsNearLocationOfType(house.x,house.y,house.z,GUILD_CHECK_RANGE,UOBJ_GUILD_STONE)
+            if (getobjproperty(check_item,"guild_id")=thisguild.guildid)
+              guildstone:=check_item;
+              thisguild.setprop("stoneserial",guildstone.serial);
+              break;
+            endif
+          endforeach
+        endif
+        if (guildstone)
+          break;
+        endif
+      endif
+    endforeach
+  endif
+  return guildstone;
+endfunction
+
+function ExtractGumpText(thistext)
+  return thistext[(Find(thistext,": ",1)+2),len(thistext)];
+endfunction

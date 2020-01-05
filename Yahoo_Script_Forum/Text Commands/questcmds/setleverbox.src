@@ -1,0 +1,24 @@
+use uo;
+
+program textcmd_setleverbox( who )
+	SendSysMessage(who, "Select lever.");
+	var lever := Target(who);
+	if (!lever)
+		SendSysMessage(who, "Aborted.");
+		return;
+	endif
+	SendSysMessage(who, "Select top left corner.");
+	var targ := TargetCoordinates(who);
+	if (!targ)
+		SendSysMessage(who, "Aborted.");
+		return;
+	endif
+	SetObjProperty(lever, "TopLeft", { targ.x, targ.y } );
+	SendSysMessage(who, "Select bottom right corner.");
+	targ := TargetCoordinates(who);
+	if (!targ)
+		SendSysMessage(who, "Aborted.");
+		return;
+	endif
+	SetObjProperty(lever, "BottomRight", { targ.x, targ.y } );
+endprogram

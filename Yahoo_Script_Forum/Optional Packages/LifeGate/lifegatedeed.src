@@ -1,0 +1,54 @@
+///////////////////////////////////////////////
+// Based on Zulus Trashcan script. Thas Man! //
+///////////////////////////////////////////////
+
+use os;
+use uo;
+
+const SEARCH_RANGE := 10;
+const LIFEGATE := 0x9010;
+
+program makelifegate( who, deed )
+
+    ReserveItem(Deed);
+
+    SendSysMessage( who, "Where would you like your Life Gate?");
+
+    local where := TargetCoordinates( who );
+    local place;
+
+    If ( !where )
+      SendSysMessage( who, "Cancelled");
+      return;
+    else
+      if (!checkforlifegate(where))
+      place := CreateItemAtLocation( where.x, where.y, where.z, LIFEGATE, 1 );
+      else
+      SendSysMessage( who, "You cannot place your Life Gate here!");
+      return;
+      endif
+   endif
+
+    If (!place)
+      SendSysMessage( who, "Your Life Gate can has not been created");
+      return;
+    else
+      SendSysMessage( who, "You have successfully created a Life Gate");
+      DestroyItem (deed);
+    endif
+
+endprogram
+
+function checkforlifegate(place)
+
+    local stuff := ListItemsNearLocation( place.x, place.y,place.z,SEARCH_RANGE);
+
+    foreach item in stuff
+	if( item.objtype = LIFEGATE )
+		return 1;
+	endif
+    endforeach
+
+    return 0;
+
+endfunction

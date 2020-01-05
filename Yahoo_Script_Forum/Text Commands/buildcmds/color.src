@@ -1,0 +1,15 @@
+//
+// .color command - changes item colors
+//
+// usage: .color
+//
+include "include/modules";
+include "include/gumps";
+
+program textcmd_color( who )
+	var newcolor := SendTextEntryGump( who, "What color would you like to use?" );
+	newcolor := CInt( newcolor );
+	SendSysMessage( who, "Select object to color" );
+	var tgt := Target( who );
+	tgt.color := newcolor;
+endprogram

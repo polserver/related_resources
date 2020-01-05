@@ -1,0 +1,53 @@
+///////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////
+//  SYSTEMMOONGATE.SRC - walkonscript for system moongates.
+//
+//  Author: Ignatius 1999/05/29
+//
+//  Modified by Madman Across the Water  2000/03/14
+////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////
+
+use os;
+use uo;
+use basic;
+
+global moongates;
+
+program walk_on_moongate( mobile, moongate )
+
+    // these are also defined in the moongates.inc.
+    var moongates := { 
+        {4467,	1283,	5},		// moonglow
+    	{1336,	1997,	5},		// britain
+    	{1499,	3771,	5},		// jehlom
+        {771,	753,	5},		// yew
+    	{2701,	693,	5},		// minoc
+    	{1828,	2948,	-20},	// trinsic
+    	{643,	2067,	5},		// skara
+    	{3564,	2140,	34},	// magincia
+    };
+
+    var toX, toY, toZ, mobface;
+
+    if ( GetObjProperty(mobile,"#moved") )
+    	EraseObjProperty(mobile,"#moved");
+	return;
+    endif
+
+    mobface := mobile.facing + 6;
+
+    if (mobface > 8)
+       mobface := mobface - 8;
+    endif
+
+    toX := moongates[ mobface ] [ 1 ];
+    toY := moongates[ mobface ] [ 2 ];
+    toZ := moongates[ mobface ] [ 3 ];
+    
+    set_critical(1);  
+    SetObjProperty(mobile,"#moved", 1);
+    MoveCharacterToLocation( mobile, toX, toY, toZ);
+
+endprogram
+

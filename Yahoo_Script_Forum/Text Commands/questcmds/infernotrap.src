@@ -1,0 +1,53 @@
+include "include/modules";
+
+var fire_type := { 0x398c, 0x3996 };
+
+program infernotrap(who)
+	SendSysMessage( who, "Whom would you like to have step on the trigger?" );
+	var item := TargetCoordinates( who );
+	if( !item.mobile )
+		return;
+	endif
+  	PrintTextAbove( item, "you step on a trigger and set off a trap!" );
+  	summoninferno( item );
+  	sleep(20);
+endprogram
+
+function summoninferno( me )
+    	PlaySoundEffect( me, 0x1f4 );
+	var i, j, rand_fire;
+	for( i := 0; i <= 4; i := i + 1 )
+		for( j := 0; j <= 4; j := j + 1 )
+			if( i == 0 )
+				if( j == 0 )
+					rand_fire := RandomInt(3);
+					CreateItemAtLocation( me.x, me.y, me.z, fire_type[rand_fire], 1 );
+				else
+					rand_fire := RandomInt(3);
+					CreateItemAtLocation( me.x, me.y+j, me.z, fire_type[rand_fire], 1 );
+					CreateItemAtLocation( me.x, me.y-j, me.z, fire_type[rand_fire], 1 );
+				endif
+			else
+				if( j == 0 )
+					rand_fire := RandomInt(3);
+					CreateItemAtLocation( me.x+i, me.y, me.z, fire_type[rand_fire], 1 );
+					CreateItemAtLocation( me.x-i, me.y, me.z, fire_type[rand_fire], 1 );
+				else
+					rand_fire := RandomInt(3);
+					CreateItemAtLocation( me.x+i, me.y+j, me.z, fire_type[rand_fire], 1 );
+					CreateItemAtLocation( me.x+i, me.y-j, me.z, fire_type[rand_fire], 1 );
+					CreateItemAtLocation( me.x-i, me.y+j, me.z, fire_type[rand_fire], 1 );
+					CreateItemAtLocation( me.x-i, me.y-j, me.z, fire_type[rand_fire], 1 );
+				endif
+			endif
+		endfor
+	endfor
+    	var tgt := ListItemsNearLocation(me.x, me.y, me.z, 5 );
+    	Detach();
+    	sleep(60);
+    	foreach x in tgt
+      	if (x.objtype == 0x3996 || x.objtype == 0x398c)
+            	DestroyItem( x );
+      	endif
+    	endforeach
+endfunction

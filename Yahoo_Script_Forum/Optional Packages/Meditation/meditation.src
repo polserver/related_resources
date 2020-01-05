@@ -1,0 +1,119 @@
+// Version 0.3
+
+use uo;
+use os;
+use util;
+
+
+
+program meditation( character )
+Local XXX:=character.x;
+Local YYY:=character.y;
+Local Skill;
+Local ManaGain;
+If (character.mana >= character.intelligence)
+	SendSysMessage( character, "Your mana is full." );
+	sleep(5);      
+	detach();
+	return 0;
+endif
+
+SendSysMessage( character, "You starts to meditate." );
+
+while ((XXX=character.x) and (YYY=character.y) and !character.warmode and !IsThingOnHand(character) and !character.hidden)
+	sleepms(4000);
+	SendSysMessage( character, "You continue to meditate." );
+        Skill:=Cint(GetSkill(Character,46)/10)+2;
+        ManaGain:=RandomInt(Skill)-ManaLoss(character);;
+        If (ManaGain<0);
+          ManaGain:=0;
+        endif
+	if (CheckSkill(character, 46, -1, managain*10))
+	        character.mana:=character.mana+managain;
+		If (character.mana > character.intelligence)
+			character.mana:=character.intelligence;
+			break;
+		endif
+	endif
+endwhile
+
+SendSysMessage( character, "You loose concetration." );
+sleep(5);
+detach();
+return 0;
+
+endprogram
+
+Function IsThingOnHand(character)
+  If (GetEquipmentByLayer(character, 1))
+    SendSysMessage(character,"You cant meditate with things on hand");
+    return 1;
+  elseif (GetEquipmentByLayer(character, 2))
+    SendSysMessage(character,"You cant meditate with things on hand");    
+    return 1;
+  else
+    return 0;
+  endif
+endfunction
+
+Function ManaLoss(character)
+  Local Item;
+  Local Loss:=0;
+  
+  //Pants
+  Item:=GetEquipmentByLayer(Character,0x04);
+  If (Item)
+    If ( (Item.objtype=0x13BE) or (Item.objtype=0x13C3) ) // ChainLegs
+      Loss:=Loss+1;
+    endif  
+  endif
+  
+  //Legs
+  Item:=GetEquipmentByLayer(Character,0x18);
+  IF (Item);
+    if ( (Item.objtype=0x1411) or (item.objtype=0x141A) ) //PlateLegs
+      Loss:=Loss+2;
+    endif
+  endif
+  
+  //Helm
+  Item:=GetEquipmentByLayer(Character,6);  
+  IF (Item); 
+    If ( (item.objtype=0x13BB) or (item.objtype=0x13C0) ) // ChainCoif
+      Loss:=Loss+1;
+    elseif ( (item.objtype>=0x1408) or (item.objtype<=0x1419) ) //PlateHelms
+      Loss:=Loss+2;
+    Endif
+  endif
+  
+  //Gloves
+  Item:=GetEquipmentByLayer(Character,7);  
+  IF ( (Item.objtype=0x1414) or (item.objtype=0x1418) ); //Plate Gloves
+    Loss:=Loss+2;
+  endif
+  
+  //Neck
+  Item:=GetEquipmentByLayer(Character,0x0a);  
+  IF (Item.objtype=0x1413) // Gorget
+    Loss:=Loss+1;
+  endif
+  
+  //Chest
+  Item:=GetEquipmentByLayer(Character,0x0d);  
+  IF (Item);
+    If (Item.objtype=0x1c04)     //Female Plate
+      Loss:=Loss+3;
+    elseif ( (item.objtype=0x13BF) or (item.objtype=0x13C4) ) //Chain Tunic
+      Loss:=Loss+2;
+    elseif ( (item.objtype=0x1415) or (item.objtype=0x1416) ) //BreadsPlate
+      Loss:=Loss+3;
+    Endif
+  endif
+  
+  //Arms
+  Item:=GetEquipmentByLayer(Character,0x13);
+  IF ( (Item.objtype = 0x1410) or (Item.objtype = 0x1417) );  //PlateArms
+    Loss:=Loss+2;
+  endif
+  Return Loss;
+endfunction

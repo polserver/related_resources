@@ -1,0 +1,55 @@
+//
+// 1.3
+// 
+// recipeslip.src
+//
+// By Austin Heilman
+// Aheilman@home.com
+//
+// Scrolls with a cprop to add reciples to a cook book.
+//
+// Created 6/19/2001 12:45PM
+// Modified 6/19/2001 12:45PM
+//
+
+use uo;
+use cfgfile;
+
+global booklist := {0xEE42, 0xEE43};
+
+program fillbook(who, slip)
+	SendSysMessage(who, "Select the cook book");
+	var targ := target(who);
+	
+	if (targ.objtype in booklist)
+		if (GetObjProperty(targ, "noadd"))
+			SendSysMessage(who, "You can not add any recipes to this book.");
+			return;
+		endif
+		
+		var sliprecipe := cint(GetObjProperty(slip, "RecipeId"));
+		
+		var recipelist := { };
+		if (GetObjProperty(targ, "recipes"))
+			recipelist := GetObjProperty(targ, "recipes");
+		endif
+		
+		if (len(recipelist) > 20)
+			SendSysMessage(who, "That book is full");
+			return;
+		endif
+			
+		if (sliprecipe in recipelist)
+			SendSysMessage(who, "You already have that recipe in your book.");
+			return;
+		endif
+
+		recipelist.append(sliprecipe);
+		recipelist.sort();
+		SetObjProperty(targ, "recipes", recipelist);
+		DestroyItem(slip);
+		SendSysMessage(who, "You write the recipe in your book.");	
+	else
+		SendSysMessage(who, "That is not a cook book");
+	endif
+endprogram

@@ -1,0 +1,85 @@
+use uo;
+use cfgfile;
+include "include/client";
+Const EFFECT_BLUE_SPARKLE  := 0x373a;
+const SFX_CHANGE := 0x1;
+
+program shapechange(who)
+local class := getobjproperty(who, "class");
+if (lower(class)["druid"])
+else
+        return; //no message on purpose
+endif
+
+
+if (getobjproperty(who, "tg")) // he wants to change back to a human
+        who.name := getobjproperty(who, "tn");
+        who.color := getobjproperty(who, "tc");
+        who.graphic := getobjproperty(who, "tg");
+        PlayObjectCenteredEffect( who, SFX_CHANGE, 10,10);
+        PlayObjectCenteredEffect( who, EFFECT_BLUE_SPARKLE, 10,10); 
+        sendsysmessage(who, "You resume your true form");
+        eraseobjproperty(who, "tn");
+        eraseobjproperty(who, "tc");
+        eraseobjproperty(who, "tg");
+        return;
+endif
+
+local skill := getskill(who, SKILLID_MEDITATION);
+
+if (skill < 10)
+        sendsysmessage(who, "You are not yet learned enough in the ways of nature");
+        return;
+endif
+
+local cfg := readconfigfile("shapechange");
+
+local maxint := getconfigmaxintkey(cfg);
+
+local i:= 1;
+
+local tmenu := createmenu("What form would you like to assume?");
+
+local texit := 0;
+
+while (!texit)
+        local elem := cfg[i];
+        if (!i)
+                texit := 1;
+        else
+                if (skill >= elem.difficulty)
+                        AddMenuItem( tmenu, elem.menu, elem.name );
+                else
+                        texit := 1;
+                endif
+                i := i + 1;
+        endif
+endwhile
+
+local sel := selectmenuitem2(who, tmenu);
+
+if (!sel)
+        return;
+endif
+
+local elem := cfg[sel.index];
+
+if (!elem)
+        print("Error with shapechanging!");
+        return;
+endif
+
+if (checkskill(who, SKILLID_MEDITATION, elem.difficulty, elem.points))
+        setobjproperty(who, "tn", who.name);
+        setobjproperty(who, "tc", who.color);
+        setobjproperty(who, "tg", who.graphic);
+        PlayObjectCenteredEffect( who, SFX_CHANGE, 10,10);
+        PlayObjectCenteredEffect( who, EFFECT_BLUE_SPARKLE, 10,10);  
+        who.name := elem.name;
+        who.graphic := elem.graphic;
+        who.color := 0;
+else
+        sendsysmessage(who, "You fail to transform yourself");
+endif
+
+endprogram

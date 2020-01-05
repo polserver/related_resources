@@ -1,0 +1,10 @@
+BODY { background-color: #000044; color: #FFFFFF }
+.back1 { background-color: #000066 }
+.back2 { background-color: #000088 }
+.back3 { background-color: #880000 }
+.back4 { background-color: #AA0000 }
+.header { font-size: 24; text-align: center; font-weight: bold }
+.center { text-align: center }
+A:link { color: #6666FF }
+A:visited { color: #AAAAFF }
+A:active { color: #FFFFFF }

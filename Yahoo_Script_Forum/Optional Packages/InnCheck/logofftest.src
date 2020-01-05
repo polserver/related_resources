@@ -1,0 +1,21 @@
+//
+//  default logofftest: anyone with a cmdlevel can log off immediately.
+//                      those without have to wait 5 minutes.
+//
+
+include "include/inncheck";
+
+program logofftest( character )
+    // print( "logofftest: " + character.name );
+    if (character.cmdlevel)
+        return 0;
+    elseif (Inncheck(character))
+        return 0;
+    elseif (CInt(GetObjProperty(character, "camped"))= 1)
+        EraseObjProperty(character, "camped");
+		return 0;
+    else        
+        return 60 * 5;
+    endif
+endprogram
+

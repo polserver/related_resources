@@ -1,0 +1,30 @@
+//
+// .colorrect command - changes item colors in a targetted rectangle
+//
+// usage: .colorrect [newcolor]
+//
+include "include/modules";
+include "include/gumps";
+
+program textcmd_colorrect( who )
+	var newcolor := SendTextEntryGump( who, "What color would you like to use?" );
+	newcolor := CInt( newcolor );
+	SendSysMessage( who, "Select object of type to color" );
+	var tgt := Target( who );
+	var objtype := tgt.objtype;
+	SendSysMessage( who, "Target the far left corner" );
+	var topleft := TargetCoordinates( who );
+	if (!topleft)
+		return;
+	endif
+	SendSysMessage( who, "Target the far right corner" );
+	var botright := TargetCoordinates( who );
+	if (!botright)
+		return;
+	endif
+	foreach item in ListObjectsInBox( topleft.x, topleft.y, topleft.z, botright.x, botright.y, botright.z )
+		if( objtype == 0 || item.objtype == objtype )
+			item.color := newcolor;
+		endif
+	endforeach  
+endprogram

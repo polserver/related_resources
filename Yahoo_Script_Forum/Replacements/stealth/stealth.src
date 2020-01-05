@@ -1,0 +1,54 @@
+/////////////////////////////////////////////////////////////////////////////
+// stealth.src                                            
+//                                                        
+// TODO: hmm, maybe the stealth steps you gain after check
+//	    could be added to the ones you alread have??
+//
+// BUGS: None so far
+//
+// Created: Syzygy 19990429
+// Modified: Porthios <inferno_13_86@yahoo.ca>
+//                                                        
+/////////////////////////////////////////////////////////////////////////////
+
+use uo;
+use util;
+
+include "include/client";
+
+program skill_stealth( chr )
+
+    if (GetSkill( chr, SKILLID_HIDING ) < 80)
+        PrintTextAbovePrivate( chr, "You are not good enough at Hiding to do that", chr );
+        return;
+    endif
+
+    if( !chr.hidden )
+        PrintTextAbovePrivate( chr, "You must be hidden to use stealth", chr );
+        return;
+    endif
+
+    var mobiles := ListMobilesNearLocation(chr.x, chr.y, chr.z, 10);
+    if(!mobiles)
+	mobiles := 2;
+    endif
+
+    if(!chr.stealthsteps)
+      if( mobiles >= RandomInt(mobiles*2) )
+    	if (CheckSkill( chr, SKILLID_STEALTH, -1, 10 ) > 0)
+            chr.stealthsteps := RandomInt( GetSkill( chr, SKILLID_STEALTH ) / 2) + 1;
+            PrintTextAbovePrivate( chr, "You are now moving stealthily.", chr );    
+    	else
+            //chr.stealthsteps := 0;
+	    chr.hidden := 0;
+            PrintTextAbovePrivate( chr, "You have revealed yourself!", chr );    
+    	endif
+      else
+	SendSysMessage(chr, "You fail to move among the shadows!");
+      endif
+    else
+	SendSysMessage(chr, "You are already moving stealthily!");
+    endif
+
+endprogram
+

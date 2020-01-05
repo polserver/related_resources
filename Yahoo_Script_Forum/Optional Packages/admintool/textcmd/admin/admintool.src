@@ -1,0 +1,427 @@
+/////////////////////////////////////////////////////////////////
+//
+//  Admin Tools by Kri v0.1
+//
+// USED SCRIPTs/INCs:
+//   |- propedit.src (as inc) by Dougall (dougalloogle@yahoo.com)
+//   |- parts of info.src by Zulu (zulu@zuluhotel.com)
+//   |- parts of admin.src command by Zulu
+//   |- selectAccount.inc by Dougall (dougalloogle@yahoo.com)
+//   |- cmdLevel.src from GMStaff pkg (again thnx to Dougall)
+// Thnx guys, whithout You it'd be a much harder task!
+//
+// GOAL: Make an all-in-one tool to simplify the work of an admin
+//
+// Features:
+//   |- Online/offline character and accounts administration
+//   |- Possible passive trainings
+//   |- Banning/deleting an account
+//   |- Editing CProps on characters/accounts
+//   |- Last IP info
+//   |- characters cmdlevel, skills and stats summary (for quick overview)
+//   |- 'age' of an account & characters ( this is sloppy if you have unstable shard, and needs some work )
+//   |- character managment
+//   |   |
+//   |   |- Stats & skills editing
+//   |   |- kicking, killing, resurecting characters
+//   |   |- backpack&bank box snooping/wiping
+//   |   |- cmdlevel & gender editing
+//   |   |- checking what a character is training ( this is usless on shards which have very slow skill grow rate )
+//   |   |- goto/send/summon
+//   |   |- freeze/squelch/jail
+//   |   |- additional info ( weight, AR )
+//   |- Last logged-in time
+//   |- Searching for wrong accounts (ie. skills over skillcap)
+//
+/////////////////////////////////////////////////////////////////
+
+use uo;
+use util;
+use os;
+use cfgfile;
+
+// This file contains main window functions
+
+include "include/gumps";  // new gumps
+include "include/client";
+include "include/attributes";
+include "include/yesNo";  // yes/no window
+include "include/gumpUtil"; // old gumps
+include "util/bank";
+include "selectAccount";  // selecting accounts from list
+include "lang";   // language definitions, if you want to translate admintool then look there
+include "propedit"; // prop edit routine
+include "func";    // all small functions, arrays etc. ripped from other scripts (you can actually find Your work there :P -- if it is so and You are not listed in credits above let me know! )
+include "charwin";  // character window function
+
+global acc;
+
+program AdminTools( who )
+
+  while( 1 )
+/////////////////////////////////////////////////
+   GFInitGump( 20, 20 );
+   GFResizePic( 0, 0, BKGND_DARK_STONE, 600, 400 );
+   GFTextLine( 20, 375, 50, VER_INFO );
+
+/////////////////////////////////////////////////
+   GFTextLine( 40, 40, COLOR_BLUE, PICK_ACCOUNT );
+   var b1 := GFButtonID( 20, 45, 0x4ba, 0x4b9, 1 );
+/////////////////////////////////////////////////
+//   GFTextLine( 520, 375, COLOR_RED, END_BUTTON_TEXT );
+//   var bend := GFButtonID( 500, 380, 0x4ba, 0x4b9, 1 );
+   var bend := GFButtonID( 570, 20, 0x19, 0x1a, 1 );
+/////////////////////////////////////////////////
+   if( !acc )
+     acc := who.acct;
+   endif
+   GFTextLine( 20, 20, 50, ADMIN_ON + acc.name );
+/////////////////////////////////////////////////
+   var b2, b3;
+   if( !acc.banned )
+      GFTextLine( 40, 155, COLOR_BLUE, BAN_MTF );
+      b2 := GFButtonID( 20, 160, 0x4ba, 0x4b9, 1 );
+   else
+      GFTextLine( 40, 155, COLOR_BLUE, UNBAN_IT );
+      b3 := GFButtonID( 20, 160, 0x4ba, 0x4b9, 1 );
+   endif
+/////////////////////////////////////////////////
+   GFTextLine( 220, 65, COLOR_RED, ACC_CHARACTERS );
+   var b4, b5, b6, b7, b8;
+   if( acc.GetCharacter(1).name )
+     if( SystemFindObjectBySerial( acc.GetCharacter(1).serial ) )
+      GFTextLine( 250, 90, COLOR_GREEN, acc.GetCharacter(1).name );
+     else
+      GFTextLine( 250, 90, COLOR_BLUE, acc.GetCharacter(1).name );
+     endif
+      b4 := GFButtonID( 230, 95, 0x4ba, 0x4b9, 1 );
+   else
+      GFTextLine( 250, 90, COLOR_BLUE, NO_CHARACTER );
+      b4 := GFButtonID( 230, 95, 0x4ba, 0x4b9, 0 );
+   endif
+   if( acc.GetCharacter(2).name )
+     if( SystemFindObjectBySerial( acc.GetCharacter(2).serial ) )
+      GFTextLine( 250, 110, COLOR_GREEN, acc.GetCharacter(2).name );
+     else
+      GFTextLine( 250, 110, COLOR_BLUE, acc.GetCharacter(2).name );
+     endif
+      b5 := GFButtonID( 230, 115, 0x4ba, 0x4b9, 1 );
+   else
+      GFTextLine( 250, 110, COLOR_BLUE, NO_CHARACTER );
+      b5 := GFButtonID( 230, 115, 0x4ba, 0x4b9, 0 );
+   endif
+   if( acc.GetCharacter(3).name )
+     if( SystemFindObjectBySerial( acc.GetCharacter(3).serial ) )
+      GFTextLine( 250, 130, COLOR_GREEN, acc.GetCharacter(3).name );
+     else
+      GFTextLine( 250, 130, COLOR_BLUE, acc.GetCharacter(3).name );
+     endif
+      b6 := GFButtonID( 230, 135, 0x4ba, 0x4b9, 1 );
+   else
+      GFTextLine( 250, 130, COLOR_BLUE, NO_CHARACTER );
+      b6 := GFButtonID( 230, 135, 0x4ba, 0x4b9, 0 );
+   endif
+   if( acc.GetCharacter(4).name )
+     if( SystemFindObjectBySerial( acc.GetCharacter(4).serial ) )
+      GFTextLine( 250, 150, COLOR_GREEN, acc.GetCharacter(4).name );
+     else
+      GFTextLine( 250, 150, COLOR_BLUE, acc.GetCharacter(4).name );
+     endif
+      b7 := GFButtonID( 230, 155, 0x4ba, 0x4b9, 1 );
+   else
+      GFTextLine( 250, 150, COLOR_BLUE, NO_CHARACTER );
+      b7 := GFButtonID( 230, 155, 0x4ba, 0x4b9, 0 );
+   endif
+   if( acc.GetCharacter(5).name )
+     if( SystemFindObjectBySerial( acc.GetCharacter(5).serial ) )
+      GFTextLine( 250, 170, COLOR_GREEN, acc.GetCharacter(5).name );
+     else
+      GFTextLine( 250, 170, COLOR_BLUE, acc.GetCharacter(5).name );
+     endif
+      b8 := GFButtonID( 230, 175, 0x4ba, 0x4b9, 1 );
+   else
+      GFTextLine( 250, 170, COLOR_BLUE, NO_CHARACTER );
+      b8 := GFButtonID( 230, 175, 0x4ba, 0x4b9, 0 );
+   endif
+/////////////////////////////////////////////////
+  ShowStatSummary();
+/////////////////////////////////////////////////
+   GFTextLine( 40, 135, COLOR_BLUE, EDIT_CPROPS );
+   var b9 := GFButtonID( 20, 140, 0x4ba, 0x4b9, 1 );
+/////////////////////////////////////////////////
+   GFTextLine( 40, 60, COLOR_BLUE, PICK_ACC_BY_NAME );
+   var b10 := GFButtonID( 20, 65, 0x4ba, 0x4b9, 1 );
+/////////////////////////////////////////////////
+  ShowLastIPs();
+/////////////////////////////////////////////////
+  ShowWhenLastLogged();
+/////////////////////////////////////////////////
+  var note :=  acc.getprop( "Notes" );
+  if( note == error )
+    note := {};
+  endif
+  GFTextLine( 20, 285, COLOR_RED, ACC_NOTES );
+  GFResizePic( 15, 305, BKGND_SILVERTRIM, 575, 70 );
+  GFTextLine( 25, 325, COLOR_BLUE, note );
+  var b11 := GFButtonID( 100, 290, 0x4ba, 0x4b9, 1 );
+  GFTextLine( 120, 285, COLOR_BLUE, EDIT_NOTES );
+/////////////////////////////////////////////////
+  ShowTheCmdLev();  
+/////////////////////////////////////////////////
+  GFTextLine( 40, 175, COLOR_BLUE, DESTROY_ACC );
+  var b12 := GFButtonID( 20, 180, 0x4ba, 0x4b9, 1 );
+/////////////////////////////////////////////////
+  GFTextLine( 40, 80, COLOR_BLUE, SEARCH_FOR_PASSIVE_TRN );
+  var b13 := GFButtonID( 20, 85, 0x4ba, 0x4b9, 1 );
+/////////////////////////////////////////////////
+  GFTextLine( 250, 40, COLOR_BLUE, SEARCH_ONLINE_PLAYERS );
+  var b14 := GFButtonID( 230, 45, 0x4ba, 0x4b9, 1 );
+/////////////////////////////////////////////////
+  GFTextLine( 40, 100, COLOR_BLUE, SEARCH_FOR_WRONG_CHAR );
+  var b15 := GFButtonID( 20, 105, 0x4ba, 0x4b9, 1 );
+/////////////////////////////////////////////////
+  var accnum := len( EnumerateOnlineCharacters() ) + "/" + len( ListAccounts() );
+  GFTextLine( 400, 20, COLOR_GREEN, accnum );
+/////////////////////////////////////////////////
+  GFTextLine( 400, 285, COLOR_BLUE, CREATE_NEW_ACC );
+  var b16 := GFButtonID( 380, 290, 0x4ba, 0x4b9, 1 );
+/////////////////////////////////////////////////
+  GFTextLine( 40, 120, COLOR_BLUE, CHANGE_PASSWD );
+  var b17 := GFButtonID( 20, 125, 0x4ba, 0x4b9, 1 );
+/////////////////////////////////////////////////
+   var keys := GFSendGump( who );
+    if( keys == error )
+        SendSysMessage( who, "Error!" );
+    	return;
+    elseif( keys[0] == b1.keyid )
+        PickAcc( who );
+    elseif( keys[0] == bend.keyid )
+        return;
+    elseif( keys[0] == b3.keyid )
+        UnbanIt( who );
+    elseif( keys[0] == b4.keyid ) // char 1 window
+        OpenCharWindow( who, 1 );
+    elseif( keys[0] == b5.keyid ) // char 2 window
+        OpenCharWindow( who, 2 );
+    elseif( keys[0] == b6.keyid ) // char 3 window
+        OpenCharWindow( who, 3 );
+    elseif( keys[0] == b7.keyid ) // char 4 window
+        OpenCharWindow( who, 4 );
+    elseif( keys[0] == b8.keyid ) // char 5 window
+        OpenCharWindow( who, 5 );
+    elseif( keys[0] == b9.keyid )
+        Prop_Editor( who, 0 );
+    elseif( keys[0] == b10.keyid )
+        SendSysMessage(who, "Enter the name of the account.");
+        var actn := SendTextEntryGump(who, "What Account Name?", 40);
+        acc := FindAccount( actn );
+    elseif( keys[0] == b11.keyid )
+        SetNotes(note);
+        var whataction := SendDialogGump( who, layout3, testdata );
+        var subnote, i;
+        note :="";
+        for (i:=2; i<=12; i:=i+1)
+             subnote:=whataction[i];
+             subnote[1, find(subnote, ": ", 1)+1]:="";
+             if (subnote!="")
+                note:=note+" "+subnote;
+             endif
+        endfor
+        acc.setprop("Notes", note);
+    elseif( keys[0] == b12.keyid )
+        DestroyAccount( who );
+    elseif( keys[0] == b13.keyid )
+        Makrowniki( who );
+    elseif( keys[0] == b14.keyid )
+        SearchForOnlinePlayers( who );
+    elseif( keys[0] == b15.keyid )
+        SearchForWrongChar( who );
+    elseif( keys[0] == b16.keyid )
+          var uname := SendTextEntryGump( who, GIVE_UNAME );
+          var pword := SendTextEntryGump( who, GIVE_PASS );
+          var check := 0;
+          foreach acctname in ListAccounts()
+             if(uname == acctname)
+                SendSysMessage(who, UNAME_TAKEN);
+                check := 1;
+                break;
+             endif
+          endforeach
+          if(!check)
+             var act := CreateAccount(uname, pword, 1);
+             if(act.errortext)
+                SendSysMessage(who, "" + act.errortext);
+                return;
+             endif
+             SendSysMessage(who, CREATED_ACC);
+          endif
+    elseif( keys[0] == b17.keyid )
+         ChangePassword( who );
+    endif
+/////////////////////////////////////////////////
+  endwhile
+endprogram
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+function PickAcc( who )
+  var trgt := SelectAccount( who );
+  acc := FindAccount( trgt );
+endfunction
+//////////////////////////////////////////////////////////////////////////////////////////////////
+function BanMTF( who )
+  acc.ban();
+  SendSysMessage( who, JUST_BANNED + acc.name );
+endfunction
+//////////////////////////////////////////////////////////////////////////////////////////////////
+function UnbanIt( who )
+  acc.unban();
+  SendSysMessage( who, JUST_UNBANNED + acc.name );
+endfunction
+//////////////////////////////////////////////////////////////////////////////////////////////////
+function GetSkillsSummary( i )
+  var me := acc.GetCharacter(i);
+  if( !me )
+   return 0;
+  endif
+  var sum := 0;
+  var attr := GetSkillIds();
+  foreach atrib in attr
+     sum := sum + GetBaseSkill( me, atrib );
+  endforeach
+  return cint(sum);
+endfunction
+//////////////////////////////////////////////////////////////////////////////////////////////////
+function GetStatSummary( i )
+  var me := acc.GetCharacter(i);
+  if( !me )
+    return 0;
+  endif
+  var sum := GetBaseStrength( me ) + GetBaseDexterity( me ) + GetBaseIntelligence( me );
+  return cint(sum);
+endfunction
+//////////////////////////////////////////////////////////////////////////////////////////////////
+function ShowLastIPs()
+   var last := acc.getprop( "LastIP" );
+   GFTextLine( 20, 220, COLOR_RED, LAST_IP + last[1] );
+   if( last[2] )
+     GFTextLine( 40, 240, COLOR_RED, last[2] );
+   endif
+   if( last[3] )
+     GFTextLine( 40, 260, COLOR_RED, last[3] );
+   endif
+endfunction
+//////////////////////////////////////////////////////////////////////////////////////////////////
+function ShowStatSummary()
+   GFTextLine( 390, 65, COLOR_RED, CHAR_STAT );
+    for i:=1 to 5
+      if( GetStatSummary(i) > STATS_CAP )
+         GFTextLine( 400, (i*20)+70, COLOR_RED, GetStatSummary(i) );
+      else
+         GFTextLine( 400, (i*20)+70, COLOR_BLACK, GetStatSummary(i) );
+      endif
+    endfor
+    GFTextLine( 440, 65, COLOR_RED, CHAR_SKILLS );
+    for i:=1 to 5
+      if( GetSkillsSummary(i) > SKILL_CAP )
+        GFTextLine( 450, (i*20)+70, COLOR_RED, GetSkillsSummary(i) );
+      else
+        GFTextLine( 450, (i*20)+70, COLOR_BLACK, GetSkillsSummary(i) );
+      endif
+    endfor
+endfunction
+//////////////////////////////////////////////////////////////////////////////////////////////////
+function SearchForWrongChar( who )
+   GFInitGump( 150, 60 );
+   GFResizePic( 0, 0, BKGND_DARK_STONE, 300, 300 );
+   
+   var z := 0;
+   var num := 0;
+   var pagecnt := 1;
+   GFPage( 1 );
+   GFButtonPage( 90, 270, 5540, 5541, 2 );
+   GFTextLine( 30, 20, 50, SEARCH_FOR_WRONG_CHAR );
+   var butt, check;
+   var list := array;
+   var accnts := ListAccounts();
+   
+   for x:=1 to len(ListAccounts())
+      
+      if( check )
+        check := 0;
+        z := z + 1;
+      endif
+        if( z > 9 )
+         z := 1;
+         pagecnt := pagecnt + 1;
+         GFPage( pagecnt );
+         GFTextLine( 60, 20, 50, SEARCH_FOR_WRONG_CHAR );
+         GFButtonPage( 90, 270, 5540, 5541, (pagecnt+1) );
+         GFButtonPage( 50, 270, 5537, 5538, (pagecnt-1) );
+        endif
+           acc := FindAccount( accnts[x] );
+           var alrdy := 0;
+           for i:=1 to 5
+             var gm;
+             if( acc.GetCharacter(i).cmdlevel > 0 ) gm := 1; endif
+             if( !gm )
+              if( GetSkillsSummary(i) > SKILL_CAP )
+                if( !alrdy )
+                   num := num + 1;
+                   check := 1;
+                   alrdy := 1;
+                   GFTextLine( 40, (z*20)+50, COLOR_BLUE, acc.name );
+                   GFButtonID( 20, (z*20)+55, 0x4ba, 0x4b9, 1, num );
+                   list.append( acc.name );
+                endif
+              elseif( GetStatSummary(i) > STATS_CAP )
+                if( !alrdy )
+                   num := num + 1;
+                   check := 1;
+                   alrdy := 1;
+                   GFTextLine( 40, (z*20)+50, COLOR_BLUE, acc.name );
+                   GFButtonID( 20, (z*20)+55, 0x4ba, 0x4b9, 1, num );
+                   list.append( acc.name );
+                endif
+              endif
+             endif
+           endfor
+   endfor
+   GFPage( (pagecnt+1) );
+   GFButtonPage( 50, 270, 5537, 5538, pagecnt );
+   
+   var keys := GFSendGump( who );
+   if( keys == error ) return; endif
+   var xx := keys[0];
+   SendSysMessage( who, xx+" " );
+   SendSysMessage( who, list[xx]+" " );
+   acc := FindAccount( list[xx] );
+   
+endfunction
+//////////////////////////////////////////////////////////////////////////////////////////////////
+function ChangePassword( who )
+   Local newpassword := SendTextEntryGump( who, GIVE_PASS, TE_CANCEL_ENABLE,TE_STYLE_NORMAL, 15);
+
+If(newpassword)
+  Local a := CAscZ ( newpassword );
+  Local i;
+  For ( i := 1; i <= len(a); i := i + 1)
+    If (a[i] = 32)
+      SendSysMessage( who, NO_SPACES_IN_PASS);
+      SendSysMessage( who, CANCELED);
+      exit;
+    Endif
+  Endfor
+
+  If ( (Len( newpassword ) < 4) || (Len( newpassword ) > 10) )
+    SendSysMessage( who, PASS_TOO_LONG );
+    SendSysMessage( who, CANCELED );
+  Else
+    acc.SetPassword(newpassword);
+    SendSysMessage( who, CHANGED );
+  EndIf
+
+Else
+SendSysMessage( who, CANCELED);
+EndIf
+endfunction

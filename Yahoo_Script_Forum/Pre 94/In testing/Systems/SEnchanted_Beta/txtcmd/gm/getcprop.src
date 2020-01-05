@@ -1,0 +1,18 @@
+use uo;
+use util;
+
+program getcprop( who, input )
+
+	if ( ! input )
+		SendSysmessage( who, "No CProp defined. Usage: .getcprop [CProp]" );
+		return;
+	endif
+
+	SendSysmessage( who, "Select Item/Mobile." );
+	local thingy := TargetCoordinates( who );
+
+	var ploople := GetObjProperty( thingy, ( input ) );
+
+	SendSysmessage( who, thingy.name + "'s value for CProp " + input + " is " + ploople );
+
+endprogram

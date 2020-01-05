@@ -1,0 +1,218 @@
+/////////////////////////////////////////////////////////
+//healing.src
+//
+//Heals hit points if:
+//
+// * The patient is human
+// * A skill check is made
+//
+//Resurrects if:
+//
+// * The patient is human
+// * The patient is dead
+// * a skill check is made
+// * a random roll is made
+//
+// TODO: Dont heal more hp than needed
+//       Fix heal amounts in healing.cfg
+//
+// Author: Dream Weaver
+// Modified by: Kanish Ankar, 11/06/2000
+//
+//////////////////////////////////////////////////////////
+
+use uo;
+use util;
+use cfgfile;
+use os;
+include "include/client";
+include "include/dist";
+
+include "include/res";
+include "include/respenalty";
+  
+Global config;
+Global elem;
+
+
+program use_bandages ( character, item )
+
+	ReserveItem(item);
+ 	
+    if (cint(getObjProperty(character, "#heal")) > readgameclock())
+        SendSysmessage(character, "Voce tem que esperar ate que voce possa usar suas habilidades novamente!");
+        return;
+    endif
+
+    SendSysmessage( character, "Quem voce quer curar?" );
+    
+    Local patient := Target( character, TGTOPT_HELPFUL + TGTOPT_CHECK_LOS);
+    
+    if (!patient)
+        SendSysmessage(character, "Alvo cancelado.");
+        return;
+    endif
+
+    local skill_lvl := Cint( GetSkill( character, SKILLID_HEALING ) / 10 );
+	skill_lvl := skill_lvl + Cint( GetSkill( character, SKILLID_ANATOMY ) / 20 );
+	if (skill_lvl > 10)
+		skill_lvl := 10;
+	endif
+
+    config := ReadConfigFile( "healing");
+    elem := FindConfigElem( config, skill_lvl ); 
+
+	if( patient.dead )   
+	        resurrect_pc (character, patient, item);    
+		return;
+       	else    
+	    	if ( (patient.graphic = CID_HUMAN_MALE) or (patient.graphic = CID_HUMAN_FEMALE) )
+	      		heal( character, patient, item);
+			return;
+		elseif (patient.script = "tamed")
+			local parms := {};
+			parms[1] := patient;
+			parms[2] := character;
+			parms[3] := item;
+			start_script(":veterinary:vet", parms);
+			return;
+		else
+			SendSysmessage( character , "Voce pode curar somente humanos." );
+			return;
+		endif
+	endif
+   
+endprogram
+
+
+function heal( character , patient , bandages )
+
+	local distt := coordist( character.x, character.y, patient.x, patient.y );
+	if ( distt > 2 )
+		SendSysmessage(character,"O paciente esta muito longe");
+		return;
+	endif
+
+	SendSysmessage(character, "Voce comeca a aplicar bandagens...");
+	local duration := 10;
+	if (patient.serial != character.serial)
+		SendSysmessage(patient, character.name + " comeca a aplicar bandagens...");
+		duration := 10;
+	else
+		duration := 20;
+	endif
+
+	local DoneHealing := cint(readgameclock()) + duration;
+	SetObjProperty(character, "#heal",DoneHealing);
+	detach();
+
+	local starthp := character.hp;
+	local max_heal := Cint(GetElemProperty( elem, "max" ) );
+
+	local diffmod := 0;
+
+	repeat
+		if (character.hp < starthp)
+			SendSysMessage( character, "Seus dedos escorregam . . .");
+			diffmod := diffmod+5;
+			starthp := character.hp;
+		endif
+		if (patient.dead)
+			return;
+		endif
+		sleepms(250);
+	until (ReadGameClock() >= DoneHealing);
+	EraseObjProperty(character, "#heal");
+
+	distt := coordist( character.x, character.y, patient.x, patient.y );
+	if ( distt > 2 )
+		SendSysmessage(character,"O paciente esta muito longe");
+		return;
+	endif
+
+	local DamageToHeal := patient.maxhp - patient.hp;
+	If (DamageToHeal > 100)
+		DamageToHeal := 100;
+	elseif ( DamageToHeal < 1)
+		SendSysMessage (character, "O paciente parece estar bem.");
+		return;
+	endif
+
+	local diff := DamageToHeal + diffmod;
+
+	local bloody := 0x0e20;
+
+	if ( CheckSkill( character, SKILLID_HEALING, Diff, (Diff*10) ) )
+
+		local dstring := "5d"+(max_heal/5);
+
+		local points_healed := RandomDiceRoll(dstring);
+
+		DamageToHeal := patient.maxhp - patient.hp;
+		if (points_healed > DamageToHeal)
+			points_healed := DamageToHeal;
+		endif
+
+		HealDamage( patient, points_healed );
+		SendSysmessage ( character , "Voce curou " + points_healed + " Hit Points." );
+	        CreateIteminBackpack(character, bloody, 1);
+
+		if (patient.serial != character.serial)
+		  SendSysmessage(patient, character.name + " curou " + points_healed + " Hit Points." );
+		endif
+	else
+		SendSysmessage ( character , "Voce fracassou em curar seu paciente." );
+		if (patient.serial != character.serial)
+			SendSysmessage(patient, character.name + " esta impossibilitado de curar sua ferida." );
+		endif
+	endif
+	SubtractAmount( bandages , 1 );   
+  
+endfunction
+
+function resurrect_pc ( character , patient , bandages )
+
+	if ( (GetSkill( character, SKILLID_HEALING ) + GetSkill( character, SKILLID_ANATOMY )) < 80 )
+		SendSysmessage(character,"Lhe falta a habilidade para ressuscitar o morto!");
+		return;
+	endif
+		
+
+    local distt := coordist( character.x, character.y, patient.x, patient.y );
+    if ( distt > 2 )
+        SendSysmessage(character,"O paciente esta muito longe");
+        return;
+    endif
+
+   SendSysmessage(character, "Voce comeca a aplicar bandagens...");
+   SendSysmessage(patient, character.name + " esta tentando ressucitar voce...");
+   sleep (10);
+
+    distt := coordist( character.x, character.y, patient.x, patient.y );
+
+    if ( distt > 2 )
+        SendSysmessage(character,"O paciente esta muito longe");
+        return;
+    endif
+
+   SubtractAmount( bandages , 1 );
+
+   if( CheckSkill( character, SKILLID_HEALING, 80, 500 ) )
+
+       local chance := Cint( GetElemProperty( elem, "ResChance" ) );
+       local roll := randomint(99) + 1;
+   
+       if ( roll < chance )
+            	resurrect( patient );
+            	ResPenalties(patient);
+            	SendSysmessage ( character, "Voce ressuscitou o paciente." );
+       else
+            SendSysmessage ( character, "Voce fracassou em devolver o paciente para este mundo." );
+       endif
+
+    else
+       SendSysmessage ( character, "Voce falhou em devolver o paciente para este mundo." );
+    endif
+
+      
+endfunction 

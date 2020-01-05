@@ -1,0 +1,103 @@
+// by Boriska[RL], Utopia POL shard
+// uo@inexworld.com
+use os;
+use uo;
+include "include/realtime";
+
+/////////////////////////////
+program textcmd_created (who, whom)
+/////////////////////////////
+
+//set_script_option (SCRIPTOPT_CAN_ACCESS_OFFLINE_MOBILES, 1);
+//	SystemFindObjectBySerial options:
+
+//const SYSFIND_SEARCH_OFFLINE_MOBILES := 1;
+//const SYSFIND_SEARCH_STORAGE_AREAS   := 2;
+
+var tgt;
+var namebasis;
+var whom_orig;
+var ret;
+	if (whom)
+
+       // whom was a serial # of a searced PC
+   	if  (cInt (whom))
+   		whom_orig := whom;
+   	// object serial should be integer!
+   		whom := cInt (whom);
+   		ret :=	SystemFindObjectBySerial (whom, 1);
+   		if (ret)
+   			if (ret.isa (POLCLASS_MOBILE))
+   				createdat (who, ret);
+   			else
+   				SendSysMessage (who, "This is not a mobile");
+   				return;
+   			endif
+   		else
+   			SendSysMessage (who, whom_orig+": no such serial");
+   		endif
+   		return;
+   	endif
+
+      whom_orig := whom;
+      whom := upper(whom);
+      foreach onlinechr in EnumerateOnlineCharacters()
+   		if (GetObjProperty (onlinechr, "__namebasis"))
+   			namebasis := upper (GetObjProperty (onlinechr, "__namebasis"));
+   		else
+   			namebasis := whom;
+   		endif
+   		if (whom = namebasis) 
+   			if ((whom != who) and (whom.cmdlevel > who.cmdlevel))
+   				SendSysMessage (who, "You don't have enough privileges");
+   				return;
+   			endif
+   			createdat (who, onlinechr);
+   			return;
+   		endif
+   	endforeach
+   	SendSysMessage (who, whom_orig +": no such PC or it is offline");
+   	return;
+   endif
+
+
+   SendSysMessage (who, "Whose created date?");
+   tgt := Target (who);
+   if (!tgt)
+   	SendSysMessage (who, "Cancelled");
+      return;
+   endif
+
+   if (!tgt.isa(POLCLASS_MOBILE) or tgt.npctemplate)
+   	SendSysMessage (who, "Wrong target");
+   	return;
+   endif
+
+   if ((tgt != who) and (tgt.cmdlevel > who.cmdlevel))
+   	SendSysMessage (who, "You don't have enough privileges");
+   	return;
+   endif
+
+   createdat (who, tgt);
+       
+endprogram
+
+
+////////////////////////////////
+function createdat (who, tgt)
+///////////////////////////////
+	var crt := GetObjProperty( tgt, "CreateTime");
+	if (crt)
+		crt := CInt(crt);
+		SendSysMessage (who, tgt.name+" created at: "+DateTime(crt));
+	endif
+	var curtime := polcore().systime;
+	crt := GetObjProperty( tgt, "CreatedAt");
+	if (crt)
+	   	var appcrtime := curtime - (ReadGameClock() - crt);
+	     	SendSysMessage (who, "Last char created at: "+DateTime(appcrtime));
+	endif
+	var onlinetime := GetObjProperty( tgt, "onlinetimer");
+  	SendSysMessage (who, "Whole online time of "+tgt.name+" is "+DateTimer(onlinetime));
+  	return;
+endfunction

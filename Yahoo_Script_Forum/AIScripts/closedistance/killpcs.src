@@ -1,0 +1,30 @@
+use npc;
+use os;
+use uo;
+use cfgfile;
+use math;
+
+include "include/eventid";
+include "include/sysevent";
+include "include/randname";
+include "include/dist";
+include "include/anchors";
+include "main/killpcsloop";
+include "combat/fight";
+include "combat/defaultcombatevent";
+include "setup/killpcssetup";
+include "setup/elementaissetup";
+include "main/loot";
+include "main/sleepmode";
+include "include/speech";
+include "main/closedistance";
+
+
+const HALT_THRESHOLD := 8; // how close before he attacks?
+
+program KillPlayers()
+
+    	SetWarMode( 0 );
+    	main_AI_loop();
+
+endprogram

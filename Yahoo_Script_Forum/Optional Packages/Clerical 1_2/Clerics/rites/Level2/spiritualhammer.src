@@ -1,0 +1,34 @@
+use uo;
+use os;
+
+include "../../cleric";
+
+program spiritualhammer(params)
+	var who := params[1];
+	var info := params[2];
+	
+	ReleaseScript(info.pid);
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif
+	
+	var slave := CreateNPCFromTemplate("spiritualhammer", who.x, who.y, who.z);
+	var weapon := CreateItemAtLocation(who.x,who.y,who.z, 0xdc0a, 1);
+	weapon.dmg_mod := piety;
+	weapon.movable := 1;
+	EquipItem(slave,weapon);
+	
+	SetObjProperty(slave, "master" , who.serial);
+	SetObjProperty(slave, "summoned", 1);
+	slave.SetMaster(who);
+	slave.script := "tamed";
+	RestartScript(slave);	
+	
+	sleep(80*piety);
+	ApplyRawDamage(slave, 2000);
+	
+endprogram

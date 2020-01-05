@@ -1,0 +1,36 @@
+//////////////////////////////////////////////////
+//
+//   SpawnNet Destroy Script v0.95b (2000/10/22)
+//
+//     based on SpawnNet v0.95b
+//       Author: Louds
+//       eMail : louds.geo@yahoo.com
+//
+//     Author: Shinigami
+//     eMail : Shinigami@gmx.net
+//
+//   Modifications:
+//     2000/10/19 Shinigami: ReWrite
+//
+//////////////////////////////////////////////////
+
+//////////////
+// Libraries
+//////////////
+
+Use os;
+Use uo;
+
+/////////////
+// Includes
+/////////////
+
+Include "include/spawnnet";
+
+////////////////
+// Mainprogram
+////////////////
+
+Program DSpawnR(runeobj)
+  ResetSpawn(runeobj, 1);
+EndProgram

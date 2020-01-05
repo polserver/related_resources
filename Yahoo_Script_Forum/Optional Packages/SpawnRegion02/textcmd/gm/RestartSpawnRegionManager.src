@@ -1,0 +1,29 @@
+///////////////////////////////////////////////////////////
+// RestartSpawnRegionManager.src
+//
+// Restarts the manager.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+// USAGE: .restartspawnregionmanager [v]
+// if 'v' is specified, manager will run in verbose mode for debugging.
+///////////////////////////////////////////////////////////
+
+use os;
+use uo;
+
+program textcmd_RestartSpawnRegionManager(who, params)
+	unload_scripts("spawnregion");
+
+	var pid := GetGlobalProperty("#SpawnRegionManagerPID");
+	var proc := GetProcess(pid);
+	proc.kill();
+
+	start_script("SpawnRegionManager", params);
+
+	SendSysMessage(who, "SpawnRegionManager restarted.");
+endprogram

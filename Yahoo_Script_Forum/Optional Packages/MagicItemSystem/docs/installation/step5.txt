@@ -1,0 +1,25 @@
+This is an optional but *extremely* recommended step.
+If this step is not followed, then your NPC hits wont be counted, so the items will only work PvP...
+
+NOTE!!!!!!!!!!!!!!!!!
+ -Most, if not all of the NPCs are already setup in distro 94. However some (like blade spirits) use seperate hitscripts. If you want these NPCs to use Enchantments on their hit, your going to have to:
+ a) Do step #2 for each of the hitscripts.
+ b) Hook the hitscripts through the main one, or by using SMIS.
+
+To make your NPCs run their attack hits through the main hitscript...
+First, open your npcdesc ( pol\config\npcdesc.cfg )
+Now, add the following line to every NPC whos hits you want to count. Its pretty easy to make a macro to do this with UltraEdit32...
+
+
+    AttackHitScript     :combat:mainhitscript
+
+
+Now, to make sure wrestling hits are counted as well...
+First open your wepndesc.cfg ( pol\config\wepndesc.cfg )
+There should be one weapon there, a wrestling weapon.
+Cut that weapon, and paste it into pol\pkg\std\combat\itemdesc.cfg
+Now add this to it:
+
+
+    hitscript mainhitscript
+    controlscript makehitscript

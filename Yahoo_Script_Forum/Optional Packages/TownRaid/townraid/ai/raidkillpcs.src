@@ -1,0 +1,46 @@
+//Raider AI v0.6
+//GM Scull
+
+use npc;
+use os;
+use cfgfile;
+use math;
+
+include "include/eventid";
+include "include/randname";
+include "include/anchors";
+include "ai/main/mainloopraider";
+include "ai/combat/raiderfight";
+include "ai/combat/raidcombatevent";
+include "ai/setup/killpcssetup";
+
+const HALT_THRESHOLD := 3; // how close before he attacks?
+
+program RaidKillPlayers()
+
+	if (getobjproperty(me, "frozen"))
+		me.frozen := 1;
+	endif
+
+    	SetWarMode( 0 );
+    	main_AI_loop();
+
+endprogram
+
+function CloseDistance( opponent )
+
+	local edist := Distance( me, opponent );
+	if (edist > 6)
+		return 2;
+	elseif (edist > 1)
+        	RunToward( opponent );
+	        return 0;
+	else
+		return 1;
+	endif
+
+endfunction
+
+
+
+

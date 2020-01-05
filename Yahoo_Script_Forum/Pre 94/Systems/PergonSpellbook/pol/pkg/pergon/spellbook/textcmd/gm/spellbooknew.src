@@ -1,0 +1,22 @@
+Use uo;
+
+Include "../../spellbook";
+
+Program TextCMD_SpellBook2(who)
+  Local spellitem;
+
+  Local book:=CreateSpellBookInBackpack(who, UOBJ_SPELLBOOK_MAGE);
+  For (spellitem:=MIN_MAGE_SPELL_ITEM; spellitem<=MAX_MAGE_SPELL_ITEM; spellitem:=spellitem+1)
+    CreateSpellInBook(book, spellitem);
+  EndFor
+
+  book:=CreateSpellBookInBackpack(who, UOBJ_SPELLBOOK_CLERIC);
+  For (spellitem:=MIN_CLERIC_SPELL_ITEM; spellitem<=MAX_CLERIC_SPELL_ITEM; spellitem:=spellitem+1)
+    CreateSpellInBook(book, spellitem);
+  EndFor
+
+  book:=CreateSpellBookInBackpack(who, UOBJ_SPELLBOOK_NECRO);
+  For (spellitem:=MIN_NECRO_SPELL_ITEM; spellitem<=MAX_NECRO_SPELL_ITEM; spellitem:=spellitem+1)
+    CreateSpellInBook(book, spellitem);
+  EndFor
+EndProgram

@@ -1,0 +1,18 @@
+use uo;
+
+program posess(who)
+	if (!GetObjProperty(who, "pos"))
+		SendSysMessage(who, "You haven't posessed anything!");
+		return;
+	endif
+	var what := SystemFindObjectBySerial(GetObjProperty(who, "pos"));
+	MoveCharacterToLocation(what,who.x, who.y, who.z, MOVECHAR_FORCELOCATION);
+	who.concealed := 1;
+	who.name := GetObjProperty(who, "on");
+	who.color := GetObjProperty(who, "oc");
+	who.graphic := GetObjProperty(who, "og");
+	EraseObjProperty(who, "on");
+	EraseObjProperty(who, "oc");
+	EraseObjProperty(who, "og");
+	EraseObjProperty(who, "pos");
+endprogram

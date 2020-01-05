@@ -1,0 +1,151 @@
+// anty makro PKG - Deluxe 
+// vOiCEr - 2003-02-24 [ script used on shard: Clair's Lair Third Edition]
+// this script will search for suspicious players, and view them by the .makro command (made by Humbool). 
+// to get this script working, every player should have "#LastSkill" property showing the last used skills.
+
+use uo;
+use os;
+
+include "include/client";
+include "include/attributes";
+
+var tabskills := array(
+       "Alchemy",              //30
+       "Anatomy",              //32
+       "Animallore",           //34
+       "Itemid",               //36
+       "Armslore",             //38
+       "Parrying",             //40
+       "Begging",              //42
+       "Blacksmithy",          //44
+       "Bowcraft",             //46
+       "Peacemaking",          //48
+       "Camping",              //50
+       "Carpentry",            //52
+       "Cartography",          //54
+       "Cooking",              //56
+       "Detecthidden",         //58
+       "Enticement",           //60
+       "Evalint",              //62
+       "Healing",              //64
+       "Fishing",              //66
+       "Forensics",            //68
+       "Herding",              //70
+       "Hiding",               //72
+       "Provocation",          //74
+       "Inscription",          //76
+       "Lockpicking",          //78
+       "Magery",               //80
+       "Resist",               //82
+       "Tactics",              //84
+       "Snooping",             //86
+       "Musicianship",         //88
+       "Poisoning",            //90
+       "Archery",              //92
+       "Spiritspeak",          //94
+       "Stealing",             //96
+       "Tailoring",            //98
+       "Taming",               //100
+       "Tasteid",              //102
+       "Tinkering",            //104
+       "Tracking",             //106
+       "Veterinary",           //108
+       "Swords",               //110
+       "Maces",                //112
+       "Fencing",              //114
+       "Wrestling",            //116
+       "Lumberjack",           //118
+       "Mining",               //120
+       "Meditation",           //122
+       "Stealth",              //124
+       "Removetrap",           //126
+       "Unknown",
+);
+
+program makro_deluxe()
+syslog("AntyMakro Deluxe by vOiCEr - started.");
+while(1)
+var podejrzani := array;
+var oznaczeni := array;
+var last_skill := array;
+oznaczeni := znajdz_zaznaczonych();
+podejrzani := znajdz_podejrzanych();
+
+   // inform what suspicious players do (with property "podejrzany")
+   if(oznaczeni.size() > 0)
+	foreach chr in oznaczeni
+		last_skill := GetObjProperty(chr, "#LastSkill");
+		var makrus := SystemFindObjectBySerial(chr);
+		if(makrus)
+		foreach gm in EnumerateOnlineCharacters()
+		if (gm.cmdlevel > 2)
+		      	SendSysMessage(gm, "MD: " + makrus.name + " using: " + tabskills[last_skill[1]+1] + ", " + last_skill[2] + " times.");
+    		endif
+		endforeach
+		endif
+	endforeach
+   endif
+   
+   if(podejrzani.size() > 0)
+	SetGlobalProperty("#md_podejrzani", podejrzani);
+   else
+	EraseGlobalProperty("#md_podejrzani");
+   endif
+   	if(podejrzani.size() > 0)
+	foreach gm in EnumerateOnlineCharacters()
+		if (gm.cmdlevel>2)
+			SendSysMessage(gm, "MakroDeluxe found: "+podejrzani.size()+" suspicious players. (.makro)");
+		endif
+	endforeach
+	endif
+
+
+sleep(60 * 20); // wait 20 minutes
+endwhile
+endprogram
+
+
+function znajdz_zaznaczonych()
+	var zaznaczeni := array;
+	foreach chr in EnumerateOnlineCharacters()
+		if((chr.cmdlevel == 0) && (GetObjProperty(chr, "podejrzany")))
+			zaznaczeni.append(chr.serial);
+		endif
+	endforeach
+	return zaznaczeni;
+endfunction
+
+function znajdz_podejrzanych()
+	var zaznaczeni := array;
+	var dane_makro := array;
+	var last_skill := array;
+	foreach chr in EnumerateOnlineCharacters()
+	if(chr.cmdlevel == 0)
+		if(!GetObjProperty(chr, "#podejrzany"))
+			dane_makro[1] := chr.x;
+			dane_makro[2] := chr.y;
+			last_skill := GetObjProperty(chr, "#LastSkill");
+			dane_makro[3] := last_skill[2]; 
+			dane_makro[4] := last_skill[1]; 
+			if(dane_makro[3] > 100)
+				SetObjProperty(chr, "#podejrzany", dane_makro);
+			endif
+		endif
+			dane_makro := GetObjProperty(chr, "#podejrzany");
+			last_skill := GetObjProperty(chr, "#LastSkill");
+		if(((dane_makro[1]==chr.x) && (dane_makro[2]==chr.y)) || (dane_makro[3] < last_skill[2]))
+			if((dane_makro[3]>100) && (GetHP(chr)>0) && (dane_makro[4] == last_skill[1]))
+				zaznaczeni.append(chr.serial);
+			endif
+		endif
+		
+		dane_makro[1] := chr.x;
+		dane_makro[2] := chr.y;
+		last_skill := GetObjProperty(chr, "#LastSkill");
+		dane_makro[3] := last_skill[2];
+		dane_makro[4] := last_skill[1]; 
+		SetObjProperty(chr, "#podejrzany", dane_makro);
+	endif
+	endforeach
+	return zaznaczeni;
+endfunction

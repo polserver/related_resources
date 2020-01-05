@@ -1,0 +1,422 @@
+use uo;
+use os;
+const EVID_ADDPOISON 	:= 78;
+const EVID_CUREPOISON 	:= 79;
+const EVID_DEAD 	:= 80;
+const EVID_LOGOFF 	:= 81;
+const EVID_CUREDISEASE := 82;
+const EVID_REMOVECURSE := 83;
+const DEFAULT_CURE_SKILL := 63;
+const EVID_CURETRUE := 84;
+/*
+
+poisonwatcher runs as long as a character is online. Other scripts send it events to let it know which poison scripts to run. It kills those scripts when they've timed out.
+
+You can have several different types of poisons, and there's no limits on what they can do. From the poisonwatcher's point of view, all they need is a script, a timeout, and a virulence. 
+	script: the script to start (String)
+	timeout: the time, in seconds, that the script should run
+	virulence: a measure of how powerful the poison is, per second. Curing spells and potions will subtract from this virulence.
+	
+	Example: a lesser poison has a virulence of 1 per second. Someone is poisoned for 30 seconds worth of lesser poison, for a total virulence of 30. They drink a cure potion that heals 15 points of virulence. That would reduce that poison timeout by 15. Their remaining virulence is 15.
+	
+	A moment later, the same character is hit with 20 seconds of (virulence 2) regular poison. That increases their total virulence by 40, to 55. They then drink a potion that cures 25 virulence. That stops all of the level 1 poison, and removes 10 virulence (or 5 seconds) of the other poison. The end result? He's left with 15 seconds to go on the second poison.
+	
+	poison resistance: poison resistance works can work different ways. First of all, the newpoisons.cfg file can specify a ResistType of A or P. Type A (all) means that the poison, if resisted, will be completely resisted -- and it won't start the script at all. Type P, for partial, means that the poison's virulence will be reduced by poison skill as a percentage.Also, individual poison scripts can check the poisonresist skill on each damage loop.
+	
+	Cure Skill: if there is a CureSkill property set in the config file, any skillchecks will be done against that skillID. If not, then it'll use 26 (MagicResistance).
+	
+	
+	Death: most poisons will cease on death. If the config file has a ContinueOnDeath property set to anything but zero, it will continue while they're dead. This is to allow for curses and the like. Please note that ContinueOnDeath poisons will still stop when an NPC dies.
+	
+	Non-curable poisons: any poison can be non-curable by normal means. To make a noncurable poison, put "NoCure 1" in the config file.  If this happens, then other scripts will be responsible for curing the poison.
+	
+	Unending poisons: If newpoisons.cfg has a NoEnd 1 property in it, then the poison will never time out on its own. This, combined with NoCure 1 and ContinueOnDeath 1, can make for a  good, long-lasting curse.
+	
+	Cure Scripts: You can specify a CureScript entry in the config file. This will be a script to call instead of killing the poison script itself. You can use this to do temporary stat modifying scripts. The poison listener will pass the victim, pid, virulence,and timeout of the script when it kills it.
+	
+	KillScripts: when a player logs out, we need to stop the poison script. If you specify a killscript, it will call this instead of killing the poison itself. Passes pid and victim.
+	
+	Type: If no type is entered, the entry is thought to be a poison. Type "C" is curse, and type "D" is disease. The primary difference between them is the spell/rite required to cure them.
+	
+*/
+
+
+
+var poisons :=  dictionary; //a dictionary of poison elements. The key is the script we'll start 
+
+
+var 	poisonelem := struct;
+
+poisonelem.+pid;
+poisonelem.+timeout;
+poisonelem.+virulence;
+poisonelem.+death;
+poisonelem.+nocure;
+poisonelem.+noend;
+poisonelem.+curescript;
+poisonelem.+killscript;
+poisonelem.+ttype;
+poisonelem.+name;
+var who;
+var NumPoisons := 0;
+var NumDiseases := 0;
+var NumCurses := 0;
+include "include/convert";
+
+program poisonwatcher(parms)
+who := parms[1];
+dologin();
+ 
+setobjproperty(who, "poisonscript", getpid());
+while (online())
+	setobjproperty(who, "poisons", poisons);
+	checkFortimeout();
+	local ev := wait_for_event(1);
+	
+	if ((numpoisons + numdiseases) > 0)
+		who.setpoisoned(1);
+	else
+		who.setpoisoned(0);
+	endif
+	if (ev)
+		
+		case (ev.type)
+			EVID_ADDPOISON: addpoison(ev); 
+			EVID_CUREPOISON: curepoison(ev); 
+			EVID_CUREDISEASE: curedisease(ev);
+			EVID_REMOVECURSE: removecurse(ev);
+			EVID_DEAD:  dead();              
+			EVID_LOGOFF: dologout();
+		endcase
+	endif
+	
+endwhile
+
+dologout();
+eraseobjproperty(who, "poisonscript");
+endprogram
+
+function online()
+	if (who.ip)
+		return 1;
+	endif
+	
+	if (who.npctemplate && who)
+		return 1;
+	endif
+endfunction
+
+function dead()
+	//stop all poisons. May need some work, because we may want some poison-like scripts (such as curses) to last 
+	//after death
+
+var p;
+var k := poisons.keys();
+foreach p in k
+	if (!poisons[p].death)
+		killpoison(poisons[p]);
+		poisons.erase(p);
+	endif
+endforeach
+ 
+setobjproperty(who, "poisons", poisons);
+endfunction
+
+
+
+
+function curepoison(ev)
+
+local cure_str := ev.virulence;
+var k := poisons.keys();
+var p;
+
+
+foreach p in k
+	 
+	local pp := poisons[p];
+	if (!pp.ttype || lower(pp.ttype = "p"))
+		if (!(pp.nocure))
+			
+			local totalstr := (pp.timeout - readgameclock() ) * pp.virulence;
+			if (cure_str  >= totalstr)
+				cure_str := cure_str - totalstr;
+				if (pp.curescript)
+					var params := {who, pp.pid, pp.virulence, pp.timeout};
+					start_script(pp.curescript, params);
+				endif
+				killpoison(pp);
+				poisons.erase(p);
+				
+				if (!len(poisons))
+					sendsysmessage(who, "You have been completely cured of poison");
+				else
+					if (!cure_str)
+						sendsysmessage(who, "You are still poisoned, but the virulence has been reduced");
+					endif
+				endif 
+				
+			else
+				pp.timeout := (pp.timeout - (cure_str / pp.virulence));
+				sendsysmessage(who, "You are still poisoned, but the virulence has been reduced");
+				if (pp.timeout <= readgameclock())
+					killpoison(pp);
+					poisons.erase(p);
+				endif
+				poisons[p] := pp;
+				 
+			endif
+		endif
+ 	endif
+endforeach
+endfunction
+
+function addpoison(ev)
+	//note: the poison scripts themselves should take care of informing the character that he's been poisoned
+	if (ev.curetype)    //take care of poison resistance
+		local skillid := ev.cureskill;
+		if (!skillid)
+			skillid := DEFAULT_CURE_SKILL;
+		endif
+		if (lower(ev.curetype) = "a")
+			if (checkskill(who, skillid, (ev.duration * ev.virulence), (ev.duration * ev.virulence)))
+				return;
+			endif
+		else
+			if (checkskill(who, skillid, (ev.duration * ev.virulence), (ev.duration * ev.virulence)))
+				ev.duration := ev.duration * (newgetskill(who, skillid)/100.0) ;
+			endif
+		endif
+	endif
+	case (lower(ev.ttype))
+		"d": Numdiseases := numdiseases + 1;
+		"c": numcurses := numcurses + 1;
+		default: numpoisons := numpoisons + 1;
+	endcase
+		
+	var ptype := ev.poisontype;
+	if (poisons.exists(ptype))
+		poisons[ptype].timeout := poisons[ptype].timeout + ev.duration;
+	else
+		
+		local s := start_script(ptype, {who});
+		if (!s)
+			syslog("Could not start poison script -- " + s.errortext);
+		endif
+		poisonelem.pid := s.pid;  //grab the pid of the script we started
+		poisonelem.timeout := ev.duration + readgameclock();
+		poisonelem.virulence := ev.virulence;
+		poisonelem.death := ev.death;
+		poisonelem.nocure := ev.nocure;
+		poisonelem.noend := ev.noend;
+		poisonelem.curescript := ev.curescript;
+		poisonelem.ttype := ev.ttype;
+		poisonelem.name := ev.name;
+		poisonelem.killscript := ev.killscript;
+		poisons[ptype] := poisonelem;
+		
+	endif
+endfunction
+
+function dologout()
+// this function writes all salient information to the character, so it can be restarted on
+//login. It also kills the other listener scripts, so they don't hog the cpu
+
+set_critical(1);
+setobjproperty(who, "logout", readgameclock());
+var p;
+var k := poisons.keys();
+foreach p in k
+	killpoison(poisons[p]);
+endforeach
+setobjproperty(who, "poisons", poisons);
+setobjproperty(who, "logout", readgameclock());
+ 
+set_critical(0);
+poisons := dictionary;
+endfunction
+	
+
+function dologin()
+//ok, we presumably have a dictionary of poison elements saved on the char. We'll check each of 
+//these and restart the scripts
+
+var pe;
+
+poisons := getobjproperty(who, "poisons");
+if (!poisons)
+	poisons := dictionary;
+	return;
+endif
+
+var logout := getobjproperty(who, "logoff");
+var diff := readgameclock() - logout;
+
+if (!logout)
+	return;
+endif
+set_critical(1);
+
+var key := poisons.keys();
+foreach pe in key
+	var p := poisons[pe];
+	case (lower(p.ttype))
+		"d": Numdiseases := numdiseases + 1;
+		"c": numcurses := numcurses + 1;
+		default: numpoisons := numpoisons + 1;
+	endcase
+	local ptype := pe;
+	local spid := start_script(  ptype, {who});
+	local ppp := spid.pid;
+	p.timeout := p.timeout + diff;
+	
+//	 
+	p.pid := spid.pid;
+ 
+	poisons[pe] := p;
+ 
+endforeach
+
+set_critical(0);
+endfunction
+
+
+function checkFortimeout()
+
+	if (!poisons.size())
+		//char has no poisons to check
+		return;
+	endif
+	
+	local now := readgameclock();
+	local i;
+	local k := poisons.keys();
+	local p;
+	foreach i in k
+		p := poisons[i];
+		if (!p.noend)
+			if (p.timeout <= now)
+				//kill the poison script
+				killpoison(p);
+				poisons.erase(i);
+			endif
+		endif
+	endforeach
+
+endfunction
+
+function killpoison(p)
+	
+	local pscript := p.pid;
+	local script := getprocess(pscript);
+	case (lower(p.ttype))
+		"d": Numdiseases := numdiseases - 1;
+		"c": numcurses := numcurses - 1;
+		default: numpoisons := numpoisons - 1;
+	endcase
+	if (p.killscript)
+		
+		var params := {who, p.pid, p.virulence, p.timeout};
+		
+		start_script(p.killscript, params);
+	endif
+	script.kill();
+endfunction
+
+
+ 
+
+
+
+function curedisease(ev)
+
+local cure_str := ev.virulence;
+var k := poisons.keys();
+var p;
+
+
+foreach p in k
+	 
+	local pp := poisons[p];
+	if (lower(pp.ttype) = "d")
+		if (!(pp.nocure))
+			
+			local totalstr := (pp.timeout - readgameclock() ) * pp.virulence;
+			if (cure_str  >= totalstr)
+				cure_str := cure_str - totalstr;
+				if (pp.curescript)
+					var params := {who, pp.pid, pp.virulence, pp.timeout};
+					start_script(pp.curescript, params);
+				endif
+				killpoison(pp);
+				poisons.erase(p);
+				
+				if (!len(poisons))
+					sendsysmessage(who, "You have been completely cured of poison");
+				else
+					if (!cure_str)
+						sendsysmessage(who, "You are still poisoned, but the virulence has been reduced");
+					endif
+				endif 
+				
+			else
+				pp.timeout := (pp.timeout - (cure_str / pp.virulence));
+				sendsysmessage(who, "You are still poisoned, but the virulence has been reduced");
+				if (pp.timeout <= readgameclock())
+					killpoison(pp);
+					poisons.erase(p);
+				endif
+				poisons[p] := pp;
+				 
+			endif
+		endif
+ 	endif
+endforeach
+endfunction
+
+
+function removecurse(ev)
+
+local cure_str := ev.virulence;
+var k := poisons.keys();
+var p;
+
+
+foreach p in k
+	 
+	local pp := poisons[p];
+	if (lower(pp.ttype) = "c")
+		if (!(pp.nocure))
+			
+			local totalstr := (pp.timeout - readgameclock() ) * pp.virulence;
+			if (cure_str  >= totalstr)
+				cure_str := cure_str - totalstr;
+				if (pp.curescript)
+					var params := {who, pp.pid, pp.virulence, pp.timeout};
+					start_script(pp.curescript, params);
+				endif
+				killpoison(pp);
+				poisons.erase(p);
+				
+				if (!len(poisons))
+					sendsysmessage(who, "You have been completely cured of poison");
+				else
+					if (!cure_str)
+						sendsysmessage(who, "You are still poisoned, but the virulence has been reduced");
+					endif
+				endif 
+				
+			else
+				pp.timeout := (pp.timeout - (cure_str / pp.virulence));
+				sendsysmessage(who, "You are still poisoned, but the virulence has been reduced");
+				if (pp.timeout <= readgameclock())
+					killpoison(pp);
+					poisons.erase(p);
+				endif
+				poisons[p] := pp;
+				 
+			endif
+		endif
+ 	endif
+endforeach
+endfunction

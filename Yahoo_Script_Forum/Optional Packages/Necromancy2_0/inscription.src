@@ -1,0 +1,299 @@
+/////////////////////////////////////////////////////////////////////////////
+//
+//  inscription.src - Inscription skill
+//
+//  Modifications:
+//      19990415 ENS Reformatted
+//
+/////////////////////////////////////////////////////////////////////////////
+use uo;
+use basic;
+use cfgfile;
+use util;
+use os;
+
+include "include/bitwise";
+include "include/client";
+include "include/objtype";
+include "include/skillpoints";
+Const SOUND_EFFECT_INSCRIPTION := 0x50;
+Const SOUND_EFFECT_SPARKLE := 0x1e8;
+Const EFFECT_SPARKLE :=  0x373a;
+Global config_file;
+
+
+program do_inscription( character )
+    local themenu;
+    local value;
+    local the_item;
+    local the_book;
+    local skill;
+    local points;
+    local elem;
+    local spells := { };
+    local spell_name;
+    local selected_spell;
+    local product;
+
+    config_file := ReadConfigFile( "inscription");
+  
+    SendSysmessage (character, "What would you like to inscribe?");
+  
+    the_item := target(character, "");
+   
+    if (!the_item)
+        SendSysmessage (character, "Targetting cancelled.");
+        return;
+    endif
+
+    if (! Accessible(character, the_item))
+        SendSysmessage (character, "You can't reach that!");
+        return;
+    endif
+  
+    if ( the_item.objtype = UOBJ_BLANK_SCROLL)
+        SendSysmessage( character, "Select a spellbook from which to inscribe." );
+        the_book := target(character, "");
+        if (!the_book)
+            SendSysmessage(character, "Targetting cancelled.");
+            return;
+        endif 
+    
+        if (! Accessible(character, the_book))
+            SendSysmessage (character, "You can't reach that!");
+            return;
+        endif
+    
+        if (the_book.objtype != UOBJ_SPELLBOOK)
+            SendSysmessage (character, "You must select a spellbook!");
+            return;
+        endif
+    
+        selected_spell := MakeAndProcessMenu(character, the_book);
+   
+        if (! selected_spell)
+            return;
+        endif
+  
+        elem := FindConfigElem(config_file, selected_spell);
+        skill := GetConfigInt(elem, "skill");
+        points := GetConfigInt(elem, "points");
+        product := GetConfigInt(elem, "scroll");
+        print ("inscription skill is " + SKILLID_INSCRIPTION);
+        local skillcheck := CheckSkill(character, SKILLID_INSCRIPTION, skill, points);
+        print ("error is " + skillcheck.errortext);
+
+        if (skillcheck > 0)
+            //use mana and reagents
+            PlaySoundEffect(character, SOUND_EFFECT_INSCRIPTION); 
+            local thescroll := CreateItemInBackpack(character, product);
+            PlayObjectCenteredEffect( thescroll, EFFECT_SPARKLE, 10,10);
+            SubtractAmount(the_item,1);
+            SendSysmessage (character, "You create the scroll and put it in your backpack");
+        else
+            print ("Skillcheck is " + skillcheck);
+            SendSysmessage (character, "You fail and destroy the scroll");
+            SubtractAmount(the_item,1);      
+        endif
+
+    elseif (is_exceptional_jewelry(the_item) or is_exceptional_weapon_armor(the_item))
+        enchant_item(character, the_item);
+    elseif ( (the_item.objtype <= 0xA110) and (the_item.objtype >= 0xA101) )
+	InscribeNecroSpell(character, the_item);
+    else
+        SendSysMessage(character, "You can't inscribe that!");
+    endif
+endprogram
+
+
+function enchant_item(character, the_item)
+    SendSysmessage (character, "Select a focus");
+    local enchantment := target(character);
+    if (!enchantment.objtype)
+        SendSysmessage(character, "Targetting cancelled.");
+        return;
+    endif
+    if (!is_alchemical_symbol(enchantment))
+        SendSysmessage(character, "Targetting cancelled.");
+        return;
+    endif
+    local elem :=config_file[ enchantment.objtype];
+    local skill := elem.skill;
+    local points := elem.points;
+    local script := elem.script;
+    local t_name := elem.tname;
+    destroyitem(enchantment);
+    if ( (CheckSkill(character, SKILLID_INSCRIPTION, skill, points)) and 
+         (CheckSkill(character, SKILLID_MAGERY, skill, points)) )
+        SendSysmessage (character, "Select a gem for each charge you wish to place on the item");
+        local thetarget := Target(character, "");
+        local charges := 0;
+        while (thetarget.objtype)
+            if (!Accessible(character, thetarget))
+                SendSysmessage(character, "You can't use that!");
+                continue;
+            endif
+            if ((thetarget.objtype >= 0x0f0f) and (thetarget.objtype <= 0x0f30))
+                DestroyItem(thetarget);
+                charges := charges + 1;
+            else
+                SendSysmessage(character, "That's not a gem!");
+            endif
+            thetarget := Target(character, "");    
+        endwhile
+        the_item.usescript := script;
+        SetObjProperty(the_item, "charges",cstr(charges));
+        PlayObjectCenteredEffect(the_item, EFFECT_SPARKLE, 7,0x10);
+        PlaySoundEffect(character, SOUND_EFFECT_SPARKLE);
+        SetObjProperty(the_item, "t_name",the_item.name  + " " +  t_name);   
+    else
+        //failure
+        SendSysmessage (character, "You fail, and destroy the item.");
+        DestroyItem(the_item);
+    endif
+endfunction
+
+
+Function MakeAndProcessMenu(character, spellbook)
+
+    set_priority(1);   
+    local circles := { };
+    
+    foreach spell in EnumerateItemsInContainer(spellbook)
+        local elem := FindConfigElem(config_file, spell.objtype);
+        local thecircle := GetConfigInt(elem, "circle");
+        circles[thecircle] := 1;
+    endforeach
+
+    local i;
+    local tmenu := CreateMenu("Select a circle to inscribe");
+
+    for (i := 1; i <= 8; i := i + 1)
+        if (circles[i] = 1)
+            AddMenuItem(tmenu, 0x20bf + i, "Circle " + cstr(i) + "spells");
+        endif
+    endfor
+
+
+    local firstchoice:= SelectMenuItem2(character, tmenu);
+
+    if (!firstchoice.index)
+        return 0;
+    endif
+
+    local tmenu2 := CreateMenu("Select a spell to inscribe");
+
+    foreach spell in EnumerateItemsInContainer(spellbook)
+        local elem := FindConfigElem(config_file, spell.objtype);
+        local thecircle := GetConfigInt(elem, "circle");
+        if (thecircle = firstchoice.objtype - 0x20bf)
+            local spellname := GetConfigString(elem, "name");
+            local thetype := GetConfigInt(elem, "graphic");
+            AddMenuItem(tmenu2, thetype, spellname);
+        endif
+    endforeach
+    
+
+    Local hischoice := SelectMenuItem2(character, tmenu2);
+   
+    set_priority(50);
+    if (!hischoice.index)
+        return 0;
+    else
+        return hischoice.objtype;
+    endif
+endfunction
+
+
+const ALCHEMICAL_SYMBOL_START := 0x181d;
+const ALCHEMICAL_SYMBOL_END := 0x1828;
+
+function is_alchemical_symbol(what)
+    if ((what.objtype >= ALCHEMICAL_SYMBOL_START) and (what.objtype <= ALCHEMICAL_SYMBOL_END))
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+
+function is_exceptional_jewelry (what)
+    if ((what.objtype >= 0x1085) and (what.objtype <= 0x108a) and (find(lower(what.name), "exceptional",1) > 0))
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+
+function is_exceptional_weapon_armor(what)
+
+    if (find(lower(what.name), "exceptional",1) = 0)
+        return 0;
+    endif
+
+    local config := ReadConfigFile(":blacksmithy:blacksmithy");
+    local elem := FindConfigElem(config, what.objtype);
+    if (!elem)
+          return 0;
+    endif
+    
+    return 1;
+
+endfunction
+
+function InscribeNecroSpell(character, the_item)
+    
+	SendSysmessage( character, "Select the infernal tome in which to inscribe." );
+        local the_book := target(character, "");
+        if (!the_book)
+            SendSysmessage(character, "Targetting cancelled.");
+            return;
+        endif 
+    
+        if (! Accessible(character, the_book))
+            SendSysmessage (character, "You can't reach that!");
+            return;
+        endif
+    
+        if (the_book.objtype != 0xA100)
+            SendSysmessage (character, "You must select a necromatic spellbook.");
+            return;
+        endif
+
+	local elem := FindConfigElem(config_file, the_item.objtype);
+        local skill := GetConfigInt(elem, "skill");
+        local points := GetConfigInt(elem, "points");
+	local FlagRegister := GetConfigInt(elem, "flagset");
+	local Flag := GetConfigInt(elem, "flag");
+	local Circle := "";
+
+	if (FlagRegister = 1)
+		Circle := "Lesser";
+	else
+		Circle := "Greater";
+	endif
+
+	FlagRegister := GetObjProperty(the_book, Circle);
+	FlagRegister := Cint(FlagRegister);
+
+	if (FlagCheck(FlagRegister, Flag) = 1)
+		SendSysMessage(character, "That spell is already inscribed.");
+		return;
+	endif
+
+        local skillcheck := CheckSkill(character, SKILLID_INSCRIPTION, skill, points);
+
+        if (skillcheck > 0)
+		PlaySoundEffect(character, SOUND_EFFECT_INSCRIPTION); 
+		PlayObjectCenteredEffect( the_book, EFFECT_SPARKLE, 10,10);
+		SubtractAmount(the_item,1);
+		SendSysmessage (character, "You inscribe the spell into your Codex.");
+		FlagRegister := FlagSet(FlagRegister, Flag);
+		FlagRegister := CStr(FlagRegister);
+		SetObjProperty(the_book, Circle, FlagRegister);
+        else
+		SendSysmessage (character, "You fail, and destroy the scroll");
+		SubtractAmount(the_item,1);      
+        endif
+endfunction

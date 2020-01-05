@@ -1,0 +1,20 @@
+///////////////////////////////////////////////////////////
+// equipGmStaff.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+///////////////////////////////////////////////////////////
+use uo;
+use os;
+
+program equip_gm_staff(who,gmstaff)
+  if (who.cmdlevel<3)
+    sendsysmessage(who,"This item is much too powerful for you to handle!");
+    ApplyRawDamage(who,15);
+    PlayLightningBoltEffect( who );
+    return 0;
+  else
+    return 1;
+  endif
+endprogram

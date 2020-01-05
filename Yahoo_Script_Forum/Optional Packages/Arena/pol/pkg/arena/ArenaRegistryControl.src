@@ -1,0 +1,433 @@
+// ArenaRegistryControl.src
+//
+// This is the control script for the Arena.   It processes the arena
+// fights and the match queue, and it monitors for "interference".
+
+use uo;
+use os;
+use cfgfile;
+use util;
+use basic;
+
+include "include/client";
+
+const UOBJ_CORPSE := 0x2006;
+
+var MainLayout := {
+    "page 0",
+    "resizepic 30 30 83 280 200",
+    "button 50 70 2104 2103 1 0 1001",
+    "button 50 90 2104 2103 1 0 1002",
+    "button 50 110 2104 2103 1 0 1003",
+    "button 50 130 2104 2103 1 0 1004",
+    "button 50 150 2104 2103 1 0 1005",
+    "button 50 170 2104 2103 1 0 1006",
+    "text 50 42 35 0",
+    "text 70 65 35 1",
+    "text 70 85 35 2",
+    "text 70 105 35 3",
+    "text 70 125 35 4",
+    "text 70 145 35 5",
+    "text 70 165 35 6",
+    "button 141 195 2119 2120 1 0 1"
+};
+
+var MainData := {
+    "Please select your opponent:",
+    "Humanoid",
+    "Beastial",
+    "NPC Human",
+    "Several Opponents",
+    "Another Player",
+    "Grand Melee"
+};
+
+var DiffLayout := {
+    "page 0",
+    "resizepic 30 30 83 280 200",
+    "button 50 70 2104 2103 1 0 2001",
+    "button 50 90 2104 2103 1 0 2002",
+    "button 50 110 2104 2103 1 0 2003",
+    "button 50 130 2104 2103 1 0 2004",
+    "button 50 150 2104 2103 1 0 2005",
+    "text 50 42 35 0",
+    "text 70 65 35 1",
+    "text 70 85 35 2",
+    "text 70 105 35 3",
+    "text 70 125 35 4",
+    "text 70 145 35 5",
+    "button 141 195 2119 2120 1 0 1"
+};
+
+var DiffData := {
+	"Please select difficulty:",
+	"Weak",
+	"Average",
+	"Advanced",
+	"Dangerous",
+	"Oh my God, run...RUUNNNNN!"
+};
+
+var PvPLayout := {
+    "page 0",
+    "resizepic 30 30 83 280 200",
+    "button 50 70 2104 2103 1 0 3001",
+    "button 50 90 2104 2103 1 0 3002",
+    "text 50 42 35 0",
+    "text 70 65 35 1",
+    "text 70 85 35 2",
+    "button 141 195 2119 2120 1 0 1"
+};
+
+var PvPData := {
+    "Do you wish to fight?",
+    "Accept",
+    "Decline"
+};
+
+program ArenaRegistryControl(ArenaControl)
+
+// Main Arena Control Loop
+//
+// First, we perform maintenance to clean up the arena from any
+// stragglers (i.e., if the server crashed, or if someone is hiding
+// in between matches, or gating in, or whatever.  Then grab a 
+// contestant from the queue.   If there's no contestant, we wait
+// and start all over again.  If there IS a contestant, we get 
+// the battle selection, fight the battle, let the victor loot,
+// then clean up and start again.
+//
+// TODO: Scoring system for arena fighters
+
+	local who;
+
+	While(1)
+		PerformArenaMaintenance(ArenaControl);
+		who := GetArenaRegistrant(ArenaControl);
+
+		if (who = 0)
+			Sleep(30);
+		else
+			FightArenaBattle(ArenaControl, who);
+		endif
+	endwhile
+endprogram
+
+function PerformArenaMaintenance(ArenaControl)
+
+// Maintenance includes removing straggling players and monsters from
+// the arena bounds, removing corpses, and tidying up.
+
+
+	local i, x;
+	local ArenaTopLeft := {0,0,0};
+	local ArenaBottomRight := {0,0,0};
+
+	local VendorID := GetObjProperty(ArenaControl, "VendorID");
+	local cfg := ReadConfigFile("arenaregistry");
+	local elem := FindConfigElem(cfg, VendorID);
+
+// Get the bounds of the arena.
+
+	ArenaTopLeft[1] := GetConfigInt(elem, "TopX");
+	ArenaTopLeft[2] := GetConfigInt(elem, "TopY");
+	ArenaTopLeft[3] := GetConfigInt(elem, "TopZ");
+	ArenaBottomRight[1] := GetConfigInt(elem, "BottX");
+	ArenaBottomRight[2] := GetConfigInt(elem, "BottY");
+	ArenaBottomRight[3] := GetConfigInt(elem, "BottZ");
+
+// Remove "lost" players.  If a fight was left unfinished (because
+// of a server crash, for example), then we add the combatants to 
+// the lost list.
+
+	local LostList := GetObjProperty(ArenaControl, "LostList");
+	local Combatants := GetObjProperty(ArenaControl, "Combatants");
+
+	if (!Combatants)
+		Combatants := {};
+	else
+		Combatants := SplitWords(Combatants);
+	endif
+
+	if (!LostList)
+		LostList := {};
+	else
+		LostList := SplitWords(LostList);
+		LostList := LostList + Combatants;
+		foreach i in EnumerateOnlineCharacters()
+			foreach x in LostList
+				if (Cint(x) = i.serial)
+					MoveCharacterToLocation(i, ArenaControl.x, ArenaControl.y + 1, ArenaControl.z, 0x40000000);
+				endif
+			endforeach
+		endforeach
+	endif
+
+// Gate out any straggling players, clear the Arena of monsters...
+
+	foreach i in ListObjectsInBox(ArenaTopLeft[1], ArenaTopLeft[2], ArenaTopLeft[3], ArenaBottomRight[1], ArenaBottomRight[2], ArenaBottomRight[3])
+		if (i.acctname)
+			MoveCharacterToLocation(i, ArenaControl.x, ArenaControl.y + 1 , ArenaControl.z);
+		endif
+
+		if ( (i.hp >= 0) and (!i.acctname) )
+			ApplyRawDamage(i, i.hp + 3);
+		endif
+	endforeach
+
+// ...and stray items (including the new corpses).
+
+	foreach i in ListObjectsInBox(ArenaTopLeft[1], ArenaTopLeft[2], ArenaTopLeft[3], ArenaBottomRight[1], ArenaBottomRight[2], ArenaBottomRight[3])
+		DestroyItem(i);
+	endforeach
+
+endfunction
+
+
+function GetArenaRegistrant(ArenaControl)
+
+// First, we check the registrant list for online players.   We 
+// remove any registrants who are not online.   We send a message
+// to everyone informing them of their place on the list, and we
+// return the id# of the 1st person on the list.   If there are
+// no registrants on the list, we return a 0.
+
+	local i, x, y;
+	local NewList := {};
+	local who := "NOBODY";
+
+	local QueueList := GetObjProperty(ArenaControl, "QueueList");
+	if (!QueueList)
+		return 0;
+	else
+		QueueList := SplitWords(QueueList);
+	endif
+
+// Eliminate all off-line registrants, making a new list of all the
+// ones who are online.
+
+	y := 0;
+	foreach i in QueueList
+		foreach x in EnumerateOnlineCharacters()
+			if ( Cint(i) = CInt(x.serial) )
+				y := y + 1;
+				NewList[y] := x;
+			endif
+		endforeach
+	endforeach
+
+// Send a message to each of the online players, and return the
+// the next contestant.   If the list is empty, return a 0.
+
+	if (Len(NewList) = 0)
+		return 0;
+	endif
+
+	SendSysMessage(NewList[1], "You are the next combatant...");
+	who := NewList[1];
+	QueueList := "";
+
+	if (Len(NewList > 1))
+		for (i := 2; i > Len(NewList); i := i + 1)
+			QueueList := QueueList + Cstr(NewList[i].serial) + " ";
+			y := i - 1;
+			if (y = 1)
+				x := "registrant";
+			else
+				x := "registrants";
+			endif
+			SendSysMessage(NewList[i], "The next match is starting.   There are " + y + " " + x + " ahead of you.");
+		endfor
+	endif
+
+	SetObjProperty(ArenaControl, "QueueList", QueueList);
+	return who;
+
+endfunction
+
+
+function FightArenaBattle(ArenaControl, who)
+
+// This is essentially a Kludge of my first version.   It's works
+// though, and I'm just using it for testing purposes.   I'll 
+// clean it up when the rest of the arena works correctly.
+
+	local Selection, PowerLevel, Success := 0;
+	local x, y, z, Difficulty;
+	local dx, dy, dz;
+
+	local InUse := GetObjProperty(ArenaControl, "InUse");
+
+	if (InUse = "Y")
+		SendSysMessage(who, "The Arena is in use...");
+		return;
+	endif
+
+	local VendorID := GetObjProperty(ArenaControl, "VendorID");
+
+	local cfg := ReadConfigFile("arenaregistry");
+	local elem := FindConfigElem(cfg, VendorID);
+	
+	local MonsterList := GetConfigStringArray(elem, "Monster");
+	local MonsterLevel := GetConfigStringArray(elem, "Level");	
+	local MonsterType := GetConfigStringArray(elem, "Type");
+	local MonsterLen := Len(MonsterList);
+
+	local DestX := GetConfigStringArray(elem, "DestX");
+	local DestY := GetConfigStringArray(elem, "DestY");
+	local DestZ := GetConfigStringArray(elem, "DestZ");
+
+	for(x:=1; x <= Len(DestX); x:=x+1)
+		DestX[x] := Cint(DestX[x]);
+		DestY[x] := Cint(DestY[x]);
+		DestZ[x] := Cint(DestZ[x]);
+	endfor
+
+	for(x:=1; x <= Len(MonsterType); x:=x+1)
+		MonsterType[x] := Cint(MonsterType[x]);
+		MonsterLevel[x] := Cint(MonsterLevel[x]);
+	endfor
+
+
+	UnloadConfigFile("arenavendors");	
+
+	var res := SendDialogGump( who, MainLayout, MainData );
+	if ( (res[0]=0) or (res[0]=1) )
+		SendSysMessage(who, "Cancelled.");
+		return;
+	endif
+	Selection := res[0] - 1000;
+
+if (Selection < 4)
+
+	res := SendDialogGump( who, DiffLayout, DiffData );
+	if ( (res[0]=0) or (res[0]=1) )
+		SendSysMessage(who, "Cancelled.");
+		return;
+	endif
+	Difficulty := res[0] - 2000;	
+
+	y := 1;
+	z := {};
+
+	For(x:=1; x <= MonsterLen; x := x+ 1)
+		if (MonsterType[x] = Selection)
+			if (MonsterLevel[x] = Difficulty)
+				z[y] := MonsterList[x];
+				y := y + 1;
+			endif
+		endif
+	endfor
+
+	if (Len(z) < 1)
+		SendSysMessage(who, "Error creating monster...page a GM at once.");
+		SendSysMessage(who, "MonsterList: " + z);
+		return;
+	endif
+
+	x := RandomInt( Len (DestX) ) + 1;
+	y := RandomInt( Len (z) ) + 1;
+	
+	local Opponent := CreateNPCFromTemplate(z[y], DestX[x], DestY[x], DestZ[x]);
+
+
+
+	if (!Opponent)
+		SendSysMessage(who, "Error creating monster...page a GM at once.");
+		SendSysMessage(who, "Monster = " + z[y]);
+		return;
+	endif	
+
+
+	While (success = 0);
+		y := RandomInt( Len (DestX) ) + 1;
+		if ( (DestX[y] = DestX[x]) and (DestY[y] = DestY[x]) )
+			success := 0;
+		else
+			success := 1;
+		endif
+	endwhile
+	MoveCharacterToLocation(who, DestX[y], DestY[y], DestZ[y]);
+	SendSysMessage(who, "Prepare thyself...");
+
+	Success := 0;
+	SetObjProperty(ArenaControl, "InUse", "Y");
+
+		While (Success = 0)
+			If ( (who.dead = 1) or (!who) )
+				SendSysMessage(who, "Perhaps next time.");
+				MoveCharacterToLocation(who, ArenaControl.x, ArenaControl.y -1 , ArenaControl.z);
+				ApplyRawDamage(Opponent, Opponent.maxhp );
+				Success := 1;
+			endif
+			if ( (Opponent.dead = 1) or (!Opponent) )
+				SendSysMessage(who, "Well fought.");
+				MoveCharacterToLocation(who, ArenaControl.x - 1, ArenaControl.y, ArenaControl.z);
+				Success := 1;
+			endif				
+			Sleep(20);
+		endwhile
+	SetObjProperty(ArenaControl, "InUse", "N");
+
+else
+	if ( (Selection = 4) or (Selection = 6) )
+		SendSysMessage(who, "Option disabled.");
+		return;
+	endif
+
+	if (Selection = 5)
+
+		SendSysMessage(who, "Select your opponent.");
+		local TargOpp := target(who);
+		if (!TargOpp)
+			SendSysMessage(who, "Aborted.");
+		endif
+
+		SendSysMessage(who, "Confirming opponent, please wait...");
+		res := SendDialogGump( TargOpp, PvPLayout, PvPData );
+		if (res[0]=3001)
+			x := RandomInt( Len (DestX) ) + 1;
+			MoveCharacterToLocation(TargOpp, DestX[x], DestY[x], DestZ[x]);
+			SendSysMessage(TargOpp, "Prepare thyself...");
+		else
+			SendSysMessage(who, "Your opponent declines.");
+			return;
+		endif
+	
+		While (success = 0);
+			y := RandomInt( Len (DestX) ) + 1;
+			if ( (DestX[y] = DestX[x]) and (DestY[y] = DestY[x]) )
+				success := 0;
+			else
+				success := 1;
+			endif
+		endwhile
+		MoveCharacterToLocation(who, DestX[y], DestY[y], DestZ[y]);
+		SendSysMessage(who, "Prepare thyself...");
+
+		Success := 0;
+		SetObjProperty(ArenaControl, "InUse", "Y");
+		While (Success = 0)
+			If ( (TargOpp.dead = 1) or (!TargOpp) )
+				SendSysMessage(who, "Well fought.");
+				MoveCharacterToLocation(who, ArenaControl.x - 1, ArenaControl.y, ArenaControl.z);
+				Success := 1;
+			endif
+			if ( (who.dead = 1) or (!who) )
+				SendSysMessage(TargOpp, "Well fought.");
+				MoveCharacterToLocation(TargOpp, ArenaControl.x - 1, ArenaControl.y, ArenaControl.z);
+				Success := 1;
+			endif				
+			Sleep(20);
+		endwhile
+		SetObjProperty(ArenaControl, "InUse", "N");
+	endif
+endif
+		
+/*
+	        4: SendSysMessage(who, "Not yet implemented.");   
+	        5: SendSysMessage(who, "Not yet implemented.");
+	        6: SendSysMessage(who, "Not yet implemented.");
+*/
+
+endfunction

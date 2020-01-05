@@ -1,0 +1,154 @@
+////////////////////////////////////
+// editprivs.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+////////////////////////////////////
+// Notes:
+//  - Due to difficulties in identifying
+//  if a player's privs are granted or not,
+//  this code treats the all priv as a 
+//  special case and sets ALL the actual 
+//  privs on/off as required.
+//  (ie as well as the specific 'all' priv)
+
+use uo;
+use os;
+
+const ENUM_PRIVS_MAX:=14;
+
+var gump_layout:=
+{
+  "page0",
+  "nodispose",
+  "resizepic 0 0 3600 300 400",
+  "text 100 60 93 0",
+  "text 100 80 93 1",
+  "text 100 100 93 2",
+  "text 100 120 93 3",
+  "text 100 140 93 4",
+  "text 100 160 93 5",
+  "text 100 180 93 6",
+  "text 100 200 93 7",
+  "text 100 220 93 8",
+  "text 100 240 93 9",
+  "text 100 260 93 10",
+  "text 100 280 93 11",
+  "text 100 300 93 12",
+  "text 100 320 93 13",
+  "croppedtext 60 10 220 20 66 14",
+  "button 230 360 2122 2123 1 0 200",
+  "text 40 40 98 15",
+  "text 220 40 98 16",
+};
+
+var gump_data:=
+{
+  "ALL",
+  "Invul",
+  "ClotheAny",
+  "DyeAny",
+  "MoveAny",
+  "RenameAny",
+  "SeeInvisItems",
+  "ShowAdv",
+  "LosAny",
+  "IgnoreDoors",
+  "DblClickAny",
+  "HearGhosts",
+  "SeeHidden",
+  "SeeGhosts",
+  "",          //gump title
+  "enabled",
+  "granted",
+};
+
+
+program Set_Privs(who)
+  sendsysmessage(who,"Edit who's privs?");
+  var tgt:=Target(who);
+  if (tgt.isa(POLCLASS_MOBILE) and !tgt.isa(POLCLASS_NPC))
+    if ((tgt!=who) and (tgt.cmdlevel>2))
+      sendsysmessage(who,"You may not change their privs!");
+      return;
+    endif
+    var granted:="";
+    var i;
+    gump_data[15]:="Edit Privs: "+tgt.name;
+    while (SendPrivEditGump(who,tgt))
+    endwhile
+  elseif (tgt)
+    sendsysmessage(who,"That isnt a character!");
+  endif
+endprogram
+
+function SendPrivEditGump(who,tgt)
+  var i;
+  var enabled_privs:=array;
+  var granted_privs:=array;
+  for (i:=1;i<=14;i:=i+1)
+    var priv:=lower(gump_data[i]);
+    enabled_privs[i]:=(tgt.enabled(priv));
+    gump_layout[22+i]:="checkbox 60 "+((i*20)+40)+" 210 211 "+(enabled_privs[i])+" "+(300+i);
+    granted_privs[i]:=(IsPrivGranted(tgt,priv));
+    gump_layout[37+i]:="checkbox 220 "+((i*20)+40)+" 210 211 "+(granted_privs[i])+" "+(350+i);
+  endfor
+
+  var retval:=SendDialogGump(who,gump_layout,gump_data);
+
+  if (retval[200])
+    var grant_all:=0;
+    var revoke_all:=0;
+    var enable_all:=0;
+    var disable_all:=0;
+    if (!retval[351])
+      if (granted_privs[1])
+        revoke_all:=1;
+      endif
+    else
+      if (!granted_privs[1])
+        grant_all:=1;
+      endif
+      if ((retval[301]) and (!enabled_privs[1]))
+        enable_all:=1;
+      elseif ((!retval[301]) and (enabled_privs[1]))
+        disable_all:=1;
+      endif
+    endif
+    for (i:=1;i<=14;i:=i+1)
+      var priv:=lower(gump_data[i]);
+      if ( !(revoke_all and !retval[300+i]) and (grant_all or retval[350+i]) )
+        GrantPrivilege(who,priv);
+      else
+        RevokePrivilege(who,priv);
+      endif
+      if ( (!disable_all) and (enable_all or retval[300+i]) )
+        tgt.enable(priv);
+      else
+        tgt.disable(priv);
+      endif
+    endfor
+    if (who!=tgt)
+      sendsysmessage(tgt,who.name+" has updated your privs!");
+    endif
+    return 1;
+  endif
+  return 0;
+endfunction
+
+// must be passed a valid priv
+function IsPrivGranted(who,priv)
+  var priv_status:=who.enabled(priv);
+  if (priv_status)
+    who.disable(priv);
+  endif
+  if (who.enable(priv))
+    if (!priv_status)
+      who.disable(priv);
+    endif
+    return 1;
+  else
+    return 0;
+  endif
+endfunction

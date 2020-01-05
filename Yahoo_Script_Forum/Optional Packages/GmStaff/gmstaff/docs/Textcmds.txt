@@ -1,0 +1,20 @@
+///////////////////////////////////////////
+// TextCommands
+// ============
+// The pkg contains the following textcommands:
+//
+//   cmdlevel                   - [gump] view/alter a chars command level (see notes in the src)
+//   createitem                 - [gump] create an item (POL items sorted by package)
+//   editprivs                  - [gump] edit privs in a gump
+//   enchantitem                - [gump] enchant an item with a distro std enchantement
+//   findgreedyscripts          - [gump] view the 10 "greediest" script profiles
+//   guildinfo                  - [gump] view selected guild's information (still in testing....)
+//   makenpc                    - [gump] create an npc from template
+//   mapgo                      - [gump] Travel via a map (not to dungeons\T2A though)
+//   propedit                   - [gump] cprop editor (updated & bug fixed from the distro version)
+//   reportables                - [gump] view a mobile's reportables
+//   scriptprofiles             - [gump] view/clear up to 160 current scriptprofiles, could take a while...
+//   selectitem                 - [gump] create an item (UO items from provided config files)
+//
+//////////////////////////////////////////////
+

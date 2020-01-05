@@ -1,0 +1,178 @@
+use uo;
+use os;
+use basic;
+use cfgfile;
+
+include "include/math";
+include "include/client";
+
+var layout := {
+    "page 0",
+    "gumppic 30 30 2200",
+    "text 70 40 28 0",
+    "text 230 40 28 1"
+};
+
+var C1SpellArray := {220,221,222,223,224,225,226,227};
+var C2SpellArray := {228,229,230,256,257,258,259,260};
+var BookArray := {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+var Con1ButtonLayout := {
+    "button 60 70 2104 2103 1 0 101",
+    "button 60 90 2104 2103 1 0 102",
+    "button 60 110 2104 2103 1 0 103",
+    "button 60 130 2104 2103 1 0 104",
+    "button 60 150 2104 2103 1 0 105",
+    "button 60 170 2104 2103 1 0 106",
+    "button 60 190 2104 2103 1 0 107",
+    "button 60 210 2104 2103 1 0 108"
+};
+
+var Con2ButtonLayout := {
+    "button 220 70 2104 2103 1 0 109",
+    "button 220 90 2104 2103 1 0 110",
+    "button 220 110 2104 2103 1 0 111",
+    "button 220 130 2104 2103 1 0 112",
+    "button 220 150 2104 2103 1 0 113",
+    "button 220 170 2104 2103 1 0 114",
+    "button 220 190 2104 2103 1 0 115",
+    "button 220 210 2104 2103 1 0 116",
+};
+
+var Con1TextLayout := {
+    "text 80 65 0 ",
+    "text 80 85 0 ",
+    "text 80 105 0 ",
+    "text 80 125 0 ",
+    "text 80 145 0 ",
+    "text 80 165 0 ",
+    "text 80 185 0 ",
+    "text 80 205 0 ",
+};
+
+var Con2TextLayout := {
+    "text 240 65 0 ",
+    "text 240 85 0 ",
+    "text 240 105 0 ",
+    "text 240 125 0 ",
+    "text 240 145 0 ",
+    "text 240 165 0 ",
+    "text 240 185 0 ",
+    "text 240 205 0 "
+};
+
+var data := {
+    "Book of earth",
+    "Book of earth"
+};
+
+var Con1SpellData := {
+    "Wolfpack",
+    "Summon Mount",
+    "Treeform",
+    "Refresh",
+    "Insect Swarm",
+    "Nature Healing",
+    "Nature Curing",
+    "Gusting Wind",
+};
+
+var Con2SpellData := {
+    "Druidic Gate",
+    "Summon Treant",
+    "Druid's Bless",
+    "",
+    "",
+    "",
+    "",
+    ""
+};
+
+program contome(who, book)
+
+	local i := 1;
+	local q := 8;
+	local C1Total := 0;
+	local C2Total := 0;
+
+	local LayoutLen := len(layout);
+	local DataLen := len(data);
+
+	local Con1Flag := GetObjProperty(book, "Con1");
+	local Con2Flag := GetObjProperty(book, "Con2");
+	
+	Con1Flag := CInt(Con1Flag);
+	Con2Flag := Cint(Con2Flag);
+
+	While (i < 9)
+		if (FlagCheck(Con1Flag, i)=1)
+			C1Total := C1Total + 1;
+			LayoutLen := LayoutLen + 1;
+			layout[LayoutLen] := Con1ButtonLayout[C1Total];
+			LayoutLen := LayoutLen + 1;
+			layout[LayoutLen] := Con1TextLayout[C1Total] + Cstr(1 + C1Total + C2Total);
+			sleepms(1);
+			DataLen := DataLen + 1;
+			data[DataLen] := Con1SpellData[i];
+			BookArray[C1Total] := C1SpellArray[i];
+		endif
+		if (FlagCheck(Con2Flag, i)=1)
+			C2Total := C2Total + 1;
+			LayoutLen := LayoutLen + 1;
+			layout[LayoutLen] := Con2ButtonLayout[C2Total];
+			LayoutLen := LayoutLen + 1;
+			layout[LayoutLen] := Con2TextLayout[C2Total] + Cstr(1 + C1Total + C2Total);
+			sleepms(1);
+			DataLen := DataLen + 1;
+			data[DataLen] := Con2SpellData[i];
+			q := 8 + C2Total;
+			BookArray[q] := C2SpellArray[i];
+		endif
+		i := i + 1;
+	endWhile
+
+	SendSysMessage(who, "Select Spell.");
+   
+	var res := SendDialogGump( who, layout, data );             
+
+	if (res[0] < 100)
+	        SendSysMessage(who, "Cancelled.");
+        	return;
+	endif
+
+	if( GetObjProperty(who, "mute") )
+	    SendSysMessage(who, "You are muted!");
+	    return;
+	endif
+
+	set_critical(1);
+	Detach();
+
+	Local CastMe := (res[0] - 100);
+	CastMe := BookArray[CastMe];
+
+	CastSpell(who, CastMe);
+
+endprogram
+
+function CastSpell(who, spellid)
+
+	set_critical( 1 );
+
+	PerformAction(who,ANIM_CAST_DIR);
+
+	local spells_cfg := ReadConfigFile( "spells" );
+	local element := FindConfigElem ( spells_cfg, spellid );
+	PrintTextAbove( who, GetConfigString(element, "PowerWords"), font := _DEFAULT_TEXT_FONT, color := 42 );
+	sleep(2);
+	var reg := ConsumeReagents(who, spellid);
+	ConsumeMana( who, spellid );
+	reg;
+	if(!reg)
+		sendsysmessage(who, "you dont have enough reagents!");
+		return 0;
+        else
+        StartSpellEffect( who, spellid );
+	  return;
+	endif
+endfunction

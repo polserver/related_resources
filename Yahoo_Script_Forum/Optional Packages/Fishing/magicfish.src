@@ -1,0 +1,100 @@
+// ********************************************************************************
+// ***
+// ***	magic fish script
+// ***
+// ***	This script is called each time a player uses (double-clicks) a magic fish
+// ***
+// ********************************************************************************
+
+// ********************************************************************************
+//	function modules that will be used
+// ********************************************************************************
+use uo;
+use cfgfile;
+use os;
+use util;
+
+// ********************************************************************************
+//	included modules that will be used
+// ********************************************************************************
+include "include/statmod";
+include "fishing";
+
+// ********************************************************************************
+//	Main program
+//	
+//	This is the main magic fish handler.  It is called when the player
+//	double-clicks on a magic fish.
+// ********************************************************************************
+program use_magicfish( who, fish )
+	// indicate the bottle is in use
+	reserveitem(fish);
+	// get the cprops we need before destroying the fish
+	local spellnum := GetObjProperty( fish, "spellnum" );
+	local spellsound := GetObjProperty( fish, "spellsound" );
+	local spelleffect := GetObjProperty( fish, "spelleffect" );
+	local miscprop1 := GetObjProperty( fish, "miscprop1" );
+	local miscprop2 := GetObjProperty( fish, "miscprop2" );
+	destroyitem(fish);
+	if (spellnum > 0)
+		// this magic fish has a spell set for it
+		// play the sound and animations that are requested
+		PlaySoundEffect( who, spellsound );
+		PlayObjectCenteredEffect( who, spelleffect, 10,10);
+		// debug messages
+		// SendSysMessage( who, "Fish has spell number " + spellnum);
+		// SendSysMessage( who, "Using spell sound " + spellsound);
+		// SendSysMessage( who, "Using spell effect" + spelleffect);
+		case (spellnum)		// handle the different magical effects
+
+			4:	// heal
+				HealDamage( who, miscprop1);
+
+			6:	// night sight
+				who.setlightlevel( miscprop1, miscprop2 );
+
+			9:	// agility
+				if (CanMod(who, "dex"))
+					DoTempMod(who, "dex", miscprop1, miscprop2);
+				endif
+
+			10:	// cunning
+				if (CanMod(who, "int"))
+					DoTempMod(who, "int", miscprop1, miscprop2);
+				endif
+
+			11:	// cure
+				local poison_level := Cint(GetObjProperty(who, "poison_level"));
+				if (poison_level > 0 )
+					poison_level := poison_level - miscprop1;
+					if (poison_level < 0) then
+						poison_level := 0;
+					endif
+				SetObjProperty (who, "poison_level",cstr(poison_level));
+				endif
+
+			16:	// strength
+				if (CanMod(who, "str"))
+					DoTempMod(who, "str", miscprop1, miscprop2);
+				endif
+
+			17:	// bless
+				if (CanMod(who, "str"))
+					DoTempMod(who, "str", miscprop1, miscprop2);
+				endif
+				if (CanMod(who, "dex"))
+					DoTempMod(who, "dex", miscprop1, miscprop2);
+				endif
+				if (CanMod(who, "int"))
+					DoTempMod(who, "int", miscprop1, miscprop2);
+				endif
+
+		    44:	// invisibility
+				who.hidden := 1;
+
+		endcase
+	else
+		// bad spellnum cprop on this fish, it is 0 (not valid)
+		SendSysMessage(who, "Yech, that was a rotten fish!");
+	endif
+endprogram

@@ -1,0 +1,39 @@
+use uo;
+
+include "sench";
+
+program enchscroll( who, scroll )
+
+	var enchs := GetObjProperty( scroll, "Enchantments" );
+
+	if( !enchs || !len(enchs) )
+	    SendSysMessage( who, "Bugged enchantment scroll. No enchantment. Destroy me." );
+	    return;
+	endif
+
+	SendSysMessage( who, "Select a runestone to enchant." );
+	var theItem := Target(who);
+
+	if( theItem.objtype != ID_RUNESTONE )
+	    SendSysMessage( who, "Thats not a runestone!" );
+	    return;
+	endif
+
+	if( !reserveitem(scroll) )
+	    return;
+	endif
+
+	if( !reserveitem(theItem) )
+	    return;
+	endif
+
+	////////////////////////
+	//Skill checks here...//
+	////////////////////////
+	foreach e in enchs
+	    convEnch( scroll, theItem, e );
+	endforeach
+	refreshEnchNames( theItem );
+	DestroyItem( scroll );
+
+endprogram

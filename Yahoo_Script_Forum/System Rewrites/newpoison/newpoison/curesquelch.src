@@ -1,0 +1,9 @@
+use uo;
+use os;
+
+program cureparalyze(parms)
+
+local who := parms[1];
+who.squelch(0);
+ 
+endprogram

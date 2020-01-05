@@ -1,0 +1,25 @@
+use uo;
+use cfgfile;
+
+include "include/spellRestrictions";
+include "include/attributes";
+include "sorcery";
+
+program cast_iceknife(parms)
+  var circle := 9;
+  var delivery := "direct";
+  var noto := "harmful";
+  var result := maincast(parms, delivery, circle, noto, 18);
+  if(result == 0)
+    return;
+  endif
+  var caster := result[1];
+  var cast_on := result[2];
+  PlayMovingEffect(caster, cast_on, 0xF51, 0x0a, 0x1e);
+  PlaySoundEffect(cast_on, 0x201);
+  PlayObjectCenteredEffect(cast_on, FX_BLESS_EFFECT, 10, 10);
+  PlaySoundEffect(cast_on, 0x42);
+  var dmg := RandomDiceRoll("9d6");
+  SetObjProperty(cast_on, "LastHit", {caster.name, caster.serial, "iceknife"});
+  SpellDamage(circle,caster, cast_on);
+endprogram

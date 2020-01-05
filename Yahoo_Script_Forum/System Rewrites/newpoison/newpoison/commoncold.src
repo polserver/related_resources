@@ -1,0 +1,61 @@
+use uo;
+use os;
+use util;
+use cfgfile;
+
+include "include/newpoisons";
+
+program mildvirus(parms)
+	var who := parms[1];
+	setobjproperty(who, "#tempcold", readgameclock()+1500);
+	var condition := 0;
+	var conditionwait := 0;
+	var incubating := 1;
+	var numcycles := 0;
+	while(1)
+		if (!incubating && conditionwait == 4|| randomint(20) == 3)
+			if (condition < 4)
+				condition := condition+1;
+			endif
+			emote(who, condition);
+			incubating := 0;
+			conditionwait := 0;
+			numcycles := numcycles+1;
+			applyrawdamage(who, 1);
+		endif
+		
+		foreach person in listmobilesnearlocation(who.x, who.y, who.z, 5)
+			if (getobjproperty(person, "#tempcold") < readgameclock())
+				if (!person.npctemplate || canbeill(person))
+					if (randomint(20) == 10)
+						addpoison(person, "commoncold", 120);
+					endif
+				endif
+			endif
+		endforeach
+		sleep(5);
+		conditionwait := conditionwait+1;
+	endwhile
+	
+endprogram
+
+function canbeill(person)
+	var config := readconfigfile("::npcdesc");
+	if (!config)
+		print ("Couldnt open npcdesc in commoncold.src");
+	endif
+	var npcstuff := config[person.npctemplate];
+	if (npcstuff.Elemental == "person")
+		return 1;
+	endif
+	return 0;
+endfunction
+
+function emote(who, condition)
+	case condition
+		1: printtextabove(who, "*shows signs of getting sick*", 3, 32);
+		2: printtextabove(who, "*begins to mildly sweat*", 3, 32);
+		3: printtextabove(who, "*begins coughing*", 3, 32);
+		4: printtextabove(who, "*coughs*", 3, 32);
+	endcase
+endfunction

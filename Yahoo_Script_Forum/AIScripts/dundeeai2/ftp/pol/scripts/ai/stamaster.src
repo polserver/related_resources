@@ -1,0 +1,253 @@
+use npc;
+use os;
+use uo;
+
+include "include/randname";
+include "include/eventid";
+include "include/client";
+include "include/speech";
+include "include/NPCBackpacks";
+
+const MONEY := 0xeed;
+const MAXFRIENDS := 3;
+
+global pet := 0;          // Pet to stable
+global player := 0;       // Whoever said "stable"
+
+global stabler := Self();
+global me := stabler;
+global speech := 5;
+
+// Prepare self
+if (stabler.name["<random>"])
+   case( randomint(2) )
+      0: stabler.graphic := 400;
+      1: stabler.graphic := 401;
+   endcase
+   SetName ( stabler , RandomName( stabler ) );
+   set_priority( 1 );
+	var parms := {};
+	parms[1]:= stabler;
+	parms[2]:= "poor";
+   	start_script("::/misc/dressme", parms);
+   set_priority( 50 );
+endif
+// done
+
+EnableEvents( EVID_DAMAGED + EVID_ENGAGED);
+EnableEvents( EVID_SPEECH, 1);
+EnableEvents( EVID_ITEM_GIVEN );
+
+while (1)
+
+	Local event;
+	event := os::wait_for_event( 30 );
+	if (event)
+	case (event.type)
+	    EVID_ENGAGED:
+	    EVID_DAMAGED:
+		stabler.hp := stabler.maxhp;
+		SetObjProperty(stabler,"poison_level","0");
+		event.source.hp := 0;
+		SetObjProperty(stabler,"guardkill",1);
+		SetObjProperty(event.source,"guardkill",1);
+	    EVID_SPEECH:
+		if (event.text["stable"])
+			player := event.source;
+                	TurnToward (event.source);
+			Say ("Show me your pet.");
+			pet := Target (player);
+			if (pet)
+				local tempdata := GetObjProperty (pet, "master");
+                		local summoned := GetObjProperty (pet, "summoned");
+				if ( (pet.script = "tamed") and (!summoned) )
+				if (tempdata = player.serial)
+
+				local price := 30;
+				Say ("I charge " + price + " to take care of " + pet.name + ".");
+				   if (!GetPayment (player, price))
+					Say ("Keep this ticket and give it to me when you want " + 
+					pet.name + " back.");
+					local ticket := CreateItemInBackpack (player, 0x14f0, 1);
+					ticket.usescript := "";
+					Save_Pet_Data (ticket, pet);
+				   endif
+				else
+					say("This is not a zoo!");
+				endif
+                		elseif ( (pet.graphic = CID_HUMAN_MALE) or 
+					(pet.graphic = CID_HUMAN_FEMALE) )
+                        		Say ("Do I look like an Inn Keeper?!");
+                		else
+	                        	Say ("That is not your pet.");
+                		endif
+			endif
+		    else
+			check_speech(event.text, event.source);
+		    endif
+		EVID_ITEM_GIVEN:
+               		TurnToward (event.source);
+			Load_Ticket_Data (event.source, event.item);
+	endcase
+	endif
+
+endwhile
+
+
+function Save_Pet_Data (ticket, pet)
+
+	Drop(pet);
+
+        var tempdata;
+                                   
+        ticket.name := "Pet claim ticket for : " + pet.name;
+	ticket.usescript := "";
+
+        SetObjProperty (ticket, "petname", pet.name);
+        SetObjProperty (ticket, "pethp", pet.hp);
+        SetObjProperty (ticket, "petmana", pet.mana);
+        SetObjProperty (ticket, "petgraphic", pet.graphic);
+        SetObjProperty (ticket, "petcolor", pet.color);
+
+	If (GetObjProperty(pet,"companion"))
+		setobjproperty(ticket,"companion",player.serial );
+		setobjproperty(player,"companion",ticket.serial );
+	endif
+
+        tempdata := pet.npctemplate;
+        SetObjProperty (ticket, "pettemplate", tempdata);
+
+        // I suppose theres a better way for doing this, also
+        SetObjProperty (pet, "guardkill", 1);
+        pet.graphic := 1000;            // invis the pet before killing
+        Damage (pet, pet.hp);
+
+endfunction
+
+
+function Load_Ticket_Data (player, ticket)
+
+	if (!canclaim(player,GetObjProperty (ticket, "pettemplate")))
+		say("You have no chance of controlling that!");
+		return;
+	endif
+
+        local tempdata := 0;
+        local newpet := 0;
+
+        if ( (ticket.objtype = 0x14f0) and ( cint(GetObjProperty(ticket, "pethp")) !=0 ) )
+
+                tempdata := GetObjProperty (ticket, "petname");
+                Say ("Oh, let me find " + tempdata + " for you. One moment, please.");
+                Sleep (1);
+
+                tempdata := GetObjProperty (ticket, "pettemplate");
+                newpet := CreateNPCFromTemplate (tempdata, stabler.x+1, stabler.y+1, stabler.z);
+
+                tempdata := GetObjProperty (ticket, "pethp");
+                newpet.hp := tempdata;
+
+                tempdata := GetObjProperty (ticket, "petmana");
+                newpet.mana := tempdata;
+
+                tempdata := GetObjProperty (ticket, "petgraphic");
+                newpet.graphic := tempdata;
+
+                tempdata := GetObjProperty (ticket, "petcolor");
+                newpet.color := tempdata;
+
+                tempdata := GetObjProperty (ticket, "petname");
+                newpet.name := tempdata;
+
+		If (GetObjProperty(ticket,"companion"))
+			if ( GetObjProperty(player,"companion") = GetObjProperty(ticket,"companion") )
+				setobjproperty(newpet,"companion",player.serial );
+				SetObjProperty(player,"companion",newpet.serial);
+			endif
+		endif
+
+                SetObjProperty (newpet, "master", player.serial);
+                newpet.script := "tamed";
+                RestartScript (newpet);
+
+                Say ("Take care of " + tempdata + " and be sure to feed it!");
+
+                DestroyItem (ticket);
+        else
+		TakeItem(player, ticket);
+        endif
+
+endfunction
+
+
+function GetPayment (player, price)
+
+        // I suppose there's a simpler way to get money from the player... =]
+
+        local backpack := EnumerateItemsInContainer (player.backpack);
+
+        foreach item in backpack
+                if ( (item.objtype = MONEY) and (GetAmount (item) >= price) )
+                        SubtractAmount (item, price);
+                        return 0;
+                endif
+        endforeach
+
+        Say ("You dont have " + price + " gold coins!");
+        return 1;            
+
+endfunction
+
+function CanClaim(player, pettemplate)
+
+	case (pettemplate)
+	"horse":
+	"horse1":
+	"horse2":
+	"horse3":
+	"forestostard":
+	"desertostard":
+	"llama":
+		return 1;
+	endcase
+
+    local conf := ReadConfigFile ("::npcdesc");
+    local elem;
+    local points := 0;
+    elem := FindConfigElem(conf, pettemplate);
+    if (!elem)
+        return 0;
+    endif
+    local difficulty := cint(GetConfigInt(elem, "tameskill"));
+
+	if (difficulty < 50)
+		return 1;
+	elseif ( ( difficulty - 20 ) > GetSkill(player, SKILLID_TAMING ) )
+		return 0;
+	else
+		return 1;
+	endif
+
+endfunction
+
+function drop(pet)
+
+	local myitems;
+	local mypack := FindMyPack(pet.serial);
+	foreach myitems in enumerateitemsincontainer(mypack)
+		if (myitems.container.serial = mypack.serial)
+        		moveitemtolocation(myitems, pet.x, pet.y, pet.z,0);
+			sleepms(100);
+		endif
+	endforeach
+
+	if (pet.backpack)
+		mypack := pet.backpack;
+		foreach item in enumerateitemsincontainer(mypack)
+			if (item.container.serial = mypack.serial)
+        			moveitemtolocation(item, pet.x, pet.y, pet.z,0);
+			endif
+		endforeach
+	endif
+
+endfunction

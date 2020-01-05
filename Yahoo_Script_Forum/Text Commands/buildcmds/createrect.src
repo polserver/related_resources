@@ -1,0 +1,74 @@
+// .createrect command - create items in a targetted rectangle
+// usage: .createrect [objtype]
+// Items created with this command will not decay.
+include "include/modules";
+include "include/gumps";
+
+var objtype, altitude, res;
+
+program textcmd_createrect( who, params )
+	if( params )
+		params := SplitWords( params );
+    		objtype := params[1];
+		altitude := CInt( params[2] );
+	else
+		var gump_ret := DoGump( who );
+		if( gump_ret[1] == 1 )
+			objtype := gump_ret[2];
+			altitude := CInt( gump_ret[3] );
+		elseif( gump_ret[1] == 2 )
+			var selection := SelectMenuItem2( who, "ItemCreation" );
+			objtype := selection.objtype;
+		endif
+	endif
+	if( !CInt(objtype) )
+      	objtype := GetObjtypeByName( objtype );
+	else
+		objtype := Cint( objtype );
+    	endif
+	SendSysMessage( who, "Target the far left corner" );
+    	var farleft := TargetCoordinates( who );
+    	if (!farleft)
+        	return;
+    	endif
+    	SendSysMessage( who, "Target the far right corner" );
+    	var farright := TargetCoordinates( who );
+    	if( !farright )
+    		return;
+    	endif
+      if( farleft.x <= farright.x && farright.y <= farleft.y )
+        	var x, y, z;
+        	for( x := farleft.x; x <= farright.x; x := x + 1 )
+            	for( y := farright.y; y <= farleft.y; y := y + 1 )
+				if( !altitude && !altitude == 0 )
+                			altitude := GetMapInfo( x, y ).z;
+				endif
+                		var item := CreateItemAtLocation( x, y, altitude, CInt(objtype), 1 );
+                		item.decayAt := 0;
+            	endfor
+        	endfor
+    	endif
+endprogram
+
+function DoGump( who )
+	GFSetRef( 50, 50 );
+	GFPage( 0 );
+	GFNoDispose();
+	GFResizePic( 0, 0, BKGND_GOLDTRIM, 210, 180 );
+	GFGumpPic( 10, 71, 0x462 );
+	GFGumpPic( 10, 116, 0x462 );
+	GFTextMid( 0, 15, 210, 4, "Enter Create Variables" );
+	GFTextLine( 10, 50, 4, "Enter Objtype" );
+	GFTextLine( 10, 95, 4, "Enter Altitude" );
+	GFTextLine( 10, 160, 4, "Or use the create menu" );
+	GFButtonID( 50, 120, 0x992, 0x993, 1 );
+	GFButtonID( 120, 120, 0x995, 0x996, 1 );
+	GFButtonID( 180, 166, 0x939, 0x938, 1 );
+	objtype := GFTextEntry( 11, 70, 175, 16, 4 );
+	altitude := GFTextEntry( 11, 115, 175, 16, 4 );
+	res := GFSendGump( who );
+	objtype := GFExtractData( objtype.keyid, res );
+	altitude := GFExtractData( altitude.keyid, res );
+	var params := { CInt(res[0]-1024), objtype, altitude };
+	return params;
+endfunction

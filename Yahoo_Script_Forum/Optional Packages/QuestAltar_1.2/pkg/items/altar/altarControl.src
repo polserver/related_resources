@@ -1,0 +1,87 @@
+// Quest Altar 1.2
+// Control script
+// (c) 2003-2004 Keelhaul
+
+use uo;
+use os;
+use util;
+
+include "include/client";
+include "include/objtype";
+include "include/attributes";
+
+program controlAltar(altar)
+  var completed := 0;
+  var itemlist := array;
+  var targetlist := array;
+
+  altar.name := "an Altar";
+  while(1)
+    if(altar.color != 0x76c) altar.color := 0x76c; endif
+    sleep(5);
+    itemlist := GetObjProperty(altar, "items");
+    targetlist := GetObjProperty(altar, "targets");
+    while(GetObjProperty(altar, "mode"))
+      if(altar.color != 0x64)
+        altar.color := 0x64;
+	PrintTextAbove(altar, "Altar is now active");
+      endif
+      sleep(1);
+      foreach item in ListItemsAtLocation(altar.x, altar.y, altar.z)
+        foreach itm in itemlist
+          if(itm && item.objtype == itm)
+            itemlist[_itm_iter] := 0;
+            PlayStationaryEffect(altar.x, altar.y, altar.z, 0x3709, 0x0a, 0x1e);
+            PlaySoundEffect(altar, SFX_SPELL_FLAME_STRIKE);
+            DestroyItem(item);
+            foreach mob in EnumerateOnlineCharacters()
+              if(mob.cmdlevel)
+                SendSysMessage(mob, "Altar: Item " + _itm_iter + " has been placed.");
+              endif
+            endforeach
+          endif
+        endforeach
+      endforeach
+
+      // Aftereffects
+      foreach item in itemlist
+        if(item) break; endif
+        completed := 1;
+      endforeach
+      if(completed)
+        sleep(1);
+        PrintTextAbove(altar, "It is done");
+        PlaySoundEffect(altar, SFX_SPELL_LIGHTNING);
+        foreach thing in targetlist
+          var current := SystemFindObjectBySerial(thing);
+          if(current)
+            case(GetObjProperty(altar, "mode"))
+              1: DestroyItem(current);
+              2: current.locked := 0;
+                 PrintTextAbove(current, "Unlocked");
+              3: PlayLightningBoltEffect(current);
+                 RevokePrivilege(current, "invul");
+                 ApplyRawDamage(current, GetMaxHp(current));
+            endcase
+          endif
+        endforeach
+        resetAltar(altar);
+        itemlist := array;
+        targetlist := array;
+        completed := 0;
+        foreach mob in EnumerateOnlineCharacters()
+          if(mob.cmdlevel)
+            SendSysMessage(mob, "Altar: Sequence completed.");
+          endif
+        endforeach
+      endif
+    endwhile
+  endwhile
+endprogram
+
+function resetAltar(byref altar)
+  EraseObjProperty(altar, "mode");
+  EraseObjProperty(altar, "targets");
+  EraseObjProperty(altar, "items");
+  return;
+endfunction

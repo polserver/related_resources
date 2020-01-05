@@ -1,0 +1,82 @@
+use uo;
+use os;
+
+program textcmd_summon( character , whom )
+
+	if( !whom )
+		local chr := MakeAndProcessGump( character );
+		if( chr )
+			MoveCharactertoLocation( chr , character.x , character.y , character.z , MOVECHAR_FORCELOCATION );
+		endif
+
+	else
+		whom := Upper( whom );
+
+		foreach chr in EnumerateOnlineCharacters()
+			if( Upper( chr.name ) = whom )
+				MoveCharactertoLocation( chr , character.x , character.y , character.z , MOVECHAR_FORCELOCATION );
+				break;
+			endif
+		endforeach
+	endif
+
+endprogram
+
+
+function MakeAndProcessGump( who )
+
+	local layout	:= array( "page 0",
+				  "resizepic 50  0   2600 300 525",
+				  "resizepic 100 480 5100 200  25",
+				  "text 150 30 5 0" );
+				
+	local data	:= array( "Summon Menu" );
+
+
+	local players	:= EnumerateOnlineCharacters();
+	local start	:= 1;
+	local count	:= 0;
+	local done	:= 0;
+	local page	:= 1;
+	local perpage	:= 20;
+	local y 	:= 70;
+	local i;
+	local j;
+
+	layout.append( "page " + page );
+	if( len(players) > perpage )
+		layout.append( "button 250 481 5540 5541 0 " + (page + 1) );
+	endif
+	
+	for( i := start ; i <= len(players) ; i := i + 1 )
+		if( done = perpage )
+			done 	:= 0;
+			page 	:= page + 1;
+			y 	:= 70;
+			
+			layout.append( "page " + page );
+			layout.append( "button 125 481 5537 5538 0 " + (page - 1) );
+			if( len(players) > (count + perpage) )
+				layout.append( "button 250 481 5540 5541 0 " + (page + 1) );
+			endif
+		endif
+		
+		layout.append( "text 85 " + y + " 0 " + len(data) );
+		layout.append( "button 300 " + (y+5) + " 2118 2117 1 0 " + i );
+		data.append( players[i].name );
+
+		y 	:= y + 20;
+		done 	:= done + 1;
+		count 	:= count + 1;
+	endfor
+			
+	local result := SendDialogGump( who , layout , data );
+	if( !result[0] )
+		return;
+	endif
+	
+	result := Cint( result[0] );
+	
+	return players[result];
+	
+endfunction

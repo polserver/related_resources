@@ -1,0 +1,45 @@
+use os;
+use uo;
+use util;
+
+// Add for chaos effects:
+include "include/chaoseffects";
+
+include "include/client";
+include "include/spellrestrictions";
+// FIXME animations?
+
+program spell_resurrect( caster )
+if (!can_cast(caster, 8))
+        return;
+endif
+
+	local cast_on := Target( caster,TGTOPT_HELPFUL + TGTOPT_CHECK_LOS );
+	if(!cast_on)
+		return;
+	endif
+
+    set_critical(1);
+	if (!CheckLineOfSight( caster, cast_on ))
+        	SendSysMessage( caster, "You don't have line of sight to that." );
+        	return;
+    endif
+
+
+// Add for Chaos Effects
+
+	if (CheckForChaosEffect(caster, 20, 100, 5) = 1)
+		local i :=RandomDiceRoll("1d4");
+		GenerateRandomChaosEffects(caster, cast_on, 10, 3, 1, 5, i);
+		return;
+	endif
+
+// end here
+			
+	PlaySoundEffect(caster, SFX_SPELL_RESSURECTION);
+	PlaySoundEffect(cast_on, SFX_SPELL_RESSURECTION);
+
+	Resurrect( cast_on );
+// pointless now: set_critical(0);
+
+endprogram

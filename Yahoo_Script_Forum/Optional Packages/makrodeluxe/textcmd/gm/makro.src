@@ -1,0 +1,154 @@
+// makrodeluxe textcmd
+// 2002-02-24 vOiCEr
+// rewritten from script made by Humbool.
+
+use uo;
+use os;
+
+include "include/attributes";
+
+var layout := {
+	"nodispose",
+	"page 0",
+	"resizepic 0 20 2620 500 470",
+	"gumppic 15 50 2621",
+	"text 20 29 40 0",
+};
+
+var data := {
+	"List of suspicious players.",
+	"ble"
+};
+
+var tabskills := array(
+       "Alchemy",              //30
+       "Anatomy",              //32
+       "Animallore",           //34
+       "Itemid",               //36
+       "Armslore",             //38
+       "Parrying",             //40
+       "Begging",              //42
+       "Blacksmithy",          //44
+       "Bowcraft",             //46
+       "Peacemaking",          //48
+       "Camping",              //50
+       "Carpentry",            //52
+       "Cartography",          //54
+       "Cooking",              //56
+       "Detecthidden",         //58
+       "Enticement",           //60
+       "Evalint",              //62
+       "Healing",              //64
+       "Fishing",              //66
+       "Forensics",            //68
+       "Herding",              //70
+       "Hiding",               //72
+       "Provocation",          //74
+       "Inscription",          //76
+       "Lockpicking",          //78
+       "Magery",               //80
+       "Resist",               //82
+       "Tactics",              //84
+       "Snooping",             //86
+       "Musicianship",         //88
+       "Poisoning",            //90
+       "Archery",              //92
+       "Spiritspeak",          //94
+       "Stealing",             //96
+       "Tailoring",            //98
+       "Taming",               //100
+       "Tasteid",              //102
+       "Tinkering",            //104
+       "Tracking",             //106
+       "Veterinary",           //108
+       "Swords",               //110
+       "Maces",                //112
+       "Fencing",              //114
+       "Wrestling",            //116
+       "Lumberjack",           //118
+       "Mining",               //120
+       "Meditation",           //122
+       "Stealth",              //124
+       "Removetrap",           //126
+       "Unknown",
+);
+
+var marownicy := array;
+
+program textcmd_makrod (character)
+
+	FillInArrays(character);
+	var gump_return := SendDialogGump(character, layout, data);
+	if (!gump_return && gump_return[0] != 0)
+		SendSysMessage(character, "You must close other gumps before you can do this.");
+	endif
+
+	if(gump_return[0]==0)
+		return;
+	endif
+	
+	var postac := SystemFindObjectBySerial(marownicy[gump_return[0]]);
+	if(postac)
+		MoveCharacterToLocation( character, postac.x, postac.y, postac.z );
+		SendSysMessage(character, "You've moved to the suspicious player.");
+	endif
+
+endprogram
+
+
+function FillInArrays(character)
+
+	var playercount := 0;
+	var pagecount := 1;
+	var ypos := 70;
+	var string_counter := 2;
+	var last_skill := array;
+
+	layout.append ("page " + pagecount);
+	
+	var postac;
+           
+        if(GetGlobalProperty("#md_podejrzani"))
+            	marownicy := GetGlobalProperty("#md_podejrzani");
+        else
+        	return;
+        endif
+           
+	foreach serial_postaci in marownicy
+		playercount := playercount + 1;
+		layout.append ("text 20 " + ypos + " 40 " + string_counter);
+		layout.append ("button 470 " + ypos + " 2118 2117 1 1 " + playercount);									
+		string_counter := string_counter + 1;
+		ypos:= ypos + 20;
+		layout.append ("text 20 " + ypos + " 40 " + string_counter);
+		string_counter := string_counter + 1;
+		ypos:= ypos + 20;
+		postac := SystemFindObjectBySerial(serial_postaci, SYSFIND_SEARCH_OFFLINE_MOBILES);
+		if(GetObjProperty(postac, "#LastSkill")==error)
+			last_skill[1]:=50;
+			last_skill[2]:=0;		
+		else
+			last_skill := GetObjProperty(postac, "#LastSkill");
+		endif
+	
+		if(postac.ip)	
+			data.append(playercount +". " + postac.name + " " + "hp:" +GetHp(postac) + "/" + GetMaxHp(postac) + ", warmode:" + postac.warmode + ", weapon: " + postac.weapon.desc);
+			data.append("  LastSkill: " + tabskills[last_skill[1]+1] + ":" + last_skill[2] +" times");
+		else
+			data.append("WYloGowal sie");
+			data.append("WYloGowal sie");		
+		endif
+		case (playercount)
+			10:
+			20:
+			30:
+			40:
+			50:
+				layout.append ("button 285 30 2648 2647 0 " + (pagecount + 1));
+				pagecount := pagecount + 1;
+				layout.append ("page " + pagecount);
+				ypos := 70;
+				layout.append ("button 255 30 2650 2651 0 " + (pagecount - 1));
+		endcase
+	endforeach
+endfunction

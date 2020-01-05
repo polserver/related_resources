@@ -1,0 +1,349 @@
+///////////////////////////////////////////////////////////
+// Merchant.src
+//
+// Merchant AI script.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+// Merchants keep their inventories in their packs, this is
+// because Rogues should be able to steal from them, and
+// because if a merchant is killed, his inventory should be
+// destroyed with him, not be left in the global storage area.
+//
+// Merchants adjust prices according to the city they are in
+// and the race of the PC dealing with them.
+//
+// To change merchant details, look in:
+//	config/CityPrices.cfg		Contains multiplies by city
+//								per race and item group.
+//	config/MerchantStock.cfg	Contains product groups by
+//								merchant group, what they
+//								buy and what they sell.
+///////////////////////////////////////////////////////////
+
+include "include/AiMain";
+include "speech/MerchantSpeech";
+include "combat/DefaultCombat";
+include "noncombat/MerchantNonCombat";
+include "consider/DefaultConsider";
+
+include "include/container";
+
+///////////////////////////////////////////////////////////
+// Customize AI.
+///////////////////////////////////////////////////////////
+ai.ConsiderRange	:= 4;
+ai.HearDist	 		:= 2;
+ai.NameRespond		:= 0;
+ai.FleePoint		:= 80;
+ai.Run				:= 1;
+ai.dstart			:= 4;	// Not allowed to wander much.
+ai.psub				:= 100;
+
+///////////////////////////////////////////////////////////
+// CONSTS
+///////////////////////////////////////////////////////////
+const CITYPRICESCFG		:= "::cityprices";
+const MERCHANTSTOCKCFG 	:= "::merchantstock";
+const ITMCFG			:= ":*:itemdesc";
+const UOBJ_GOLDCOIN   	:= 0x0EED; // A gold coin
+const UOBJ_METALCHEST 	:= 0x0E7C; // A Metal Chest
+
+// How often do I restock my inventory?
+const RESTOCK_INTERVAL := 60*2;
+
+// Criminal price modifier to theprice when the merchant is...
+const CRIMINAL_SELL_MOD := 1.2;
+const CRIMINAL_BUY_MOD 	:= 0.8;
+
+///////////////////////////////////////////////////////////
+// GLOBAL VARIABLES
+///////////////////////////////////////////////////////////
+var NextRestock 	:= 0;
+var stockcfg;		// Stock config.
+var pricecfg;		// City Price mods config.
+var itemcfg;		// Itemdesc.
+var InvStock;		// My Stock.
+var InvBought;		// Stuff I bought from PCs.
+var InvSpare;		// Unknown, but seems to be required for SendSellWindow().
+var BuyList := dictionary;	// Dictionary of "Buy Groups".
+var SellList := dictionary; // Dictionary of "Sell Groups";
+
+///////////////////////////////////////////////////////////
+// GLOBAL CODE
+///////////////////////////////////////////////////////////
+stockcfg := ReadConfigFile(MERCHANTSTOCKCFG);
+if (!stockcfg)
+	syslog("Unable to read: " + MERCHANTSTOCKCFG + ".cfg");
+endif
+
+pricecfg := ReadConfigFile(CITYPRICESCFG);
+if (!pricecfg)
+	syslog("Unable to read: " + CITYPRICESCFG + ".cfg");
+endif
+
+itemcfg := ReadConfigFile(ITMCFG);
+if (!itemcfg)
+	syslog("Unable to read: " + ITMCFG + ".cfg");
+endif
+
+InvStock	:= GetMerchantContainer("Inventory");
+InvBought	:= GetMerchantContainer("Bought");
+InvSpare 	:= GetMerchantContainer("Spare");
+
+CreateBuyList();
+CreateSellList();
+RestockInventory();
+
+///////////////////////////////////////////////////////////
+// MAIN PROGRAM
+///////////////////////////////////////////////////////////
+program Merchant()
+	MainAILoop();
+endprogram
+
+///////////////////////////////////////////////////////////
+// Purpose: Restocks the merchant's inventory.
+// 			**NOTE: Called from NonCombat module.
+// Params:  none
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function RestockInventory()
+	var nowtime := ReadGameClock();
+
+	// Is it time to restock?
+	if (NextRestock > nowtime)
+		return 0;
+	endif
+
+	foreach group in SellGroups()
+		RestockGroup(group);
+	endforeach
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Restocks a group of items I sell.
+// Params:  group		Name of the group.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function RestockGroup(group)
+	var groupelem := FindConfigElem(stockcfg, group);
+
+	foreach itm in GetConfigStringArray(groupelem, "Item")
+		RestockItem(itm);
+	endforeach
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Restocks an item.
+// Params:  item		Objtype of item.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function RestockItem(item)
+	item := SplitWords(item);
+	var itm := CInt(item[1]);
+	var tostock := CInt(item[2]);
+
+	// How many to create?
+	var tocreate := tostock - CountExisting(InvStock, itm);
+	if (tocreate < 1)
+		return 0;
+	endif
+
+	CreateItemInInventory(InvStock, itm, tocreate);
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Counts how many items are in a container.
+// Params:  container		Container ref.
+//			objtype			Object type.
+// Returns: <return>
+///////////////////////////////////////////////////////////
+function CountExisting(byref container, objtype)
+    var count := 0;
+    foreach item in EnumerateItemsInContainer(container)
+        if (item.objtype = objtype)
+            count := count + item.amount;
+        endif
+    endforeach
+    return count;
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Returns a list of Sell groups.
+// Params:  none
+// Returns: selllist	Array of groups I sell.
+///////////////////////////////////////////////////////////
+function SellGroups()
+	var mymrelem := FindConfigElem(stockcfg, GetObjProperty(me, "Merchant"));
+	return GetConfigStringArray(mymrelem, "Sells");
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Returns a list of Buy groups.
+// Params:  none
+// Returns: buylist		Array of groups I buy.
+///////////////////////////////////////////////////////////
+function BuyGroups()
+	var mymrelem := FindConfigElem(stockcfg, GetObjProperty(me, "Merchant"));
+	return GetConfigStringArray(mymrelem, "Buys");
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Finds or creates a container for the merchant's
+//			inventory.
+// Params:  name		Name of inventory.
+// Returns: inv			Item container for the inventory.
+///////////////////////////////////////////////////////////
+function GetMerchantContainer(name)
+	// Try to find the container.
+	foreach box in EnumerateItemsInContainerOfObjtype(me.backpack, UOBJ_METALCHEST)
+		if (box.name = name)
+			return box;
+		endif
+	endforeach
+
+	// Not found, so create.
+	var mrbox := CreateItemInBackpack(me, UOBJ_METALCHEST, 1);
+	mrbox.name := name;
+	mrbox.invis := 1;
+
+	return mrbox;
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Creates a list of items I can buy.
+// Params:  none
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function CreateBuyList()
+	var groupelem;
+
+	foreach buygroup in BuyGroups()
+		groupelem := FindConfigElem(stockcfg, buygroup);
+
+		var itmp;
+		var list := array;
+		foreach itm in GetConfigStringArray(groupelem, "Item")
+			itmp := SplitWords(itm);
+			list.append(CInt(itmp[1]));
+		endforeach
+
+		BuyList[buygroup] := list;
+	endforeach
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Creates a list of items I can sell.
+// Params:  none
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function CreateSellList()
+	var groupelem;
+
+	foreach sellgroup in SellGroups()
+		groupelem := FindConfigElem(stockcfg, sellgroup);
+
+		var itmp;
+		var list := array;
+		foreach itm in GetConfigStringArray(groupelem, "Item")
+			itmp := SplitWords(itm);
+			list.append(CInt(itmp[1]));
+		endforeach
+
+		SellList[sellgroup] := list;
+	endforeach
+endfunction
+
+
+///////////////////////////////////////////////////////////
+// Purpose: Sets the buying prices in a container according to
+//			quality, hp and location.
+// Params:  container		Ref to container to set prices in.
+//			forwho			Ref to mobile who prices are being set for.
+//			selling			1 if selling, 0 if buying.
+// Returns: N/A
+///////////////////////////////////////////////////////////
+function SetPrices(byref container, byref forwho, selling := 0)
+	var cityelem := FindConfigElem(pricecfg, FindCity(me));
+	var group;
+	var mult;
+	var racemult;
+	var price;
+
+	foreach item in EnumerateItemsInContainer(container)
+		var criminalmod := 1;
+		// Get the price multiplier based on city
+		if (selling)
+			group := WhatGroup(item.objtype, 1);
+			if (forwho.criminal)
+				criminalmod := CRIMINAL_SELL_MOD;
+			endif
+		else
+			group := WhatGroup(item.objtype);
+			if (forwho.criminal)
+				criminalmod := CRIMINAL_BUY_MOD;
+			endif
+		endif
+
+		if (!group and selling)
+			item.buyprice := -1;
+			continue;
+		endif
+
+		// Get city multiplier.
+		mult := GetConfigReal(cityelem, group);
+		if (!mult)
+			mult := GetConfigReal(cityelem, "All");
+		endif
+
+		// Get race multiplier.
+		racemult := GetConfigReal(cityelem, GetObjProperty(forwho, "Race"));
+		if (!racemult)
+			racemult := GetConfigReal(cityelem, "All");
+		endif
+
+		if (selling)
+			price := itemcfg[item.objtype].VendorSellsFor * mult;
+		else
+			price := itemcfg[item.objtype].VendorBuysFor * mult;
+		endif
+
+		// Apply the criminal and race multipliers.
+		price := price * criminalmod * racemult;
+
+		item.buyprice := CInt(price / 2);
+		item.sellprice := CInt(price);
+	endforeach
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Returns the buy group for this item.
+// Params:  itemtype	Objtype of item being bought.
+//			selling		1 if selling, 0 if buying.
+// Returns: buygrp	The buy group.
+//			0		It's not in my buy list.
+///////////////////////////////////////////////////////////
+function WhatGroup(itemtype, selling := 0)
+	var grplist;
+	if (selling)
+		grplist := SellList;
+	else
+		grplist := BuyList;
+	endif
+
+	foreach grp in (grplist.keys())
+		foreach type in (grplist[grp])
+			if (type = itemtype)
+				return grp;
+			endif
+		endforeach
+	endforeach
+
+	return 0;
+endfunction
+

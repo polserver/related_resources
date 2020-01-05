@@ -1,0 +1,45 @@
+//
+// 1.1
+// 
+// fillcookbook.src
+//
+// By Austin Heilman
+// Aheilman@home.com
+//
+// Creates cook books in your pack. It will make a new book if one
+// fills up with 20 reciples.
+//
+// Created 6/19/2001 12:45PM
+// Modified 6/19/2001 12:45PM
+//
+
+use uo;
+use cfgfile;
+
+CONST BOOK := 0xEE42;
+program fillbook(who)
+	
+	var alchemy := ReadConfigFile("cooking");
+	alchemy := cint(GetConfigMaxIntKey(alchemy));
+	
+	var i:=1;
+	var recipelist := {};
+	for(i:=1; i<= alchemy; i:=i+1)
+		recipelist.append(i);
+		
+		if (i % 20 == 0)
+			var book := createiteminbackpack(who, BOOK);
+			setobjproperty(book, "recipes", recipelist);
+			recipelist := {};
+		endif
+	endfor
+	
+	recipelist := {};
+	var leftovers := alchemy - (alchemy%20);
+	for (i:=leftovers; i <=  alchemy; i:=i+1)
+		recipelist.append(i);
+	endfor
+	var book := createiteminbackpack(who, BOOK);
+	setobjproperty(book, "recipes", recipelist);
+	
+endprogram

@@ -1,0 +1,14 @@
+use uo;
+use os;
+
+program curelycanth(parms)
+
+local who := parms[1];
+if (who.graphic = 0xe1)
+		who.graphic := getobjproperty(who, "graphic");
+		who.name := getobjproperty(who, "name");
+		who.color := getobjproperty(who, "color");
+endif
+eraseobjproperty(who, "lyc");
+
+endprogram

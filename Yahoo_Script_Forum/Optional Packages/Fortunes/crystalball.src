@@ -1,0 +1,122 @@
+/////////////////////////////////////////////////////////
+//						       //	
+// Fortune telling script which picks a random fortune //
+//      used in conjunction with a crystal ball.       //
+//						       //
+// 		GM Basara - April 1 2001	       //
+//						       //
+/////////////////////////////////////////////////////////
+
+use basic;
+use uo;
+use util;
+use os;
+use cfgfile;
+
+include "include/client";
+
+program crystalball(who, item)
+	if (GetObjProperty(item, "inuse") = 1)
+		SendSysMessage(who, "The spirits can only tell one future at a time!.");
+		return;
+	endif
+SendSysMessage (who, "Whom do you wish to read the future of?");
+local tgt := Target(who);
+
+	if(!tgt)
+		SendSysMessage(who, "Cancelled");
+		return;
+	elseif (tgt == who)
+	SendSysMessage(who, "You can't tell your own future!");
+		return;
+	elseif (distance(tgt, item) > 2)
+		SendSysMessage(who, tgt.name + " is too far away for the ritual to work");
+		return;
+	elseif (distance(who, item) > 2)
+		SendSysMessage(who, "You are not near enough to perform the ritual");
+		return;
+	elseif (tgt.graphic == 400 || tgt.graphic == 401)
+	else
+	SendSysMessage(who, "You cannot tell the future of that");
+	return;
+	detach();
+	endif
+	
+	SetObjProperty(item, "inuse", 1);
+	PrintTextAbove(who, "*" + who.name + " begins chanting a Mantra*");
+	PerformAction(who, ANIM_CAST_AREA);
+	PlaySoundEffect(who, SFX_SKILL_SPIRITSPEAK);
+	Sleep(2);
+	PerformAction(who, ANIM_CAST_AREA);
+	PlaySoundEffect(who, SFX_SKILL_SPIRITSPEAK);
+	Sleep(2);
+	if( item.graphic = 0x0e2d )
+		item.graphic := 0x0e2e;
+	endif
+	PrintTextAbove(item, "*Within the ball, the mists begin to swirl...*");
+	PlaySoundEffect(item, 260);
+	PlayObjectCenteredEffect( tgt, FX_BLESS_EFFECT, 0x0a, 0x1e);
+	PlayObjectCenteredEffect( who, FX_BLESS_EFFECT, 0x0a, 0x1e);
+	Sleep(2);
+	PlayObjectCenteredEffect( tgt, FX_BLESS_EFFECT, 0x0a, 0x1e);
+	PlayObjectCenteredEffect( who, FX_BLESS_EFFECT, 0x0a, 0x1e);
+	Sleep(2);
+	PlayObjectCenteredEffect( tgt, FX_BLESS_EFFECT, 0x0a, 0x1e);
+	PlayObjectCenteredEffect( who, FX_BLESS_EFFECT, 0x0a, 0x1e);
+	Sleep(2);
+	PlayObjectCenteredEffect( tgt, FX_BLESS_EFFECT, 0x0a, 0x1e);
+	PlayObjectCenteredEffect( who, FX_BLESS_EFFECT, 0x0a, 0x1e);
+	Sleep(2);
+	PrintTextAbove(item, "*An image appears in the mist and begins to speak via " + who.name + "*" );
+	Sleep(8);
+	PrintTextAbove(who, tgt.name + ", your future will now be unveiled!" , 3, 38);
+	Sleep(8);
+	tellfortune( who );
+	Sleep(8);
+	PrintTextAbove(who, "*" + who.name + " begins chanting a different Mantra*");
+	PerformAction(who, ANIM_CAST_AREA);
+	PlaySoundEffect(who, SFX_SKILL_SPIRITSPEAK);
+	Sleep(2);
+	PerformAction(who, ANIM_CAST_AREA);
+	PlaySoundEffect(who, SFX_SKILL_SPIRITSPEAK);
+	Sleep(2);
+	PlaySoundEffect(item, 260);
+	PlayObjectCenteredEffect( tgt, FX_HEAL_EFFECT, 0x0a, 0x1e);
+	PlayObjectCenteredEffect( who, FX_HEAL_EFFECT, 0x0a, 0x1e);
+	Sleep(2);
+	PlayObjectCenteredEffect( tgt, FX_HEAL_EFFECT, 0x0a, 0x1e);
+	PlayObjectCenteredEffect( who, FX_HEAL_EFFECT, 0x0a, 0x1e);
+	Sleep(2);
+	PlayObjectCenteredEffect( tgt, FX_HEAL_EFFECT, 0x0a, 0x1e);
+	PlayObjectCenteredEffect( who, FX_HEAL_EFFECT, 0x0a, 0x1e);
+	Sleep(2);
+	PlayObjectCenteredEffect( tgt, FX_HEAL_EFFECT, 0x0a, 0x1e);
+	PlayObjectCenteredEffect( who, FX_HEAL_EFFECT, 0x0a, 0x1e);
+	Sleep(2);
+	PrintTextAbove(item, "*The image in the crystal ball fades*");
+	if( item.graphic = 0x0e2e )
+		item.graphic := 0x0e2d;
+	endif
+	EraseObjProperty(item, "inuse");
+		
+endprogram
+
+
+function tellfortune( who )
+     local randy    := RandomInt(12);
+     
+     case( randy )
+          0: PrintTextAbove( who, "The future is unclear at this time, ask again later...", 3, 38);
+          1: PrintTextAbove( who, "The future does not bode well for you, I cannot say more.", 3, 38);
+          2: PrintTextAbove( who, "Beware of those closest to you, for they will betray you!", 3, 38);
+          3: PrintTextAbove( who, "I suggest you keep your friends close and your enemies closer.", 3, 38);
+          4: PrintTextAbove( who, "The future's bright, the future's, um, *coughs* orange?.", 3, 38);
+          5: PrintTextAbove( who, "What goes around, comes around.  You will get what you deserve soon enough!", 3, 38);
+          6: PrintTextAbove( who, "You will find happiness with a new love.", 3, 38);
+          7: PrintTextAbove( who, "Do not be quick to refuse a favor.", 3, 38);
+          8: PrintTextAbove( who, "Think before you speak, you never know who might be listening.", 3, 38);  
+          9: PrintTextAbove( who, "Leave the GM's alone for they are mightily sick of all your whingeing.", 3, 38);
+          10: PrintTextAbove( who, "Beware, your love has eyes for another.", 3, 38);
+          11: PrintTextAbove( who, "Mighty dragons shall fall before the wrath of your blade.", 3, 38);
+endcase
+endfunction

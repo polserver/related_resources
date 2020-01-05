@@ -1,0 +1,82 @@
+///////////////////////////////////////////////////
+//
+// updateRootItems.src
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+///////////////////////////////////////////////////
+// Notes
+// =====
+// - identifies items which are NOT in a package
+// but are in itemdesc.cfg ( ie items which are
+// defined in pol\config\itemdesc.cfg ) and records
+// them in an array in a datafile.
+//
+// - this is necessary since POL treats itemdesc as 
+// a special case and reads the composite cfg 
+// (ie root + pkg itemdescs ) if you try to read just
+// the root with the standard format ie "::itemdesc".
+//
+// - the data file is used by the textcmd createitem
+// to identify items not in a pkg for creation.
+//
+///////////////////////////////////////////////////
+
+use uo;
+use os;
+use cfgfile;
+use datafile;
+
+include "include/string";
+
+var composite_itemdesc:=ReadConfigFile(":*:itemdesc");
+
+program rootitems()
+  sleep(1);
+  var itemsdf:=OpenDataFile("GmStaff");
+  if (!itemsdf)
+    itemsdf:=CreateDataFile("GmStaff");
+  endif
+  var df_itemselem:=itemsdf.findelement("RootItems");
+  if (!df_itemselem)
+    df_itemselem:=itemsdf.createelement("RootItems");
+  endif
+
+  var update_df:=array;
+  var items_in_pkgs:=array;
+  var packagenames:=polcore().packages;
+  var current_items:=GetConfigIntKeys(composite_itemdesc);
+
+  if (!len(current_items))
+    syslog(current_items.errortext);
+    return;
+  endif
+
+// enumerate all item objtypes in package itemdescs
+// into an array...
+  foreach pkgname in (packagenames)
+    var pkgitemdesc:=ReadConfigFile(":"+pkgname+":itemdesc");
+    if (pkgitemdesc)
+      foreach itemkey in (GetConfigIntKeys(pkgitemdesc))
+        items_in_pkgs.append(itemkey);
+      endforeach
+    endif
+    sleepms(2);
+  endforeach
+
+// check all items in the composite itemdesc to see if they 
+// are in a pkg.... if not add them to the update array
+  foreach checkitem in current_items
+    if (!(checkitem in items_in_pkgs))
+      update_df.append(checkitem);
+      sleepms(2);
+    endif
+  endforeach
+
+// finally update the datafile.
+  df_itemselem.setprop("Itemtypes",update_df);
+  print("GMstaff pkg: "+len(update_df)+" items found in root itemdesc.cfg");
+  UnloadDataFile("GmStaff");
+
+endprogram

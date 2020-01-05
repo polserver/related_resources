@@ -1,0 +1,176 @@
+use uo;
+use os;
+use cfgfile;
+
+const WAITDELAY := 180;
+
+var owner;
+
+program AwardCheck( awardbook)
+  var ownerserial;
+  var awardcfg;
+  var awardkeys := {};
+  var awardelem;
+  var count;
+  var i;
+  var j;
+  var found;
+  var exist;
+  var vals := {};
+  var skillvals := {};
+  var parms := {};
+  var oldaward;
+
+  while( awardbook)
+    if( !owner)
+      ownerserial := GetObjProperty( awardbook, "ownerserial");
+      owner := SystemFindObjectBySerial( ownerserial);
+      if( !owner)
+        Sleep( WAITDELAY);
+        continue;
+      endif
+    endif
+    //SendSysMessage( owner, "awardcheck running...");
+    
+    if( !awardcfg)
+      awardcfg := readconfigfile(":awardsystem:awardsystem");
+    endif
+    
+    if( !len( awardkeys))
+      awardkeys := GetConfigStringKeys( awardcfg);
+    endif
+    count := GetObjProperty( awardbook, "count");
+    
+    foreach award in awardkeys
+      awardelem := awardcfg[award];
+      found := 0;
+      exist := 0;
+      for( i := 1; i <= count; i := i + 1)
+        if( GetObjProperty( awardbook, "award" + CStr(i)) == awardelem.name)
+          exist := i;
+        endif
+      endfor
+      if( !found)
+        vals := GetConfigStringArray( awardelem, "race");
+        found := 1;
+        foreach val in vals
+          if( lower(GetObjProperty( owner, "race")) == lower(val))
+            found := 1;
+            break;
+          else
+            found := 0;
+          endif
+        endforeach
+        if( found)
+          vals := GetConfigStringArray( awardelem, "class");
+          found := 1;
+          foreach val in vals
+            if( lower(GetObjProperty( owner, "class")) == lower(val))
+              found := 1;
+              break;
+            else
+              found := 0;
+            endif
+          endforeach
+        endif
+        if( found)
+          vals := GetConfigStringArray( awardelem, "graphic");
+          found := 1;
+          foreach val in vals
+            if( owner.graphic == CInt(val))
+              found := 1;
+              break;
+            else
+              found := 0;
+            endif
+          endforeach
+        endif
+        if( found)
+          vals := GetConfigStringArray( awardelem, "skillor");
+          found := 1;
+          foreach val in vals
+            skillvals := SplitWords( val);
+            if( GetAttribute( owner, CInt(skillvals[1])) >= CInt( skillvals[2]))
+              found := 1;
+              break;
+            else
+              found := 0;
+            endif
+          endforeach
+        endif
+        if( found)
+          vals := GetConfigStringArray( awardelem, "skilland");
+          found := 1;
+          foreach val in vals
+            skillvals := SplitWords( val);
+            if( GetAttribute( owner, CInt(skillvals[1])) >= CInt( skillvals[2]) && found)
+              found := 1;
+            else
+              found := 0;
+              break;
+            endif
+          endforeach
+        endif
+        if( found)
+          vals := GetConfigStringArray( awardelem, "stat");
+          found := 1;
+          foreach val in vals
+            skillvals := SplitWords( val);
+            if( GetStat( owner, skillvals[1]) >= CInt( skillvals[2]) && found)
+              found := 1;
+            else
+              found := 0;
+              break;
+            endif
+          endforeach
+        endif
+        if( exist && found)
+          if( awardelem.autorun)
+            parms := { owner, 0 };
+            start_script( awardelem.script, parms);
+          endif
+        elseif( exist && !found)
+          EraseObjProperty( awardbook, "award" + CStr(exist));
+          count := count - 1;
+          SetObjProperty( awardbook, "count", count);
+          SendSysMessage( owner, "What a pitty! Your " + awardelem.name + " award was canceled!");
+          for( j := exist+1; (oldaward := GetObjProperty( awardbook, "award" + CStr(j))); j := j + 1)
+            EraseObjProperty( awardbook, "award" + CStr(j));
+            SetObjProperty( awardbook, "award" + CStr(j-1), oldaward);
+          endfor
+          parms := { owner, 1 };
+          start_script( awardelem.script, parms);
+        elseif( found)
+          SetObjProperty( awardbook, "award" + CStr(i), awardelem.name);
+          count := count + 1;
+          SetObjProperty( awardbook, "count", count);
+          SendSysMessage( owner, "Congratulation! You are awarded for " + awardelem.name);
+        endif
+      endif
+    endforeach
+    Sleep( WAITDELAY);
+  endwhile
+endprogram
+
+function GetStat(who, statname)
+  var retval;
+  
+  case(lower(statname))
+    "strength":
+      retval := who.strength - who.strength_mod;
+      break;
+      
+    "dexterity":
+      retval := who.dexterity - who.dexterity_mod;
+      break;
+      
+    "intelligence":
+      retval := who.intelligence - who.intelligence_mod;
+      break;
+      
+    default:
+      retval := who.dexterity - who.dexterity_mod;
+  endcase
+  return retval;
+endfunction
+

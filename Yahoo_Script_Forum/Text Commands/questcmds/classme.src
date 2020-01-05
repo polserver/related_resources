@@ -1,0 +1,61 @@
+include "include/modules";
+include "include/gumps";
+include "include/joinclass";
+include "include/output";
+
+var classes_cfg := ReadConfigFile( "classes" );
+var cfg_keys := GetConfigStringKeys( classes_cfg );
+var i, j, k, num_sets;
+
+program classme(who)
+	var class := DoGump( who );
+	SetObjProperty( who, "class", class );
+	output( who, "New class is: " + class );
+	var primary := GetConfigStringArray( classes_cfg[class], "Primary" );
+	var secondary := GetConfigStringArray( classes_cfg[class], "Secondary" );
+	var tertiary := GetConfigStringArray( classes_cfg[class], "Tertiary" );
+	var denied := GetConfigStringArray( classes_cfg[class], "Denied" );
+	var pskill := Class_Skills( who );
+	var skillgroups := { pskill, primary, secondary, tertiary, denied };
+	SetObjProperty( who, "class_skills", skillgroups );
+endprogram
+
+function DoGump( who )
+	for( i := len(cfg_keys); i >= 1; i := i - 1 )
+		if( CInt( cfg_keys[i] ) )
+			cfg_keys.erase(i);
+		endif
+	endfor
+	num_sets := len(cfg_keys);
+	GFSetRef( 20, 20 );
+	GFPage( 0 );
+	GFNoDispose();
+	GFResizePic( 0, 0, BKGND_GOLDTRIM, 225, 405 );
+	GFTextMid( 0, 10, 225, 4, "Choose a class" );
+	fill_in_page();
+	var res := GFSendGump( who );
+	if( res[0] == 0 )
+		return 0;
+	endif
+	if( !classes_cfg[cfg_keys[res[0]-1024]] )
+		SendSysMessage(who, "Invalid template!");
+		return;
+	endif
+	return cfg_keys[res[0]-1024];
+endfunction
+
+function fill_in_page()
+	var x_start := 25, y_start := 10;
+	var num_pages := CInt( CInt(num_sets/60) + 1 );
+	GFPage( 1 );
+	var last_set := CInt( num_sets );
+	if( last_set > 20 )
+		last_set := 20;
+	endif
+	for( k := 1; k <= last_set; k := k + 1 )
+		var new_x := x_start;
+		var new_y := y_start + (k*16);
+		GFTextLine( new_x, new_y, 8, cfg_keys[k] );
+		GFButtonID( new_x - 16, new_y + 4, 0x4B9, 0x4BA, 1 );
+	endfor
+endfunction

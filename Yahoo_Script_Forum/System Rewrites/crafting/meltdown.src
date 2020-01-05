@@ -1,0 +1,159 @@
+use uo;
+use cfgfile;
+use os;
+use util;
+include "include/client";
+include "include/objtype";
+
+const SOUND_EFFECT_BELLOWS := 0x2c;
+const SOUND_EFFECT_BUBBLE := 0x22;
+
+global cfg := readconfigfile(":crafting:crafting");
+global nomeltcfg := readconfigfile("::nomelt");
+global amt ;
+program smeltarmor(character, tongs)
+output(character, "In meltdown");
+sendsysmessage(character, "Select the item you wish to destroy");
+local use_on := target(character, TGTOPT_CHECK_LOS);
+if (!use_on)
+	sendsysmessage(character, "Targetting cancelled");
+	return;
+endif
+
+if (use_on.container.serial != character.backpack.serial)
+	sendsysmessage(character, "You can only melt items stored in the top level of your backpack");
+	return;
+endif
+amt := use_on.amount;
+if (!amt)
+	amt := 1;
+endif
+reserveitem(use_on);
+output(character, "You selected " + use_on.desc + " objtype " + format_hex(use_on.graphic));
+sendsysmessage(character, "Select a forge");
+
+local forge := target(character, TGTOPT_CHECK_LOS);
+if (!forge)
+	sendsysmessage(character, "Targetting cancelled");
+	return;
+endif
+
+if ((forge.objtype != UOBJ_SMALL_FORGE) && (forge.objtype < UOBJ_FORGE_START and forge.objtype > UOBJ_FORGE_END))
+	sendsysmessage(character, "You must use a forge to recover material from this item");
+	return;
+endif
+
+if (distance(character, forge) > 2)
+	sendsysmessage(character, "Step closer to the forge");
+	return;
+endif
+
+if (!cfg[format_hex(use_on.graphic)])
+	//we don't know what this is made from , so we give plain wood
+	output(character, "You don't know what this is made of");
+	if(nomeltcfg[use_on.graphic])
+		sendsysmessage(character, "You fail and destroy the item");
+		destroyitem(use_on);
+		return;
+	endif
+	
+	if (checkskill(character, SKILLID_BLACKSMITHY, 10, 1))
+		output(character, "You made the skill check!");
+		destroyitem(use_on);
+		playsoundeffect(character, SOUND_EFFECT_BELLOWS);
+		sleep(1);
+		playsoundeffect(character, SOUND_EFFECT_BELLOWS);
+		sleep(1);
+		playsoundeffect(character, SOUND_EFFECT_BUBBLE);
+		sleep(1);
+		sendsysmessage(character, "You manage to get a bit of material out of that");
+		createiteminbackpack(character, UOBJ_LOGS, amt);
+		return;
+	else
+		destroyitem(use_on);
+				output(character, "You failed the skill check!");
+		playsoundeffect(character, SOUND_EFFECT_BELLOWS);
+		sleep(1);
+		playsoundeffect(character, SOUND_EFFECT_BELLOWS);
+		sleep(1);
+		playsoundeffect(character, SOUND_EFFECT_BUBBLE);
+		sleep(1);
+		sendsysmessage(character, "You fail, and destroy the item");
+		return;
+	endif
+else
+	local material := cfg[format_hex(use_on.graphic)].material;
+	while (material["/"])
+		material["/"] := " ";
+	endwhile
+	local stuff := splitwords(material);
+	local skill := cfg[use_on.graphic].skill;
+	while (skill["/"])
+		skill["/"] := " ";
+	endwhile
+	local skillstuff := splitwords(skill);
+	if (!skillstuff[1])
+		skillstuff[1] := SKILLID_BLACKSMITHY;
+	endif
+	if (!skillstuff[2])
+		skillstuff[2] := -1;
+	endif
+	if (!stuff[1])
+		stuff[1] := UOBJ_LOGS;
+		stuff[2] := 2;
+	endif
+	output(character, "Material is " + stuff);
+	output(character, "Skill is " + skillstuff);
+	if (cint(stuff[1]) = 0x1bf2)
+		stuff[1] := 0x6011;
+	elseif (cint(stuff[1]) = 0x1bf5)
+		stuff[1] := 0xee20;
+	endif
+
+		destroyitem(use_on);
+		playsoundeffect(character, SOUND_EFFECT_BELLOWS);
+		sleep(1);
+		playsoundeffect(character, SOUND_EFFECT_BELLOWS);
+		sleep(1);
+		playsoundeffect(character, SOUND_EFFECT_BUBBLE);
+		sleep(1);
+	if (checkskill(character, cint(skillstuff[1]),cint(skillstuff[2]), 0))
+		
+		local matamount := cint(stuff[2]) / (randomint(3) + 1);
+		if (!matamount)
+			matamount := 1;
+		endif
+		if (matamount > 20)
+			matamount := 20;
+		endif
+		if (matamount > cint(stuff[2]))
+			matamount := cint(stuff[2])/2;
+		endif
+		createiteminbackpack(character, cint(stuff[1]), matamount * amt);
+		sendsysmessage(character, "You successfully recover some material from that item");
+		
+	else
+		sendsysmessage(character, "You fail to recover any usefull material from that item");
+	endif
+endif
+unloadconfigfile("::nomelt");
+endprogram		
+	
+function output(who, message)
+if (who.cmdlevel)
+	sendsysmessage(who, message);
+endif
+endfunction
+
+function format_hex(theobjtype)
+   local thex := hex(theobjtype);
+   if (len(thex) = 5)
+      thex["0x"] := "0x0";
+   elseif (len(thex) = 4)
+      thex["0x"] := "0x00";
+   elseif (len(thex) = 3)
+      thex["0x"] := "0x000";
+   endif
+   return thex;
+   
+endfunction

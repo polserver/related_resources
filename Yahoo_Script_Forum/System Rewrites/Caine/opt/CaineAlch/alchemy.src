@@ -1,0 +1,35 @@
+Use uo;
+use cfgfile;
+use util;
+use basic;
+use os;
+
+include "include/client";
+include "potion";
+
+
+Const REAGENT_START := 0x0f78;
+Const REAGENT_STOP := 0x0f91;
+Const SOUND_EFFECT_GRIND := 0x243;
+Const SOUND_EFFECT_POUR := 0x241;
+Const SOUND_EFFECT_BUBBLE :=  0x4f;
+Const UOBJECT_EMPTY_BOTTLE := 0x0f0e;
+
+global conf := ReadConfigFile("alchemy"); 
+
+program use_mortar ( user, mortar )
+
+if (GetObjProperty(mortar, "contents")  )
+        local contents:= GetObjProperty(mortar, "contents");
+	PourPotion(user, mortar);
+
+else
+
+    SendSysmessage( user, "What would you like to use that on?" );
+    
+    make_the_potion (user, mortar);
+
+endif 
+   
+endprogram
+

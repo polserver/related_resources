@@ -1,0 +1,18 @@
+use os;
+use uo;
+
+include "specialeventid";
+
+program DestroyRegionManager(manager)
+
+   var managerproc := GetObjProperty(manager, "#mypid");
+   managerproc := GetProcess(managerproc);
+
+   var ev := struct;
+   ev.+type;
+   ev.type := EV_MANAGER_DESTROYED;
+   
+   managerproc.SendEvent(ev);
+   return 1;
+
+endprogram

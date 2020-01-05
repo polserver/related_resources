@@ -1,0 +1,291 @@
+// housing
+// updated by zulu December 12, 2000
+
+use cfgfile;
+use uo;
+use os;
+
+include "util/key";
+include "util/bank";
+include "include/objtype";
+include "include/checkcity";
+
+Const UOBJECT_DOORS_START:=0x675;
+Const UOBJECT_DOORS_END:=0x6f4;
+Const UOBJECT_BRASS_SIGN:=0xbd2;
+Const UOBJECT_WOOD_SIGN:=0xbd0;
+Const UOBJECT_WOOD_SIGNTWO:=0xbd1;
+Const UOBJECT_TENT_CHEST:=0xE43;
+
+program usehousedeed( character, deed )
+
+    if(!ReserveItem(deed)) return; endif
+
+    if (DeedAlreadyBuiltFrom( deed ))
+        printtextaboveprivate( deed, "That house has already been built.", character );
+        destroyitem(deed);
+    else
+        Buildhouse( character, deed );
+    endif
+endprogram
+
+
+function Buildhouse( character, deed )
+
+    if(!IsInContainer( character.backpack , deed ) )
+	SendSysmessage( character, "The deed has to be in your backpack." );
+	return;
+    endif
+
+    if(!ReserveItem(deed)) return; endif
+
+    local housetype := GetHouseObjtype( deed );
+
+    if (housetype = error)
+        printtextaboveprivate( deed, "That house deed appears to be broken.", character );
+        syslog( "Deed " + deed.serial + " had no housetype property!" );
+        return;
+    endif
+
+    local where := TargetMultiPlacement( character, housetype );
+    if (!where) return; endif
+
+    local landtype := hex(GetMapInfo( where.x, where.y ).landtile);
+
+    if ((landtype>=0x9 and landtype<=0x15) or (landtype>=0x150 and landtype<=0x15c))
+    printtextaboveprivate( deed, "You can't build on farmland.", character );
+    return;
+    endif
+
+    // dirt and sand was rem'd out
+    if ((landtype>=0x71 and landtype<=0x78) or (landtype>=0x27e and landtype<=0x281) or (landtype>=0x377 and landtype<=0x37a) or (landtype>=0x553 and landtype<=0x556))// or (landtype>=0x16 and landtype<=0x19))
+    printtextaboveprivate( deed, "You can't build here.", character );
+    return;
+    endif
+
+    if (where.objtype>=0x31f4 and where.objtype<=0x31fb) // dirt
+    printtextaboveprivate( deed, "You can't build on farmland.", character );
+    return;
+    endif
+
+    if (where.objtype>=0x515 and where.objtype<=0x518)// cobblestone
+    printtextaboveprivate( deed, "You can't build on the road.", character );
+    return;
+    endif
+
+    if (CheckCity(character)=1)
+    printtextaboveprivate( deed, "You can't build in cities.", character );
+    return;
+    endif
+
+    // try to create the house
+    set_critical( 1 );
+
+    local created:=CreatehouseKeysAndBuiltDeed( character, housetype, where, deed );
+    if (!created) return; endif
+
+    destroyitem( deed );
+
+    setobjproperty( created.builtdeed, "builtserial", created.house.serial );
+
+    local lockid := AllocLockId();
+    setobjproperty( created.packkey, "lockid", lockid );
+    setobjproperty( created.bankkey, "lockid", lockid );
+
+   local logdoor, item, abc := 0, staticbanstrip;
+local number_ := 0;
+    foreach item in (created.house.components)
+        
+        
+        if( ((item.objtype >= UOBJECT_DOORS_START) and (item.objtype <= UOBJECT_DOORS_END)) or item.objtype = UOBJECT_TENT_CHEST or item.objtype = 0x6ad )
+            item.locked := 1;
+            setobjproperty( item , "lockid" , lockid );
+            setobjproperty(item, "houseserial", created.house.serial);
+           
+	
+	if(item.z < 10)
+	number_ := number_ +1;
+	staticbanstrip := CreateItemAtLocation( item.x , item.y , item.z , 0x9999, 1);
+        SetObjProperty(created.house, "bantile"+number_,staticbanstrip.serial);
+        SetObjProperty(staticbanstrip, "house_serial", created.house.serial);
+
+       	endif
+       	
+            
+        elseif((item.objtype=UOBJECT_BRASS_SIGN) or (item.objtype=UOBJECT_WOOD_SIGN) or (item.objtype=UOBJECT_WOOD_SIGNTWO))
+            setobjproperty(item,"lockid",lockid);
+            SetObjProperty(item, "house_serial", created.house.serial);
+            SetObjProperty(created.house, "signserial", item.serial);
+                   
+
+            
+            
+        endif
+    endforeach
+
+case (housetype)
+
+0x6070: // tents
+0x6072:
+additems(where,0,4,3,0xbcf,1,created,lockid,0);
+0x6BB8: // log home
+additems(where,4,0,0,0x6ad,2,created,lockid,1);
+additems(where,5,-1,0,0xbd0,1,created,lockid,0);
+additems(where,2,-3,12,0xA2C,3,created,0,0);
+0x609E: // villa with light
+additems(where,5,5,5,0xb22,1,created,0,0);
+0x6098: // smalltower
+additems(where,3,-2,17,0x8a3,1,created,0,0);
+additems(where,-2,-2,37,0x8a0,3,created,0,0);
+0x609A: // 2story log cabin
+additems(where,3,-4,7,0x8A5,1,created,0,0);
+additems(where,3,-5,11,0x8A5,3,created,0,0);
+0x6096: // marblehouse
+additems(where,-5,4,35,0x8a3,1,created,0,0);
+additems(where,-5,5,24,0x8a4,3,created,0,0);
+0x609C: // sandstonepatiohousedeed
+additems(where,-4,-2,7,0x8a3,1,created,0,0);
+additems(where,-4,-3,15,0x8a3,3,created,0,0);
+0x60A0: // stoneshop
+additems(where,-2,1,18,0x8a3,1,created,0,0);
+additems(where,-2,2,7,0x8a4,3,created,0,0);
+0x60A2: // marbleshop
+additems(where,-2,1,14,0x8a3,1,created,0,0);
+additems(where,-2,2,4,0x8a4,3,created,0,0);
+0x608D: // ranch house
+   local startx:=where.x+2,starty:=where.y,endx:=where.x+7,endy:=where.y+6;
+
+       while (startx<=endx)
+        while (starty<=endy)
+           item:=createitematlocation(startx,starty,where.z+7,0x177d,1);
+           item.movable:=0;
+           starty:=starty+1;
+        endwhile
+        starty:=where.y;
+        startx:=startx+1;
+	endwhile
+	createitematlocation(where.x+2,where.y,where.z+7,0xb41,1);
+	createitematlocation(where.x+2,where.y+1,where.z+7,0xb42,1);
+endcase
+
+endfunction
+
+
+function additems(where,x,y,z,obj,i,created,lockid,lock)
+local item:=createitematlocation(where.x+x,where.y+y,where.z+z,obj,1);
+item.movable:=0;
+setobjproperty(created.house ,"component"+i,item.serial);
+if (lockid<>0) setobjproperty(item,"lockid",lockid); endif
+if (lock) item.locked:=1; endif
+setobjproperty(item,"house_serial",created.house.serial);
+
+
+if((item.objtype=UOBJECT_BRASS_SIGN) or (item.objtype=UOBJECT_WOOD_SIGN) or (item.objtype=UOBJECT_WOOD_SIGNTWO))
+SetOBjProperty(created.house, "signserial", item.serial);
+endif
+
+if(item.objtype = 0x6ad)
+local staticbantile := CreateItemAtlocation(item.x, item.y, item.z, 0x9999, 1);
+SetObjProperty(created.house, "bantile", staticbantile.serial);
+SetObjProperty(staticbantile, "house_serial", created.house.serial);
+endif
+endfunction
+
+
+
+function CreatehouseKeysAndBuiltDeed( character, housetype, where, deed )
+    local bankbox := FindBankBox( character );
+    local logdoor, x:=where.x, y:=where.y, z:=where.z;
+   
+    local packkey := CreateItemInBackpack( character, UOBJ_GOLD_KEY );
+    if (!packkey)
+        printtextaboveprivate( character, "My backpack is too full!", character );
+        return 0;
+    endif
+
+    local bankkey := createitemincontainer( bankbox, UOBJ_GOLD_KEY );
+    if (!bankkey)
+        printtextaboveprivate( character, "My bankbox is too full!", character );
+        destroyitem( packkey );
+        return 0;
+    endif
+
+    local builtdeed := createitemincontainer( bankbox, UOBJ_HOUSE_DEED1 );
+    SetName( builtdeed, deed.desc + " at " + x + ", " + y + ", " + z + " (built)" );
+
+    if (!builtdeed)
+        printtextaboveprivate( character, "My bankbox is too full!", character );
+        destroyitem( packkey );
+        destroyitem( bankkey );
+        return 0;
+    endif
+
+    local cx:=character.x,cy:=character.y,cz:=character.y;
+    //movecharactertolocation(character,5445,1153,0,MOVECHAR_FORCELOCATION);
+    local house:=createmultiatlocation(x,y,z,housetype);
+    
+    if (house)
+      movecharactertolocation(character,x,y,z);
+    else
+      movecharactertolocation(character,cx,cy,cz);
+    endif
+    local sign;
+
+    setobjproperty(house,"numlockdowns",getobjproperty(deed,"numlockdowns"));
+    setobjproperty(house,"numsecure",getobjproperty(deed,"numsecure"));
+    setobjproperty(house,"ownerserial",character.serial);
+    setobjproperty(house,"owneracct",character.acctname);
+    setobjproperty(house,"builtdeed",builtdeed.serial);
+    setobjproperty( house , "decay", (ReadGameClock()+ 2592000));
+
+    if (housetype=0x6BB8 or housetype=0x6070 or housetype=0x6072)
+	house.movable:=0;
+	house.visible:=1;
+    endif
+
+    if (!house)
+        printtextaboveprivate( character, "I can't place the house there.", character );
+        print(house.errortext);
+        destroyitem( packkey );
+        destroyitem( bankkey );
+        destroyitem( builtdeed );
+        return;
+    endif
+
+    local result array;
+    
+    result .+ packkey := packkey;
+    result .+ bankkey := bankkey;
+    result .+ builtdeed := builtdeed;
+    result .+ house := house;
+    
+    return result;
+endfunction
+
+
+function DeedAlreadyBuiltFrom( deed )
+    if (getobjproperty( deed, "builtserial" ))
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+function GetHouseObjtype( deed )
+    var id := ReadConfigFile( "itemdesc" ); // package itemdesc
+    var elem := id[ deed.objtype ];
+    var ot := GetObjtypeByName( elem.HouseObjType );
+    return ot;
+endfunction
+
+function IsInContainer( container , item )
+
+   	foreach thing in EnumerateItemsInContainer( container )
+		if( thing.serial = item.serial )
+			return 1;
+		endif
+   	endforeach
+
+   	return 0;
+
+endfunction

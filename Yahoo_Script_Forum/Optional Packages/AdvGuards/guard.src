@@ -1,0 +1,125 @@
+const NPCType := "GUARD";
+
+include "include/client";
+include "include/eventid";
+
+//Customize this AI as you wish.
+
+//PUT IN YOUR NPC LAYOUT/NAME GENERATOR CODE HERE
+
+//This is a homepoint system I use at many AIs.
+var home := GetProperty("Home");
+if (!home)
+	home := {me.x,me.y,me.z};
+	SetProperty("Home", home);
+endif
+
+//Sets an anchor at it's homepoint.
+SetAnchor(home[1], home[2], 10, 12);
+
+//Enable the events we are going to use.
+EnableEvents(EVID_SPEECH + EVID_ENGAGED + EVID_DAMAGED + EVID_ITEM_GIVEN, 2);
+
+//Signup the Shard's Guards Army!
+NotifyCentral(EVID_GUARD_REGISTER);
+
+program Guard_AI ()
+	//I believe I'll be easy to guess what each variable does here.
+	var ev, text, next_wander, onduty, next_homevisit;
+
+	while (1)
+		ev := Wait_For_Event(1);
+		if (next_wander<ReadGameClock())
+			//Walk around, stop eventually. (guards wont stop when speaking to other PCs, like the other NPCs).
+			Wander();
+			if (!RandomInt(4))
+				next_wander := ReadGameClock()+(RandomInt(21)+1);
+			endif
+		endif
+		//Visit your homepoint each 5 minutes.
+		//This checks if you are in duty. Being in duty means you took a call.
+		//If you are not in duty that means you are at your homepoint already! ;)
+		if (onduty and next_homevisit<ReadGameClock())
+			SetAnchor(home[1], home[2], 10, 12);
+			PlaySoundEffect(me, SFX_SPELL_TELEPORT);
+			PlayStationaryEffect(me.x, me.y, me.z, FX_SMOKE, speed:=0xA, loop:=0xA);
+			MoveCharacterToLocation(me, home[1], home[2], home[3], MOVECHAR_FORCELOCATION);
+			//The criminal has been whacked. End of mission.
+			onduty := 0;
+			//Tell the central that the mission is over.
+			NotifyCentral(EVID_GUARD_AVAILABLE);
+		endif
+		if (ev)
+        	case (ev.type)
+        		EVID_GUARD_CALL:
+        			SearchAndDestroy(ev.criminal);
+        			next_homevisit := ReadGameClock()+60;
+        			onduty := 1;
+
+            	EVID_SPEECH:
+					text := upper(ev.text);
+					if (text[upper(me.name)] or text["NPC"] or text[NPCType])
+						if (!ev.source.criminal)
+							TurnToward(ev.source);
+							if (text["TRAIN"] or text["TEACH"])
+								//Guess wha? :P
+	            	    	elseif (text["MOVE"])
+								//Move! Let's not obstruct the way!
+							elseif (text["FARE"] or text["BYE"])
+								//Bye bye code
+							elseif (text=upper(me.name) or text="NPC" or text=NPCType)
+								//Just greet the player.
+							else
+								//Other, general speech handling function.
+	            	    	endif
+	            	    endif
+					endif
+				EVID_ITEM_GIVEN:
+					TurnToward(ev.source);
+					Say("Are thou trying to bribe me?");
+					MoveItemToContainer(ev.source.backpack, ev.item);
+				EVID_ENGAGED:
+				EVID_DAMAGED:
+					SearchAndDestroy(ev.source);
+					next_homevisit := ReadGameClock()+60;
+					onduty := 1;
+			endcase
+		endif
+	endwhile
+endprogram
+
+function SearchAndDestroy(criminal)
+	//For the next minutes, the guard will wander under another anchor
+	SetAnchor(criminal.x, criminal.y, 10, 12);
+
+	//If it's a NPC... then the guards will have the corpse for dinner!
+	if (criminal.npctemplate)
+		SetObjProperty(criminal, "guardkill", 1);
+	endif
+
+	//This is the load-less way to have a guard insta kill something ;)
+	PlaySoundEffect(me, SFX_SPELL_TELEPORT);
+	PlayStationaryEffect(me.x, me.y, me.z, FX_SMOKE, speed:=0xA, loop:=0xA);
+	SetWarMode(1);
+	MoveCharacterToLocation(me, criminal.x, criminal.y, criminal.z, MOVECHAR_FORCELOCATION);
+	PlayStationaryEffect(me.x, me.y, me.z, FX_SMOKE, speed:=0xA, loop:=0xA);
+	PlaySoundEffect(me, SFX_SPELL_TELEPORT);
+	Sleepms(500);
+	if (RandomInt(2))
+		PrintTextAbove(me, GetConfigString(StrTbl[100], "Str50"), FONT_NORMAL, 0);
+	endif
+	PerformAction(me, 0x000d);//Halbert hitting animation
+	PlaySoundEffect(me, 0x238);//Halbert hitting sound FX.
+	//Guess wha? Our guards never miss :P
+	ApplyRawDamage(criminal, criminal.hp);//Criminals_in_the_world--;
+	Sleep(1);
+	SetWarMode(0);
+endfunction
+
+//Easy to understand huh?
+function NotifyCentral(what)
+	var event := struct;
+	event.+type := what;
+	event.+guard := me;
+	GuardsNerve.SendEvent(event);
+endfunction

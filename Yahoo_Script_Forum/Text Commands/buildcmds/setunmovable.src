@@ -1,0 +1,9 @@
+use uo;
+
+program textcmd_setunmovable( who )
+	SendSysMessage( who, "Target the item to set movable" );
+	var obj := Target( who );
+	if( obj )
+		obj.movable := 0;
+	endif
+endprogram

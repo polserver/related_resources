@@ -1,0 +1,20 @@
+use uo;
+use os;
+use basic;
+
+include "include/client";
+include "../../sench";
+
+program addsench( who, slots )
+
+	SendSysMessage( who, "Select an item to add " + slots + " slots to." );
+	var item := target(who);
+
+	if (!item)
+	        SendSysmessage(who, "Targetting cancelled.");
+        	return;
+	endif
+
+	setSlots( item, cInt(slots) );
+
+endprogram

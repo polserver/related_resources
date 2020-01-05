@@ -1,0 +1,202 @@
+const GFX_UNSHORN_SHEEP := 0xcf;
+const GFX_SHORN_SHEEP := 0xdf;
+
+function main_AI_loop(next_wander := 0)
+
+    local ev;
+    local wanders := 60;
+    local next_regrow := readgameclock() + 1800;
+    local next_bark := readgameclock() + (RandomInt(30)+60);
+    local makenoise := bark();
+
+    EnableMainEvents();
+
+    while (1)
+
+	if (readgameclock() > next_wander)
+		wander();
+		next_wander := readgameclock()+5;
+		wanders := wanders +1;
+		if (wanders > 30)
+			wanders :=0;
+			ev := sleepmode();
+	    	endif
+	else
+		ev := os::wait_for_event( 5 );
+	endif
+
+        repeat
+	    case (ev.type)
+                EVID_DAMAGED:
+                    Fight( ev.source );
+                EVID_ENGAGED:
+		    Runawayfrom( ev.source );
+		EVID_ENTEREDAREA:
+		default:
+		if (!ev.source.npctemplate)
+		  look_around();
+		  if (makenoise)
+			if (readgameclock() > next_bark)
+				next_bark := readgameclock() + (RandomInt(30)+60);
+				PlaySoundEffect(me,makenoise);
+			elseif ( me.graphic = GFX_SHORN_SHEEP )
+				if (readgameclock() > next_regrow)
+					next_regrow := readgameclock()+1800;
+					me.graphic := GFX_UNSHORN_SHEEP;
+				endif
+			endif
+		  endif
+		endif
+            endcase
+        until (! (ev := os::wait_for_event(1)) );
+
+   endwhile      
+
+endfunction        
+
+function look_around()
+
+	foreach critter in ListMobilesInLineOfSight( me, HALT_THRESHOLD )
+          if (MyEnemy(critter.graphic))
+                Fight( critter );
+		return;
+          endif
+	endforeach
+
+endfunction
+
+function EnableMainEvents()
+
+    cleareventque();
+    DisableEvents( EVID_SPEECH + EVID_LEFTAREA + EVID_DISENGAGED + EVID_OPPONENT_MOVED);
+    EnableEvents( EVID_ENGAGED + EVID_DAMAGED + EVID_ENTEREDAREA, HALT_THRESHOLD );
+
+endfunction
+
+function DisableMainEvents()
+
+    cleareventque();
+    DisableEvents( EVID_SPEECH + EVID_ENGAGED + EVID_DAMAGED + EVID_ENTEREDAREA);
+
+endfunction
+
+function Bark()
+
+	local noise := 0;
+	case (me.graphic)
+	0x06://bird
+		case (randomint(3))
+		0: noise := 0x1B;
+		1: noise := 0x18;
+		2: noise := 0x277;
+		endcase
+	0xc9://cat	
+		noise := 0x6B;
+	0xd0://chicken
+		noise := 0x70;
+	0xd8://cow
+		noise := 0x7A;
+	0xd9://dog
+		case (randomint(2))
+		0: noise := 0x86;
+		1: noise := 0x87;
+		endcase
+	0xd1://goat
+		case (randomint(2))
+		0: noise := 0x9A;
+		1: noise := 0x9B;
+		endcase	
+	0xcb://pig
+		noise := 0xC6;
+	GFX_SHORN_SHEEP:
+	GFX_UNSHORN_SHEEP:
+		case (randomint(2))
+		0: noise := 0xD7;
+		1: noise := 0xD8;
+		endcase	
+	0xcc:
+	0xc8:
+	0xe2:
+	0xe4://horses
+		case (randomint(4))
+		0: noise := 0xA9;
+		1: noise := 0xAA;
+		2: noise := 0xAB;
+		3: noise := 0xAC;
+		endcase
+	0x51://toad
+		case (randomint(4))
+		0: noise := 0x267;
+		1: noise := 0x268;
+		2: noise := 0x26A;
+		3: noise := 0x26D;
+		endcase
+	0xd3://bears
+		case (randomint(5))
+		0: noise := 0xA4;
+		1: noise := 0xA5;
+		2: noise := 0xA6;
+		3: noise := 0xA7;
+		3: noise := 0xA8;
+		endcase
+	0x1d://gorilla
+		case (randomint(3))
+		0: noise := 0x9F;
+		1: noise := 0xA0;
+		2: noise := 0xA2;
+		endcase
+	endcase
+
+	return noise;
+
+endfunction
+
+function MyEnemy(enemy)
+
+	case (me.graphic)
+	0xC9:
+		case (enemy) 
+		0XEE:
+		0x6:
+		0x5:
+			return 1;
+		default:
+			return 0;
+		endcase
+	0xD9:
+		case (enemy) 
+		0xC9:
+			return 1;
+		default:
+			return 0;
+		endcase
+	0xD3:
+		case (enemy) 
+		0xD9:
+			return 1;
+		default:
+			return 0;
+		endcase
+	0xE1:
+		case (enemy) 
+		0xD0:
+		0XED:
+		0xD8:
+		0XE7:
+		0xD9:
+		0XC9:
+		0XD1:
+		0XEA:
+		0XCB:
+		0XDF:
+		0XCF:
+		0x190:
+		0x191:
+			return 1;
+		default:
+			return 0;
+		endcase
+	endcase
+	return 0;
+
+endfunction

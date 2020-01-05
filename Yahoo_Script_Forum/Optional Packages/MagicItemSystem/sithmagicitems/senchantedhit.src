@@ -1,0 +1,476 @@
+/////////////////////////////////////////////////////
+//S!tH's Enchantment System v1.14
+/////////////////////////////////////////////////////
+//TODO:
+//Find bugs
+/////////////////////////////////////////////////////
+//Notes:
+//Give credit where credit is due and all that crap.
+//e-mail me with bugs, additions you want to see,
+//or with any updates you might have made :)
+//s1th@stoned.com
+/////////////////////////////////////////////////////
+
+use uo;
+use os;
+use basic;
+use cfgfile;
+
+include "include/client";
+include "include/skillpoints";
+include "sench";
+
+const debug := 0;
+
+var enchCFG := ReadConfigFile( "senchantedhit" );
+var data := FindConfigElem( enchCFG, 420 );
+var iDmgCall := 0;
+var rawdamage;
+var attacker;
+var defender;
+var weapon;
+var armor;
+var armour;
+var weaponEnchArray := {};
+var armourEnchArray := {};
+var attackerEnchArray := {};
+var defenderEnchArray := {};
+var nAdd, nSub, nMul, nDiv;
+var enchStrength := {}, enchWeakness := {};
+
+var armourEns := 0;
+
+program senchantedhit (param)
+
+	attacker := param[1];
+	defender := param[2];
+	weapon := param[3];
+	armor := param[4];
+	var basedamage := param[5];
+	rawdamage := param[6];
+
+	armour := ListEquippedItems( defender );
+
+	if( debug )
+		print( "**********************");
+		print( "Damage = " + rawdamage );
+		print( "Attacker = " + attacker.name + ", Defender = " + defender.name );
+	endif
+
+	//Weapons enchantments...
+	var enchantments := GetObjProperty( weapon, "Enchantments" );
+	var tempHits;
+	if(enchantments)
+		//print( "enchantments = " + enchantments );
+		weaponEnchArray := enchantments;
+		
+		//Here is where we handle the 'DidHitScript'
+		foreach xEnch in weaponEnchArray
+		  tempHits := getEnchConfigProp( xEnch, "DidHitScript", "string" );
+		  tempHits := SplitWords( tempHits );
+		  if( tempHits )
+		    foreach tHit in tempHits
+		      //Start the script + grab the damage
+		      var returnDmg := run_script_to_completion( tHit, {attacker, defender, weapon, armor, basedamage, rawdamage } );
+		      if( returnDmg )
+			rawdamage := returnDmg;
+		      endif
+		    endforeach
+		  endif
+		endforeach
+	endif
+
+	var cPA := {};
+
+	//Armours enchantments... Modded.
+	foreach armourPeice in armour
+		enchantments := GetObjProperty( armourPeice, "Enchantments" );
+		if(enchantments)
+			armourEns := armourEns + 1;
+			//print( "enchantments = " + enchantments );
+			cPA := enchantments;
+			armourEnchArray.append( cPA );
+			
+			//Here is where we handle the 'WasHitScript'
+			foreach zEnch in cPA
+			  tempHits := getEnchConfigProp( zEnch, "WasHitScript", "string" );
+			  tempHits := SplitWords( tempHits );
+			  if( tempHits )
+			    foreach tHit in tempHits
+			      //Start the script + grab the damage
+			      var returnDmg := run_script_to_completion( tHit, {attacker, defender, weapon, armor, basedamage, rawdamage, armourPeice } );
+			      if( returnDmg )
+			          rawdamage := returnDmg;
+		              endif
+			    endforeach
+			  endif
+			endforeach
+		endif
+	endforeach
+	if( armourEns < 1 )
+		armourEns := 1;
+	endif
+
+	if( debug )
+		print( "Armours With Enchantments = " + armourEns );
+	endif
+
+	//Attackers enchantments...
+	enchantments := GetObjProperty( attacker, "Enchantments" );
+	if(enchantments)
+		//print( "enchantments = " + enchantments );
+		attackerEnchArray := enchantments;
+
+		//Here is where we handle the 'DidHitScript'
+		foreach xEnch in attackerEnchArray
+		  tempHits := getEnchConfigProp( xEnch, "DidHitScript", "string" );
+		  tempHits := SplitWords( tempHits );
+		  if( tempHits )
+		    foreach tHit in tempHits
+		      //Start the script + grab the damage
+		      //Note, the attacker is the weapon too
+		      var returnDmg := run_script_to_completion( tHit, {attacker, defender, attacker, armor, basedamage, rawdamage } );
+		      if( returnDmg )
+			rawdamage := returnDmg;
+		      endif
+		    endforeach
+		  endif
+		endforeach
+	endif
+
+	//Defenders enchantments...
+	enchantments := GetObjProperty( defender, "Enchantments" );
+	if(enchantments)
+		//print( "enchantments = " + enchantments );
+		defenderEnchArray := enchantments;
+
+		//WasHitScript for defenders.
+		foreach zEnch in defenderEnchArray
+		  tempHits := getEnchConfigProp( zEnch, "WasHitScript", "string" );
+		  tempHits := SplitWords( tempHits );
+		  if( tempHits )
+		    foreach tHit in tempHits
+		      //Start the script + grab the damage
+		      var returnDmg := run_script_to_completion( tHit, {attacker, defender, weapon, armor, basedamage, rawdamage, defender } );
+		      if( returnDmg )
+			rawdamage := returnDmg;
+		      endif
+		    endforeach
+		  endif
+		endforeach
+	endif
+
+	//Free up stuff...
+	enchantments := 0;
+	tempHits := 0;
+
+	doweapon();
+	doattacker();
+	doarmour();
+	dodefender();
+
+	if( debug )
+	  print( "Damage = " + rawdamage );
+	  print( "**********************");
+	endif
+
+        return rawdamage;
+endprogram
+
+function doweapon()
+
+	var enchElement;  //The weapons enchantment element.
+	var aenchElement; //The armours enchantment element.
+	var denchElement; //The defenders enchantment element.
+	var kenchElement; //The attackers enchantment element.
+	var blechy;
+	foreach enchy in weaponEnchArray
+	    if( !getEnchConfigProp( enchy, "noNormalMods", "integer" ) )
+		enchElement := enchy;
+		if(enchElement)
+		setArrays( enchElement );
+		getNormDamageMods(enchElement);
+		doNormDmgMods();
+
+			//OK, we have done all the normal damage for this
+			//enchantment, now we check if the defender/armour
+			//has enchantments that might effect us.
+
+			//Armour stuff
+			if(armourEnchArray)
+
+			foreach armaPeiceArray in armourEnchArray
+			    foreach aenchy in armaPeiceArray //aenchy. armour enchy.
+				aenchElement := aenchy;
+
+					//Dont worry about the normal damage mods, because we will do them in doarmour().
+					//Check for enchantment strength/weakness and do mods
+
+					foreach entryThingo in enchStrength
+						if (entryThingo = aenchy)
+							doStrengthDmgMods( enchElement, 1 );
+							blechy := 1;
+							break;
+						endif
+					endforeach
+
+					if(!blechy) //An enchantment cannot be Strong AND Weak against another singular enchantment.
+					foreach otherEntryThingo in enchWeakness
+						if (otherEntryThingo = aenchy)
+							doWeaknessDmgMods( enchElement, 1 );
+							break;
+						endif
+					endforeach
+					endif
+					blechy := 0;
+			    endforeach
+			endforeach
+			endif
+
+			//Defender stuff
+			if(defenderEnchArray)
+
+			    foreach denchy in defenderEnchArray //denchy. defender enchy.
+				denchElement := denchy;
+
+					//Dont worry about the normal damage mods, because we will do them in dodefender().
+					//Check for enchantment strength/weakness and do mods
+
+					foreach entryThingo in enchStrength
+						if (entryThingo = denchy)
+							doStrengthDmgMods( enchElement );
+							break;
+							blechy := 1;
+						endif
+					endforeach
+
+					if(!blechy) //An enchantment cannot be Strong AND Weak against another singular enchantment.
+					foreach otherEntryThingo in enchWeakness
+						if (otherEntryThingo = denchy)
+							doWeaknessDmgMods( enchElement );
+							break;
+						endif
+					endforeach
+					endif
+					blechy := 0;
+			    endforeach
+			endif
+		endif
+	    endif //Check for 'noNormMods'
+	endforeach //foreach enchy in weaponEnchArray;
+
+endfunction
+
+function doattacker()
+
+	var enchElement; //The attackers enchantment element.
+	var aenchElement; //The armours enchantment element.
+	var denchElement; //The defenders enchantment element.
+	var wenchElement;  //The weapons enchantment element.
+	var blechy;
+	foreach enchy in attackerEnchArray
+	    if( !getEnchConfigProp( enchy, "noNormalMods", "integer" ) )
+		enchElement := enchy;
+		if(enchElement)
+		setArrays( enchElement );
+		getNormDamageMods(enchElement);
+		doNormDmgMods();
+
+			//OK, we have done all the normal damage for this
+			//enchantment, now we check if the defender/armour
+			//has enchantments that might effect us.
+
+			//Armour stuff
+			if(armourEnchArray)
+
+			foreach armaPeiceArray in armourEnchArray
+			    foreach aenchy in armaPeiceArray //aenchy. armour enchy.
+				aenchElement := aenchy;
+
+					//Dont worry about the normal damage mods, because we will do them in doarmour().
+					//Check for enchantment strength/weakness and do mods
+
+					foreach entryThingo in enchStrength
+						if (entryThingo = aenchy)
+							doStrengthDmgMods( enchElement, 1 );
+							break;
+							blechy := 1;
+						endif
+					endforeach
+
+					if(!blechy) //An enchantment cannot be Strong AND Weak against another singular enchantment.
+					foreach otherEntryThingo in enchWeakness
+						if (otherEntryThingo = aenchy)
+							doWeaknessDmgMods( enchElement, 1 );
+							break;
+						endif
+					endforeach
+					endif
+					blechy := 0;
+			    endforeach
+			endforeach
+			endif
+
+			//Defender stuff
+			if(defenderEnchArray)
+
+			    foreach denchy in defenderEnchArray //denchy. defender enchy.
+				denchElement := denchy;
+
+					//Dont worry about the normal damage mods, because we will do them in dodefender().
+					//Check for enchantment strength/weakness and do mods
+
+					foreach entryThingo in enchStrength
+						if (entryThingo = denchy)
+							doStrengthDmgMods( enchElement );
+							break;
+							blechy := 1;
+						endif
+					endforeach
+
+					if(!blechy) //An enchantment cannot be Strong AND Weak against another singular enchantment.
+					foreach otherEntryThingo in enchWeakness
+						if (otherEntryThingo = denchy)
+							doWeaknessDmgMods( enchElement );
+							break;
+						endif
+					endforeach
+					endif
+					blechy := 0;
+			    endforeach
+			endif
+		endif
+	    endif
+	endforeach //foreach enchy in weaponEnchArray;
+
+endfunction
+
+function doarmour()
+
+	//The doweapon/doattacker functions took care of the strength/weakness damage. So all we do here is normal damage mods.
+	var enchElement;
+	iDmgCall := 1;
+	foreach armaPeiceArray in armourEnchArray
+		foreach enchy in armaPeiceArray
+	    	    if( !getEnchConfigProp( enchy, "noNormalMods", "integer" ) )
+			enchElement := enchy;
+			if( enchElement )
+				getNormDamageMods(enchElement);
+				doNormDmgMods( 1 );
+			endif
+		    endif
+		endforeach
+	endforeach
+	iDmgCall :=0;
+
+endfunction
+
+function dodefender()
+
+	//The doweapon/doattacker functions took care of the strength/weakness damage. So all we do here is normal damage mods.
+	var enchElement;
+	iDmgCall := 1;
+	foreach enchy in defenderEnchArray
+	    if( !getEnchConfigProp( enchy, "noNormalMods", "integer" ) )
+		enchElement := enchy;
+		if( enchElement )
+			getNormDamageMods(enchElement);
+			doNormDmgMods();
+		endif
+	    endif
+	endforeach
+	iDmgCall := 0;
+
+endfunction
+
+function getNormDamageMods( element );
+
+	var ele := FindConfigElem( enchCFG, element );
+	nAdd := GetConfigInt( ele, "NormAdd" );
+	nSub := GetConfigInt( ele, "NormSub" );+
+	nMul := GetConfigInt( ele, "NormMulti" );
+	nDiv := GetConfigInt( ele, "NormDivis" );
+
+	if( !nMul || !nDiv )
+	    if( debug )
+		print("Element = " + element);
+		print("ele = " + ele);
+		print("Enchantment CFG file, entry " + element + " has bad or no NormMulti and/or NormDivis");
+	    endif
+		return 0;
+	endif
+
+	return 1;
+
+endfunction
+
+function doNormDmgMods( isArmour := 0 )
+
+	var oRdmg := rawdamage;
+
+	if( !isArmour )
+		if( !iDmgCall )
+			rawdamage := rawdamage * nMul;
+			rawdamage := rawdamage / nDiv;
+			rawdamage := rawdamage + nAdd;
+			rawdamage := rawdamage - nSub;
+		else
+			rawdamage := rawdamage * nDiv;
+			rawdamage := rawdamage / nMul;
+			rawdamage := rawdamage + nSub;
+			rawdamage := rawdamage - nAdd;
+		endif
+	endif
+
+	if( isArmour )
+	  rawdamage := oRdmg + (( rawdamage - oRdmg ) / armourEns);
+	endif
+
+endfunction
+
+function setArrays( enchElement )
+
+	var ele := FindConfigElem( enchCFG, enchElement );
+	var tempStuff;
+
+	tempStuff := GetConfigString( ele, "Strengths");
+	enchStrength := SplitWords( tempStuff );
+	tempStuff := 0;
+
+	tempStuff := GetConfigString( ele, "Weaknesses");
+	enchWeakness := SplitWords( tempStuff );
+	tempStuff := 0;
+
+endfunction
+
+function doStrengthDmgMods( element, isArmour := 0 )
+
+	var oRdmg := rawdamage;
+
+	var ele := FindConfigElem( enchCFG, element );
+	var add := GetConfigInt( ele, "StrengthAdd" );
+	var multi := GetConfigInt( ele, "StrengthMulti" );
+
+	rawdamage := rawdamage * multi;
+	rawdamage := rawdamage + add;
+	if( isArmour )
+	  rawdamage := oRdmg + (( rawdamage - oRdmg ) / armourEns);
+	endif
+
+endfunction
+
+function doWeaknessDmgMods( element, isArmour := 0 )
+
+	var oRdmg := rawdamage;
+
+	var ele := FindConfigElem( enchCFG, element );
+	var sub := GetConfigInt( ele, "WeaknessSub" );
+	var divis := GetConfigInt( ele, "WeaknessDiv" );
+
+	rawdamage := rawdamage / divis;
+	rawdamage := rawdamage - sub;
+	if( isArmour )
+	  rawdamage := oRdmg + (( rawdamage - oRdmg ) / armourEns);
+	endif
+
+endfunction

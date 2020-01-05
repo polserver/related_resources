@@ -1,0 +1,24 @@
+use uo;
+
+program posess(who)
+	SendSysMessage(who, "Which NPC would you like to posess?");
+	var what := Target(who, TGTOPT_NOCHECK_LOS);
+	if (!what)
+		return;
+	endif
+	if(!what.isA(POLCLASS_NPC))
+		SendSysMessage(who, "You can only posess NPCs!");
+		return;
+	endif
+	who.concealed := 1;
+	SetObjProperty(who, "on", who.name);
+	SetObjProperty(who, "oc", who.color);
+	SetObjProperty(who, "og", who.graphic);
+	SetObjProperty(who, "pos", what.serial);
+	who.name := what.name;
+	who.color := what.color;
+	who.graphic := what.graphic;
+	MoveCharacterToLocation(who, what.x, what.y, what.z, MOVECHAR_FORCELOCATION);
+	MoveCharacterToLocation(what, 1, 1, -127, MOVECHAR_FORCELOCATION);
+	who.concealed := 0;
+endprogram

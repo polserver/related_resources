@@ -1,0 +1,102 @@
+//////////////////////////////////////////
+//
+//   SysHook - Alle benutzten SysHooks
+//
+//     Author: Shinigami
+//     eMail : Shinigami@gmx.net
+//
+//   Modifications:
+//     2002/02/18 Shinigami: First Write
+//
+//////////////////////////////////////////
+
+/////////////
+// Includes
+/////////////
+
+Include "spellbook";
+
+//////////////////////
+// Globale Variablen
+//////////////////////
+
+Global bookdesc; // Beschreibungen des Buches
+
+/////////////////////////////////////////////////
+// HookOpenSpellbookPergon - Zauberbuch oeffnen
+/////////////////////////////////////////////////
+
+Exported Function HookOpenSpellbookPergon(who)
+  If (!who.dead) // Nur lebendige Spieler...
+    bookdesc:=0; // Beschreibungen des Buches initialisieren
+
+    // Nach Buechern gemaess SkillLevel suchen
+   // Local book:=CheckSkillLevelForBook(who, 0, "Beruf");
+   // book:=CheckSkillLevelForBook(who, book, "Haupt");
+   // book:=CheckSkillLevelForBook(who, book, "Neben");
+   // book:=CheckSkillLevelForBook(who, book, "Weitere");
+    Local book:=CheckSkillLevelForBook(who, 0, "");
+
+    If (book) // Zauberbuch gefunden?
+      If (Accessible(who, book))
+        Start_Script("spellbook", {who, book}); // Zauberbuch oeffnen
+      Else
+        SendSysMessage(who, "Ihr kommt nicht an "+bookdesc[1]+" heran!");
+      EndIf
+    Else
+      If (bookdesc)
+        SendSysMessage(who, "Ihr habt kein "+bookdesc[2]+" in eurem Backpack!");
+      Else
+        SendSysMessage(who, "Ihr wisst nichts mit magischen Dingen anzufangen!");
+      EndIf
+    EndIf
+  EndIf
+
+  Return (1); // Hook wurde behandelt
+EndFunction
+
+////////////////////////////////////////////////////////////////////
+// CheckSkillLevelForBook - Sucht nach Buechern gemaess SkillLevel
+////////////////////////////////////////////////////////////////////
+
+Function CheckSkillLevelForBook(who, book, skilllevel)
+  If (!book) // Schon ein Buch gefunden?
+   // If (HasPlayerSkill(who, SKILLID_MAGIE)=skilllevel)
+      book:=SearchSpellBookInBackpack(who, UOBJ_SPELLBOOK_MAGE);
+
+      If (!bookdesc)
+        bookdesc:={"euer Grimoire", "kein Grimoire"};
+      EndIf
+   // EndIf
+
+    If (!book) // Schon ein Buch gefunden?
+     // If (HasPlayerSkill(who, SKILLID_SEGNEN)=skilllevel)
+        book:=SearchSpellBookInBackpack(who, UOBJ_SPELLBOOK_CLERIC);
+
+        If (!bookdesc)
+          bookdesc:={"euren Liber Castus", "keinen Liber Castus"};
+        EndIf
+     // EndIf
+
+      If (!book) // Schon ein Buch gefunden?
+       // If (HasPlayerSkill(who, SKILLID_FLUCHEN)=skilllevel)
+          book:=SearchSpellBookInBackpack(who, UOBJ_SPELLBOOK_NECRO);
+
+          If (!bookdesc)
+            bookdesc:={"euer paq mu'qaDmey", "kein paq mu'qaDmey"};
+          EndIf
+       // EndIf
+      EndIf
+    EndIf
+  EndIf
+
+  Return (book);
+EndFunction
+
+//////////////////
+// Hauptprogramm
+//////////////////
+
+Program Hook()
+  Return (1);
+EndProgram

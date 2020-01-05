@@ -1,0 +1,52 @@
+use uo;
+use util;
+use cfgfile;
+include "explosion";
+
+program explosion_det ( params )
+	local character := params[1];
+	local potion := params[2];
+	local timer := params[3];
+	local str := params[4];
+	
+	local ground_zero := potion;
+	local fallout := str * 2; // the range of the blast
+	
+	//print("FIRE");	//debug
+	setscriptcontroller(character); // make sure the damage gets regged from this char
+	
+	if (potion.container)
+        	ground_zero := character;
+    	endif
+	
+	PlayStationaryEffect( ground_zero.x, ground_zero.y, ground_zero.z, EFFECT_EXPLOSION, 0, 7, 0 );
+
+	foreach creature in ListMobilesNearLocationEx( ground_zero.x, ground_zero.y, ground_zero.z, fallout, LISTEX_FLAG_NORMAL + LISTEX_FLAG_HIDDEN )
+		local dist_mod := Distance ( creature , ground_zero );
+		
+		//local start_hp := creature.hp;	//debug
+		//local end_hp := 0;	//debug
+		//local tot_dmg := 0;	//debug
+					
+		PlaySoundEffect( creature,  SOUND_EFFECT_EXPLOSION );
+		PlayObjectCenteredEffect( creature,  EFFECT_EXPLOSION, 0, 7 );
+		
+		if (dist_mod <= 0)
+			dist_mod := 1;
+		endif
+		//print("potion STR : " + str );	//debug
+		//print("distance : " + dist_mod );	//debug
+		
+		
+		local dmg := ( ( Randomint(30) + 1 ) * str ) / dist_mod;
+        	dmg := dmg + 2;
+         	ApplyRawDamage( creature, dmg ); // note this is raw damage
+		
+		//end_hp := creature.hp;	//debug
+		//tot_dmg := ( start_hp - end_hp );	//debug
+		//print ( "total damage to "+ creature.name + " is : " + tot_dmg );	//debug
+		
+	endforeach
+	
+	destroyitem( potion );
+endprogram

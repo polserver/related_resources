@@ -1,0 +1,14 @@
+use npc;
+use uo;
+
+
+program missingai()
+
+	var mob := self();
+
+	movecharactertolocation(mob, 5288 , 1176 , 0, 0x40000000);
+	setobjproperty(mob, "guardkill", 1);
+	RevokePrivilege( mob, "invul" );
+	Damage( mob, mob.hp );
+
+endprogram

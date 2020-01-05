@@ -1,0 +1,24 @@
+Talos's NPCs  ver 2. 12/21/00
+
+I added another NPC merchant for your enjoyment. A Taxidermist that sells stuffed animal heads. 
+
+Package includes:
+
+Florest:	Sells flowers
+Taxidermist:	Sells animal trophy.
+
+_____________
+To install:
+
+copy itemdesc.cfg contents to your Pol\config\itemdesc.cfg file
+copy mrcspawn.cfg contents to your Pol\config\mrcspawn.cfg file
+copy npcdesc.cfg contents to your Pol\config\npcdesc.cfg file
+
+__________________________________________
+Florist NPC
+
+To spawn the new npc, type .createnpc florist
+
+Taxitermist NPC
+
+To spawn the new npc, type .createnpc taxidermist

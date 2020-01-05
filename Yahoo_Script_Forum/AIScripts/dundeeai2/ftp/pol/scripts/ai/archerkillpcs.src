@@ -1,0 +1,77 @@
+use npc;
+use os;
+use uo;
+use cfgfile;
+
+include "include/eventid";
+include "include/randname";
+include "include/npcutil";
+include "include/objtype";
+include "include/dist";
+include "include/anchors";
+include "ai/main/killpcsloop";
+include "ai/combat/fight";
+include "include/dist";
+include "ai/combat/defaultcombatevent";
+include "ai/setup/archersetup";
+include "ai/main/loot";
+include "ai/main/sleepmode";
+include "include/client";
+
+const HALT_THRESHOLD := 10; // how close before he attacks?
+
+global runaway := 0;
+
+program KillPlayers()
+
+	SetWarMode( 0 );
+    	main_AI_loop();
+        
+endprogram
+
+function CloseDistance( opponent )
+
+    if ( (runaway < 100) or (!theammo) )
+    	if (distance(me, opponent) <= 4)
+		RunAwayFrom(opponent);
+		runaway := runaway +1;
+		if (runaway > 50)
+			runaway := 100;
+			local weaponone := GetEquipmentByLayer( me,  LAYER_HAND1 );
+			local weapontwo := GetEquipmentByLayer( me,  LAYER_HAND2 );
+
+			local mypack := 0;
+			if (!getobjproperty(me,"serial"))
+				setobjproperty(me, "serial", me.serial);
+			endif
+			mypack := FindMyPack(me.serial);
+			if (weaponone)
+				moveitemtocontainer(weaponone,mypack);
+			endif
+			if (weapontwo)
+				moveitemtocontainer(weapontwo,mypack);
+			endif
+			weaponone := CreateItemInContainer(me.backpack,0x143e,1);
+			setobjproperty(weaponone,"#noloot",1);
+			if (!EquipItem(me,weaponone))
+				DestroyItem(weaponone);
+			endif
+            		RunToward( opponent );
+		endif
+		return 0;
+    	else
+		runaway := 0;
+		return 1;
+    	endif
+    else
+	case Distance( me, opponent )
+        	1:
+        	0:
+            		return 1;
+        	default:
+            		RunToward( opponent );
+            		return 0;
+    	endcase
+    endif
+
+endfunction

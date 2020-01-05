@@ -1,0 +1,31 @@
+use uo;
+use os;
+
+program use_deathglass(who, glass)
+
+	local Options := "NOREGS NODELAY NOMANA NOSKILL";
+	local charges := Cint( GetObjProperty(glass, "charges") );
+
+	if (charges = 0)
+		SendSysMessage(who, "Nothing happens.");
+		return;
+	endif
+
+	if (charges = 1)
+		SendSysMessage(who, "Your time has expired...");
+		ApplyRawDamage(who, who.hp + 3);
+// Broken	glass.desc := "an empty hourglass";
+		SetObjProperty(glass, "charges", "0");
+		return;
+	endif
+
+	charges := charges - 1;
+
+	SetObjProperty(glass, "charges", CStr(charges) );
+	SetObjProperty(who, "NecroOpts", Options);
+	
+	set_critical(1);
+	detach();
+	StartSpellEffect(who, 70);
+
+endprogram

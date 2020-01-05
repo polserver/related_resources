@@ -1,0 +1,103 @@
+//////////////////////////////////////////////////////////
+// cmdLevel.src 
+//
+// author: dougall
+// email : dougalloogle@yahoo.com
+//
+//////////////////////////////////////////////////////////
+// Notes:
+//  - view / alter a char's cmdlevel in a gump.
+//
+//  - If you are cmd level admin or test you can make any changes
+//  to a characters cmd level you want.
+//
+//  - If you are cmd level gm you can make any character a
+//  seer or counsellor..... but you can only make them a gm
+//  if the const GM_MAKE_GM is set to 1.
+//
+//////////////////////////////////////////////////////////
+
+use uo;
+use os;
+
+include "include/client";
+include "include/yesno";
+
+///////////////////////////////////////////////////////////  
+
+const GM_MAKE_GM:=1; // disables/enables GMs being able
+                     // to make other chars into GMs using
+                     // this script
+
+///////////////////////////////////////////////////////////  
+
+program set_cmdLevel(who,parms)
+ var char:=Target(who,TGTOPT_NOCHECK_LOS);
+ if (!char.isa(POLCLASS_MOBILE) or (char.isa(POLCLASS_NPC)))
+   return;
+ endif
+ var cmd_layout:={
+  "page0",
+  "nodispose",
+  "resizepic 0 0 3600 300 360",
+  "croppedtext 60 20 220 20 93 0",
+  "text 60 40 66 1",
+  "text 80 73 98 2",
+  "text 80 113 98 3",
+  "text 80 153 98 4",
+  "text 80 193 98 5",
+  "text 80 233 98 6",
+  "text 80 273 98 7",
+  "button 220 300 2122 2123 1 0 49" };
+
+ var cmd_data:={
+  char.name,
+  "",
+  "Player",
+  "Coun",
+  "Seer",
+  "Gm",
+  "Admin",
+  "Test" };
+
+ if ((who=char) or (who.cmdlevel>char.cmdlevel))
+   cmd_data[2]:="Set Command Level";
+   cmd_layout.append("button 220 300 2122 2123 1 0 49");
+ else
+   cmd_data[2]:="View Command Level";
+ endif
+
+ var i;
+ for (i:=0;i<=5;i:=i+1)
+   if ( (who=char) or ( who.cmdlevel>char.cmdlevel and ( (who.cmdlevel=3 and (i<(3+GM_MAKE_GM))) or (who.cmdlevel>3) ) ) )
+     cmd_layout.append("radio 40 "+(70+(i*40))+" 2152 2154 "+(char.cmdlevel=i)+" "+(50+i));
+   else
+     cmd_layout.append("gumppic 40 "+(70+(i*40))+" "+(2152+2*(char.cmdlevel=i)));
+   endif
+ endfor
+
+ var retval:=SendDialogGump(who,cmd_layout,cmd_data);
+ if (retval[49])
+   var setlevel;
+   for (i:=0;i<=5;i:=i+1)
+     if (retval[50+i])
+       setlevel:=i;
+     endif
+   endfor
+   if ((char=who) and (setlevel<who.cmdlevel))
+     sendsysmessage(who,"! Warning ! Are you sure you wish to lower your command level to "+cmd_data[setlevel+3]+" ?");
+     if (!YesNo(who,"Lower CmdLevel?"))
+       return;
+     endif
+   else
+     char.cmdlevel:=setlevel;
+     if (char!=who)
+       sendsysmessage(who,char.name+" is now "+cmd_data[setlevel+3]);
+     endif
+     sendsysmessage(char,"You are now "+cmd_data[setlevel+3]);
+   endif
+ endif
+endprogram
+
+///////////////////////////////////////////////////////////  
+

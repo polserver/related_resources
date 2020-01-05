@@ -1,0 +1,72 @@
+/////////////////////////////////////////////////////////////////////////////
+//
+//  killpcs.src: Kill player-characters
+//
+//  TODO: Some server support for only paying attention to 'enteredarea'
+//        and 'leftarea' events from PCs would be nice.
+//        we just use the graphic at the moment, so we'd fight
+//        NPCs too.  Oh well.
+//
+//  Author: ENS
+//
+//  Created: 4/98
+//
+//  Modified week of 6/15/99 by DW to allow speech and ranged attacks
+//
+/////////////////////////////////////////////////////////////////////////////
+
+use npc;
+use os;
+use uo;
+use cfgfile;
+
+include "include/eventid";
+include "include/randname";
+include "include/npcutil";
+include "include/objtype";
+include "include/dist";
+include "include/anchors";
+include "ai/main/mainloopimmobile";
+include "ai/combat/fight";
+include "ai/main/sleepmode";
+include "ai/combat/spellcombatevent";
+include "ai/setup/spellsetup";
+include "include/npccast";
+
+const HALT_THRESHOLD := 10; // how close before he attacks?
+
+program KillPlayers()
+
+	SetWarMode( 0 );
+  
+	main_AI_loop();
+
+endprogram
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//  These types fight singlemindedly, until the quarry is dead.
+//  There is no way out but death.
+//
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//  CloseDistance - close the distance between self and an opponent.
+//  Returns: 1 if distance is 0 or 1 (no move necessary)
+//           0 if distance is >= 2 (may still need to move)
+//
+//  This is a .EM-file candidate.
+//
+/////////////////////////////////////////////////////////////////////////////
+function CloseDistance( opponent )
+
+sleepms(100);
+
+endfunction
+
+
+// Look around me for humans to fight.  
+

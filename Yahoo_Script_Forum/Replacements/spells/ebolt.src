@@ -1,0 +1,45 @@
+use uo;
+use os;
+use util;
+
+include "include/client";
+include "include/spellrestrictions";
+include "include/spellattack";
+
+program chrcast_ebolt( parms )
+
+	local circle := 6;
+	local caster;
+	local cast_on;
+
+	if (parms[1] = "#MOB")
+		caster := parms[2];
+		cast_on := parms[3];
+		send_attack(cast_on,caster, 42);
+	else
+		caster := parms;
+		cast_on := CanTargetSpell(caster, circle, TGTOPT_HARMFUL + TGTOPT_CHECK_LOS );
+		if (!cast_on)
+			return;
+		endif
+	endif
+	SetObjProperty(cast_on, "LastHit", {caster.name, caster.serial, caster });
+	PlayMovingEffect( caster, cast_on, FX_ENERGY_BOLT, 0xa, 0x1e );
+	PlaySoundEffect( caster, SFX_SPELL_ENERGY_BOLT );
+
+	local dmg := CalcSpellDamage(circle,caster,cast_on);
+
+	if (Reflected(cast_on))
+		PlayMovingEffect( cast_on, caster, FX_ENERGY_BOLT, 0xa, 0x1e );
+		PlaySoundEffect( cast_on, SFX_SPELL_ENERGY_BOLT );
+		cast_on := caster;
+		if (GetObjProperty( caster, "mr") = "1")
+			EraseObjProperty(caster, "mr");
+			SendSysMessage(caster, "Your magic reflect spell saved you!");
+			return;
+		endif
+	endif
+
+	ApplyRawDamage( cast_on, Resisted(circle,caster,cast_on,dmg) );
+
+endprogram

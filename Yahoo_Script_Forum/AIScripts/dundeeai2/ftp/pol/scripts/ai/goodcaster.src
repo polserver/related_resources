@@ -1,0 +1,61 @@
+/////////////////////////////////////////////////////////////////////////////
+//
+//  spellpcs.src: spell caster AI
+//
+//
+//  Author: DCT, stealing most from ENS's killpc.src
+//
+//  Created: 6/98
+
+//
+/////////////////////////////////////////////////////////////////////////////
+
+use npc;
+use os;
+use uo;
+use cfgfile;
+
+include "include/eventid";
+include "include/randname";
+include "include/npcutil";
+include "include/objtype";
+include "include/speech";
+include "include/dist";
+include "include/npccast";
+include "include/dist";
+include "include/anchors";
+include "ai/main/mainloopgood";
+include "ai/combat/fight";
+include "ai/combat/spellcombatevent";
+include "ai/setup/setup";
+include "ai/main/loot";
+include "ai/main/sleepmode";
+
+const HALT_THRESHOLD := 10; // how close before he attacks?
+
+program KillPlayers()
+
+	SetWarMode( 0 );
+
+	if (getobjproperty(me, "frozen"))
+		me.frozen := 1;
+	endif
+       
+	main_AI_loop(ReadGameClock() + 10);
+
+endprogram
+
+function CloseDistance( opponent )
+
+
+    case Distance( me, opponent )
+        1:              // the most likely, so first 
+        0:
+            return 1;
+        default:
+            RunToward( opponent );
+            return 0;
+    endcase
+    
+
+endfunction

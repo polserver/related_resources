@@ -1,0 +1,17 @@
+//
+// Destroy all items within a radius
+//
+include "include/modules";
+
+program textcmd_destroyradius( who )
+	var radius := SendTextEntryGump( who, "What radius would you like to wipe?" );
+	radius := CInt( radius );
+	if ( !radius )
+		radius := 1;
+	endif
+    	SendSysMessage( who, "Destroying items in a radius of " + radius );
+      foreach item in ListItemsNearLocation( who.x, who.y, who.z, radius )
+           	DestroyItem( item );
+		sleepms(2);
+      endforeach
+endprogram

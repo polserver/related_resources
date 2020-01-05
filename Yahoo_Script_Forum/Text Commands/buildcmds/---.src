@@ -1,0 +1,6 @@
+use uo;
+
+program breakit(who)
+	SendSysMessage( who, "No functionality yet." );
+	return;
+endprogram

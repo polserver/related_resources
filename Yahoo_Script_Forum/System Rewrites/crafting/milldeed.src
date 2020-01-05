@@ -1,0 +1,11 @@
+use uo;
+use os;
+
+Const UOBJ_MILLDEED := 0x6699;
+
+program doubleclick_milldeed(who, item)
+local parms := {};
+parms[1] := "mill";
+start_script("::/textcmd/gm/makeset", parms );
+destroyitem(item);
+endprogram

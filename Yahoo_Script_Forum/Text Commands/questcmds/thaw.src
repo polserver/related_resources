@@ -1,0 +1,17 @@
+use uo;
+
+program thaw( who )
+	SendSysMessage( who, "Who do you wish to thaw?" );
+	var whom := TargetCoordinates( who );
+	if( whom.mobile )
+		whom.mobile.frozen := 0;
+		if( GetObjProperty(whom.mobile, "frozen") )
+			EraseObjProperty(whom.mobile,"frozen");
+		else
+			SendSysMessage( who, "that wasn't frozen");
+		endif
+		PrintTextAbovePrivate( whom.mobile, whom.mobile.name + " has been thawed", who );
+	else
+		SendSysMessage( who, "Cancelled" );
+	endif
+endprogram

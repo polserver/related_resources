@@ -1,0 +1,69 @@
+use uo;
+use util;
+
+include "../cleric";
+  
+var materiallist :=
+{
+	//Material, "focus type", 
+	0xEE19, "earth focus",
+	0x6011, "power focus",
+	0xEE20, "arcane focus",
+	0x1BDD, "life focus", 
+	0x7010, "life focus",
+	0x7013, "life focus",
+	0x7014, "life focus",
+	0x7016, "life focus",
+	0x7017, "life focus",
+	0x7018, "life focus",
+	0x7019, "life focus",
+	0xffcb, "life focus",
+	0xffcc, "life focus",
+	0xffcd, "life focus",
+	0xffce, "life focus",
+	0x175D, "spirit focus",
+	0xEE18, "time focus"
+};
+
+program createfocus(params)
+	var who := params[1];
+	
+	SendSysMessage(who, "Select the material");
+	var targ := target(who);
+	
+	if (!targ)
+		SendSysMessage(who, "Cancelled");
+		return;
+	endif
+	
+	var i;
+	var focci:=0;
+	
+	for (i:=1;i<=len(materiallist);i:=i+1)
+		if (targ.objtype = materiallist[i])
+			focci := FocusType(materiallist[i+1]);
+		endif
+	endfor
+	
+	if (!focci)
+		SendSysMessage(who, "You cant make anything with this material.");
+		return;
+	endif
+
+	var piety := DevotionPiety(GetObjProperty(who, "Devotion"));
+	var created;
+	while(1)
+		if (CheckMana(who, cint(10/piety)))
+			if(ConsumeSubstance(who.backpack.serial, targ.objtype, 5))
+				created := CreateItemInBackpack( who, focci, 1 );
+			else
+				break;
+			endif
+		else
+			break;
+		endif
+	endwhile
+	if (created)
+		PlaySoundEffect(who, 508);
+	endif
+endprogram

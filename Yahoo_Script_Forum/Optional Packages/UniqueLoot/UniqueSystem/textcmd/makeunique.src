@@ -1,0 +1,11 @@
+use uo;
+
+program textcmd_makeunique( who )
+  SendSysMessage( who, "Please target an items to make unique" );
+  var tgt := Target( who );
+  if(tgt)
+    SetObjProperty(tgt, "unique", 1);
+  else
+    SendSysMessage( who, "You can only make items unique" );
+  endif
+endprogram

@@ -1,0 +1,26 @@
+///////////////////////////////////////////////////
+//
+// AI - NPCWalkPath
+//    Designed by Cassandra White
+//    With large amounts of assistance from Myrathi
+//    And Syzygy, thanks to you both!
+//
+////////////////////////////////////////////////////
+
+use uo;
+use npc;
+use util;
+use os;
+use basic;
+
+
+include "include/NPCWalkPath";
+
+program NPCFollowPath( )
+
+	while (1)
+		NPCWalkPath ( self() );
+		sleepms(100);
+	endwhile
+
+endprogram

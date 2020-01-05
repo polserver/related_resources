@@ -1,0 +1,56 @@
+use os;
+use uo;
+
+program use_securecont( character , item )
+
+    Local house := SystemFindObjectBySerial( GetObjProperty( item , "houseserial" ));
+    Local secure, chestserial := item.serial;
+    Local cown;
+
+    if ((GetObjProperty( house , "ownerserial" ) = character.serial) or (GetObjProperty( house , "owneracct" ) = character.acctname))
+       secure := 1;
+    else
+       Local i;
+          for(i := 1; i <= 20; i := i + 1)
+            if(GetObjProperty( house , "friend" + i ) = character.serial)
+               secure := 1;
+               break;
+            endif
+          endfor
+          for(i := 1; i <= 5; i := i + 1)
+            if(GetObjProperty( house , "Co-owner" + i ) = character.serial)
+               cown := 1;
+               break;
+            endif
+          endfor
+    endif
+
+    if (character.cmdlevel>3)
+      secure := 1;
+    endif
+
+    if ((!secure) and (!GetObjProperty( house , "ownerserial" )))
+	destroyitem(item);
+    endif
+
+    if (!secure)
+       SendSysmessage( character , "You can't use this." );
+       return;
+    endif
+
+    local boxin := enumerateitemsincontainer(item);
+    local boxs := GetObjProperty( item , "boxserial" );
+    local boxo := SystemFindObjectBySerial(boxs);
+
+    foreach item in boxin
+        if (!boxs = item.serial)
+	      moveitemtocontainer(item, boxo);
+	elseif (item.container.serial=chestserial)
+	      moveitemtocontainer(item, boxo);
+        endif
+    endforeach
+
+    SendOpenSpecialContainer( character, boxo);
+    SendSysmessage( character , "You open the secure container." );
+
+endprogram

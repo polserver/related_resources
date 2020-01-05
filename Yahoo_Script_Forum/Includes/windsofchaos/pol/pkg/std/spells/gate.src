@@ -1,0 +1,92 @@
+/*
+ *  Gate spell
+ *
+ *  - Creates two moongates (0x0F6C), one at the location of the caster, and
+ *        one at the location marked on a rune.
+ *  - Immediately transports the caster to the far gate.
+ *  - Destroys the gates after a period of time has elapsed.
+ *
+ *  - Transportation of those who walk onto the gate is done by a walk-on 
+ *        script (MOONGATE.SRC) which fires when someone walks over the gate.
+ */
+
+use os;
+use uo;
+
+// Added for ChaosGate v1.0:
+include "include/chaoseffects";
+
+include "include/client";
+include "include/objtype";
+include "include/spellrestrictions";
+
+program spell_gate( caster )
+if (!can_cast(caster, 7))
+        return;
+endif
+
+    SendSysmessage( caster, "Select a rune to gate from." );
+
+    local rune := Target( caster, TGTOPT_CHECK_LOS );
+
+    if (!rune)
+            SendSysmessage (caster, "Targetting cancelled.");
+            return;
+    endif
+
+    if (!Accessible(caster, rune))
+            SendSysmessage (caster, "You can't reach that!");
+            return;
+    endif
+
+    if (rune.objtype != UOBJ_RUNE)
+            SendSysmessage(caster, "You can only cast that on a rune!");
+            return;
+    endif
+
+	local tox := Cint(GetObjProperty( rune, "x" ));
+	local toy := Cint(GetObjProperty( rune, "y" ));
+	local toz := Cint(GetObjProperty( rune, "z" ));
+
+    set_critical( 1 );
+    local gate1 := CreateItemAtLocation( caster.x, caster.y, caster.z, UOBJ_BLUE_MOONGATE, 1 );
+    local gate2 := CreateItemAtLocation( tox, toy, toz, UOBJ_BLUE_MOONGATE, 1 );
+    if (!gate1 or !gate2)
+        return;
+    endif
+    SetObjProperty( gate1, "GateDestX", gate2.x );
+    SetObjProperty( gate1, "GateDestY", gate2.y );
+    SetObjProperty( gate1, "GateDestZ", gate2.z );
+    SetObjProperty( gate2, "GateDestX", gate1.x );
+    SetObjProperty( gate2, "GateDestY", gate1.y );
+    SetObjProperty( gate2, "GateDestZ", gate1.z );
+
+    Detach();
+	//SendSysmessage( caster, "You would have gone to " + tox + " " + toy + " " + toz );
+    if (MoveCharacterToLocation( caster, tox, toy, toz ))
+    	SetObjProperty( caster, "JustGated", 1 );
+    endif
+       
+	PlaySoundEffect( caster, SFX_SPELL_GATE_TRAVEL ); // was RECALL SFX
+
+// added for Chaos Effects
+
+	local i := 6;
+	set_critical(1);
+
+	While (i > 0)
+		if (CheckForChaosEffect(caster, 15, 1, 10) = 1)
+			PrintTextAbove(gate1, "There is a disturbance in the ether...");
+			GatedDaemon(gate1.x, gate1.y, gate1.z);
+		endif	
+		sleep(5);
+		i := i -1;
+	endWhile
+// end here
+
+
+    DestroyItem( gate1 );
+    DestroyItem( gate2 );
+    set_critical(0);
+endprogram
+

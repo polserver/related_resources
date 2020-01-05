@@ -1,0 +1,105 @@
+// begging.src:   Begging skill, scavenged info from stratics.com
+
+use uo;
+use basic;
+use os;
+use util;
+
+include "include/client";
+include "include/repfuncs";
+
+Const UOBJ_GOLDCOIN     :=      0xEED;  // A gold coin
+
+function ValidNPC( tnpc )
+
+        local scr := tnpc.script;
+
+        case( scr )
+          "merchant":
+          "helppcs":
+          "banker":
+          "auctioneer":
+          "cstguard":
+          "daves_healer":
+          "goodcaster":
+          "hired":
+          "questie":
+          "smartcrier":
+          "stamaster":
+          "townguard":
+          "townperson":
+          "traveler":
+            return 1;
+            break;
+        endcase
+    return 0;
+endfunction
+
+function GetGold( tnpc )
+        local amt := 0;
+
+        foreach item in EnumerateItemsInContainer(tnpc.backpack)
+          if ((item.graphic = 0xEED) or (item.graphic = 0xEEE) or
+           (item.graphic = 0xEEF))
+            amt := amt + item.amount;
+          endif
+        endforeach
+
+        // Cap gold at 100
+
+        if (amt > 100)
+          amt := 100;
+        endif
+
+        return amt;
+
+endfunction
+
+program skill_begging( character )
+
+        local timer := 0;
+        local points := RandomDiceRoll("400d2");
+
+        SendSysmessage( character, "Who do you want to beg from?" );
+        local npc := target(character);
+        if (!npc)
+          SendSysmessage(character, "Targeting Cancelled.");
+          return;
+        endif
+        if (!CheckLineofSight(character, npc))
+          SendSysmessage(character, "You can't see that!");
+          return;
+        endif
+
+        if (!validnpc(npc))
+          SendSysmessage(character, "You can't beg from that person.");
+          return;
+        endif
+
+        local hasgold := Cint(GetGold(npc));
+
+        if (hasgold <= 9)
+          PrintTextAbove(npc, "I barely have any money myself, let alone to give to you.");
+          return;
+        endif
+
+        if (checkskill(character, SKILLID_BEGGING, -1, points))
+          PrintTextAbove(npc, "Humble beggar, here is some gold to aid you.");
+          local awarded := CInt(hasgold/10);
+          local golds := CreateItemInBackpack(character, UOBJ_GOLDCOIN, awarded);
+
+          foreach item in EnumerateItemsInContainer(npc.backpack)
+            if (item.graphic = 0xEED)
+              SubtractAmount(item, awarded);
+            endif
+          endforeach
+
+          SendSysmessage(character, "You take the gold and place it in your pack.");
+          return;
+        else
+          PrintTextAbove(npc, "You'll not have any of my hard earned gold, beggar.");
+        endif
+
+        return;
+
+endprogram

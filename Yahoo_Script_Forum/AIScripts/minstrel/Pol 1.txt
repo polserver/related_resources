@@ -1,0 +1,44 @@
+just a little diddy here....
+minstrel walks around playing tunes for the folk....
+
+there are 4 sample songs included (songs.cfg)...just follow the format shown by those
+and everything will be all cool :)
+
+in the singsongs() you will need to change the following if you add more songs.....
+local numsongs := <how many songs you have in the cfg file.....>
+currently this is set at 4 since I have 4 songs in there :) I know there is a better way
+to do this but I was lazy.....
+
+drop the songs.cfg into the config folder....
+
+drop the minstrel.src into the ai folder and compile.....
+
+playmidi is a textcmd so that you can test through the midi files if you wanna :)
+
+oh yeah....add the minstrel dude to the npcdesc file.....
+
+keep in mind none of this is perfect :0
+
+email me with any comments, suggestions, flames or whatever :)
+Angreal
+saangreal@excite.com
+03/20/00
+
+Additions by Madman Across the Water:
+Removed playmidi, as it was redundant.
+Max number of songs is now a config element, so you don't have to recompile every
+time you add a song.
+Songs default to having a soundeffect accompany them. If you wish them to play a 
+midi, add the line "midi ##" where the number is _in hex_ for which midi you want 
+to have go with the song. I did not include any default midi selections because
+I've changed half the midis on my server and some of you probably did also.
+Corrected two typos in this file. :>
+And added a second NPC type, performer, which is essentially the minstrel except
+doesn't move.
+And finally, added the ability for the minstrels and performers to be female by 
+adding the random gender generator.
+Actually, I just wanted to say "random gender generator."
+I think that's all...
+
+Oh, and I added one song. ;>
+ -MAtW

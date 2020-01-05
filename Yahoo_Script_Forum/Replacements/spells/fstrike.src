@@ -1,0 +1,44 @@
+use os;
+use uo;
+use util;
+
+include "include/client";
+include "include/spellattack";
+include "include/spellrestrictions";
+
+program cast_flamestrike( parms )
+
+	local circle := 7;
+	local caster;
+	local cast_on;
+
+	if (parms[1] = "#MOB")
+		caster := parms[2];
+		cast_on := parms[3];
+		send_attack(cast_on,caster, 51);
+	else
+		caster := parms;
+		cast_on := CanTargetSpell(caster, circle, TGTOPT_HARMFUL + TGTOPT_CHECK_LOS );
+		if (!cast_on)
+			return;
+		endif
+	endif
+
+	local dmg := CalcSpellDamage(circle,caster,cast_on);
+
+	if (Reflected(cast_on))
+		cast_on := caster;
+		if (GetObjProperty( caster, "mr") = "1")
+			EraseObjProperty(caster, "mr");
+			SendSysMessage(caster, "Your magic reflect spell saved you!");
+			return;
+		endif
+	endif
+
+	   SetObjProperty(cast_on, "LastHit", {caster.name, caster.serial, caster });
+	PlayObjectCenteredEffect(cast_on, 0x3709, 0x0a, 0x1e );
+	PlaySoundEffect( caster, SFX_SPELL_FLAME_STRIKE );
+	ApplyRawDamage( cast_on , Resisted(circle,caster,cast_on,dmg) );
+
+endprogram
+

@@ -1,0 +1,76 @@
+use uo;
+use os;
+
+include "song";
+
+var gumplayout := {
+         "page 0",
+     "gumppic 15 50 500",
+//     "gumppic 113 50 5058",
+     "text 70 65 05 0",
+     "text 70 85 05 1",
+     "text 70 105 05 2",
+     "text 70 125 05 3",
+     "text 70 145 05 4",
+     "text 70 165 05 5",
+     "text 70 185 05 6",
+     "text 70 205 05 7",
+     "text 70 225 05 8",
+//         "button 141 155 2119 2120 1 0 01",
+     "button 50 68 2118 2117 1 1 02",
+     "button 50 88 2118 2117 1 1 03",
+     "button 50 108 2118 2117 1 1 04",
+     "button 50 128 2118 2117 1 1 05",
+     "button 50 148 2118 2117 1 1 06",
+     "button 50 168 2118 2117 1 1 07",
+     "button 50 188 2118 2117 1 1 10",
+     "button 50 208 2118 2117 1 1 11",
+     "button 50 228 2118 2117 1 1 12",
+};
+
+var gumpdata :={
+"Group Reflect",
+"Group Regeneration",
+"Group Sight",
+"Invigorate",
+"Mezmerise",
+"Rejuvenate",
+"Just Play",
+"Resurrect",
+"Group Resurrect",
+};
+
+program domusic(who)
+ EraseObjProperty(who, "IsMeditating");
+	var res := SendDialogGump( who, gumplayout, gumpdata );
+	case (res[0])
+
+		02:
+			group_reflect(who);
+			return;
+		03:
+			group_healing(who);
+			return;
+		04:
+			group_sight(who);
+			return;
+		05:
+			manasong(who);
+			return;
+		06:
+			play_mez(who);
+			return;
+		07:			
+			staminasong(who);
+			return;
+		10:
+			just_play(who);
+			return;
+		11:
+			play_resurrect(who);
+			return;
+		12:
+			g_resurrect(who);
+			return;
+	endcase
+endprogram

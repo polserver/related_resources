@@ -1,0 +1,153 @@
+///////////////////////////////////////////////////////////
+// spawngo.src
+//
+// Displays a gump of all spawn points in the world and allows
+// you to go there.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 19-Apr-2000
+// Updated: 19-Apr-2000
+//
+///////////////////////////////////////////////////////////
+
+use uo;
+use os;
+
+include "include/gumps";
+include "include/gumputil";
+include "include/client";
+include "include/findcity";
+
+const UOBJ_SPAWN_RUNE 	:= 0xa300;
+const C_YELLOW 			:= 52;
+const RUNESPERPAGE		:= 20;
+const MAX_X				:= 400;
+const MAX_Y				:= 400;
+
+program textcmd_runego(who)
+	var runes := GetGlobalProperty("SpawnPoints");
+
+	GFInitGump(0, 0);
+	GFPage(0);
+	GFResizePic(0, 0, BKGND_BLACKSLAB, MAX_X, MAX_Y);
+	GFTextLine(118, 8, 0, "Spawn Points");
+	GFTextLine(120, 10, C_YELLOW, "Spawn Spoints");
+	GFTextLine(20, MAX_Y - 40, C_YELLOW, "Total Spawn Points: " + runes.size());
+	GFTextLine(210, MAX_Y - 40, COLOR_RED, "RED = Disabled");
+
+	// Count how many pages we need?
+	var numrunes := runes.size();
+	var numpages := numrunes / RUNESPERPAGE + 1;
+
+	var buttons := array;
+
+	var pg;
+	for (pg := 1; pg <= numpages; pg := pg + 1)
+		ComposeRunesPage(pg, runes, buttons, numpages);
+	endfor
+
+	var retkey := GFSendGump(who);
+
+	var key;
+	var num;
+	for (num := 1; num <= buttons.size(); num := num + 1)
+		if (buttons[num] = retkey[0])
+			key := num;
+			break;
+		endif
+	endfor
+
+	// No rune selected.
+	if (!key)
+		return;
+	endif
+
+	if (!GoToSpawnPoint(who, runes[key]))
+		runes.erase(key);
+		SendSysMessage(who, "Invalid spawn point #" + key);
+	endif
+endprogram
+
+///////////////////////////////////////////////////////////
+// Purpose: Composes a page of runes.
+// Params:  page		Page number to compose.
+// Returns: 0/1
+///////////////////////////////////////////////////////////
+function ComposeRunesPage(page, runes, byref buttons, maxpages)
+	var bX := 20;
+	var y := 40;
+	var tX := 40;
+	var yShift := 15;
+	var numrunes := RUNESPERPAGE * page;
+	var startrune := RUNESPERPAGE * (page - 1) + 1;
+
+	GFPage(page);
+
+	// Set up the up/down arrows.
+	if (page = 1 and page != maxpages) // 1st page
+		GFButtonPage(MAX_X - 40, MAX_Y - 40, G_TRIANGLE_DOWN, G_TRIANGLE_DOWN, page + 1);
+	elseif (page = maxpages and page != 1) // last page
+		GFButtonPage(MAX_X - 40, 40, G_TRIANGLE_UP, G_TRIANGLE_UP, page - 1);
+	elseif (page > 1 and page < maxpages) // mid pages
+		GFButtonPage(MAX_X - 40, 40, G_TRIANGLE_UP, G_TRIANGLE_UP, page - 1);
+		GFButtonPage(MAX_X - 40, MAX_Y - 40, G_TRIANGLE_DOWN, G_TRIANGLE_DOWN, page + 1);
+	endif
+
+	var rune;
+	var amt;
+	var template;
+	var note;
+	var disabled;
+	var city;
+	var txt;
+	var rn;
+	var bt;
+	for (rn := startrune; rn <= numrunes; rn := rn + 1)
+		txt := "#" + rn;
+		rune := SystemFindObjectBySerial(runes[rn]);
+		if (!rune)
+			DestroyItem(rune);
+			return;
+		endif
+		template := GetObjProperty(rune, "Template");
+		amt := GetObjProperty(rune, "Max");
+		note := GetObjProperty(rune, "Note");
+		disabled := GetObjProperty(rune, "Disabled");
+		city := FindCity(rune);
+		if (note != error)
+			txt := txt + " " + amt + " " + template + " in " + city + " (" + note + ")";
+		else
+			txt := txt + " " + amt + " " + template + " in " + city + " (<NONE>)";
+		endif
+		if (rune)
+			bt := GFButtonId(bX, y, G_SMALL_GEM_0, G_SMALL_GEM_1, 1);
+			buttons.append(bt.keyid);
+			if (disabled)
+				GFTextCrop(tX, y - 3, 320, 20, COLOR_RED, txt);
+			else
+				GFTextCrop(tX, y - 3, 320, 20, C_YELLOW, txt);
+			endif
+		endif
+		y := y + yShift;
+	endfor
+endfunction
+
+///////////////////////////////////////////////////////////
+// Purpose: Takes the user to the specified spawn point
+// Params:  who		Ref to user.
+//			serial	Serial of point to go to.
+// Returns: 0/1
+///////////////////////////////////////////////////////////
+function GoToSpawnPoint(who, serial)
+	local point := SystemFindObjectBySerial(serial);
+
+	if(!point)
+		SendSysMessage(who,"Spawnpoint " + serial + " not found");
+		return 0;
+	endif
+
+	MoveCharacterToLocation(who, point.x, point.y, point.z);
+	return 1;
+endfunction

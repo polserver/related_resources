@@ -1,0 +1,43 @@
+/*
+*****************************************************************
+*			   logon.src			 	*
+*      		     Simple Jail System 1.1			*
+*			   by bzagh				*
+*			 bzagh@bzagh.de				*
+*								*
+*****************************************************************
+*/
+
+use uo;
+
+program logon( character )
+    local i;
+    local marker;
+    // print( "logon: " + character.name );
+    SendSysMessage( character, "Welcome to Ultima Online (POL)" );
+    
+    local account := character.acct;
+    
+    if(account.GetProp( "Jail" ))
+      if(account.GetProp != 0 )
+        marker := 1;
+      endif
+    endif
+    
+    if(marker)
+      MoveCharacterToLocation( character, 5304, 1184, 0, 0);
+      joinmessage( character, 1);
+    else
+      joinmessage( character, 0 );
+    endif
+endprogram
+
+function joinmessage(player, jail)
+
+if(!jail)
+  Broadcast( "Player" + player.name + " (" + player.acctname + ") has arrived");
+else
+  Broadcast( "Player " + player.name + " (" + player.acctname + ") has arrived (Jail)");
+endif
+
+endfunction

@@ -1,0 +1,58 @@
+///////////////////////////////////////////////////////////
+// SpawnRegionManager.src
+//
+// Manages the spawning of all regions.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+include "include/eventid";
+include "SpawnRegion";
+
+///////////////////////////////////////////////////////////
+// CONSTS
+///////////////////////////////////////////////////////////
+const WAIT_FOR_EVENT_TIME	:= 60; // 1 min cycles.
+
+program SpawnRegionManager(param)
+	var pid := GetPid();
+	SetGlobalProperty("#SpawnRegionManagerPID", pid);
+	print("[SPAWNREGIONMGR]: Started, PID = " + pid);
+
+	// Check for verbose mode.
+	if (param = "v")
+		MgrVerbose := 1;
+		print("[SPAWNREGIONMGR]: Running in verbose mode.");
+	endif
+
+	ValidateSpawnRegions(); // Do cleanup in the global cprops.
+
+	var nextregion := 0;
+	SpawnAllRegions();
+
+	var ev;
+	while (1)
+		ev := wait_for_event(WAIT_FOR_EVENT_TIME);
+
+		// Got event.
+		while (ev)
+			case (ev.type)
+/*				EVID_SPAWNREGION_DEATH:
+					// ev.source = serial
+					// ev.region = "region group"
+					var regdata := SplitWords(ev.region);
+					RemoveSerialFromGroup(CInt(regdata[1]), regdata[2], ev.source);
+*/
+			endcase
+			ev := wait_for_event(0);
+		endwhile
+
+		// Timed out.
+		SpawnAllRegions();
+	endwhile
+endprogram

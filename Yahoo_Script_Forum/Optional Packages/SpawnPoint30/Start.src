@@ -1,0 +1,16 @@
+///////////////////////////////////////////////////////////
+// Start.src
+//
+// Starts the SpawnPointManager on server boot.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+use os;
+
+start_script("SpawnPointManager");

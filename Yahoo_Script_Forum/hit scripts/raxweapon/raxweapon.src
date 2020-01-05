@@ -1,0 +1,71 @@
+use os;
+use uo;
+use util;
+
+include "include/client";
+include "include/spellrestrictions";
+
+program raxweapon(param);
+
+local attacker := param[1];
+local defender := param[2];
+local weapon := param[3];
+local armor := param[4];
+local basedamage := param[5];
+local rawdamage := param[6];
+
+local spell := (GetObjProperty (weapon, "effect"));
+local range;
+local dmg;
+
+if(!spell)
+	return;
+endif
+
+if (RandomInt(10) < 9)
+	return;
+endif
+
+local name := weapon.desc;
+printtextabove (attacker,"You feel the power of " + name + " unleash!");
+
+case (spell)
+	"marrow":
+		PlayMovingEffect( attacker, defender, FX_MAGIC_ARROW, 5, 1 );
+		PlaySoundEffect( attacker, SFX_SPELL_MAGIC_ARROW );
+		range := (20 - 0);
+		dmg := (RandomInt(range) + 0);
+		ApplyRawDamage( defender, Resisted(1,attacker,defender,dmg) );
+	"harm":
+		PlaySoundEffect(defender, SFX_SPELL_HARM);
+		PlayObjectCenteredEffect( defender, FX_GLOW_SPIKE, 0x0a,0x1e);
+		range := (30 - 10);
+		dmg := (RandomInt(range) + 10);
+		ApplyRawDamage( defender, Resisted(2,attacker,defender,dmg) );
+	"fireball":
+		PlayMovingEffect( attacker, defender, FX_FIREBALL, 5, 1 );
+		PlaySoundEffect( attacker, SFX_SPELL_FIREBALL );
+		range := (40 - 20);
+		dmg := (RandomInt(range) + 20);
+		ApplyRawDamage( defender, Resisted(3,attacker,defender,dmg) );
+	"lightning":
+		PlaySoundEffect(defender, SFX_SPELL_LIGHTNING);
+		PlayLightningBoltEffect( defender);
+		range := (50 - 30);
+		dmg := (RandomInt(range) + 30);
+		ApplyRawDamage( defender, Resisted(4,attacker,defender,dmg) );
+	"ebolt":
+		PlayMovingEffect( attacker, defender, FX_ENERGY_BOLT, 0xa, 0x1e );
+		PlaySoundEffect( attacker, SFX_SPELL_ENERGY_BOLT );
+		range := (60 - 40);
+		dmg := (RandomInt(range) + 40);
+		ApplyRawDamage( defender, Resisted(6,attacker,defender,dmg) );
+	"fstrike":
+		PlayObjectCenteredEffect(defender, 0x3709, 0x0a, 0x1e );
+		PlaySoundEffect( attacker, SFX_SPELL_FLAME_STRIKE );
+		range := (70 - 50);
+		dmg := (RandomInt(range) + 50);
+		ApplyRawDamage( defender, Resisted(7,attacker,defender,dmg) );
+endcase
+
+endprogram

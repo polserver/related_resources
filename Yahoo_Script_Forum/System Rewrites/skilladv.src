@@ -1,0 +1,66 @@
+/////////////////////////////////////////////////////////////////
+//
+//   SkillAdv Script - Advances a Skill of a Player
+//
+//     based on Class/Racc System
+//       Author: Dream Weaver
+//       eMail : windminstrel@home.net
+//
+//       Thanks to Racalac and Sigismund for scripting support.
+//
+//     Author: Shinigami
+//     eMail : Shinigami@gmx.net
+//
+//   Modifications:
+//     2000/04/30 Shinigami: Complete ReWrite
+//     2000/10/15 Shinigami: CombatSkill reduction
+//
+/////////////////////////////////////////////////////////////////
+
+//////////////
+// Libraries
+//////////////
+
+Use uo;
+Use os;
+
+/////////////
+// Includes
+/////////////
+
+Include "include/client";
+
+////////////////
+// MainProgram
+////////////////
+
+Program CheckChar(who, skillid)
+  Local divisor:=0;
+
+  Case (skillid)
+    SKILLID_BATTLE_DEFENSE:
+    SKILLID_TACTICS:          divisor:=8;
+    SKILLID_BOWCRAFT:
+    SKILLID_SWORDSMANSHIP:
+    SKILLID_MACEFIGHTING:
+    SKILLID_FENCING:
+    SKILLID_WRESTLING:        divisor:=12;
+  EndCase
+
+  If (divisor)
+    Local skillname:="SkRaw"+CStr(skillid);
+
+    Local value:=GetRawSkill(who, skillid);
+    Local oldvalue:=GetObjProperty(who, skillname);
+    If (!oldvalue)
+      oldvalue:=value;
+    EndIf
+    value:=oldvalue+CInt((value-oldvalue)/divisor);
+
+    SetObjProperty(who, skillname, value);
+    SetRawSkill(who, skillid, value);
+  EndIf
+
+ // SendSysMessage(who, "ID="+skillid+" Value="+GetSkill(who, skillid)+
+ //   " RawValue="+GetRawSkill(who, skillid));
+EndProgram

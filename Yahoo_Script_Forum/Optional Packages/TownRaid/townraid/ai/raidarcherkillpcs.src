@@ -1,0 +1,80 @@
+use npc;
+use os;
+use math;
+use cfgfile;
+
+
+include "include/eventid";
+include "include/randname";
+include "include/anchors";
+include "include/NPCBackpacks";
+include "include/dist";
+include "ai/main/mainloopraider";
+include "ai/combat/raiderfight";
+include "ai/combat/defaultcombatevent";
+include "ai/setup/archersetup";
+include "include/client";
+
+const HALT_THRESHOLD := 6; // how close before he attacks?
+
+global runaway := 0;
+
+program KillPlayers()
+
+	SetWarMode( 0 );
+    	main_AI_loop();
+        
+endprogram
+
+function CloseDistance( opponent )
+
+	local edist := Distance( me, opponent );
+
+    if ( (runaway < 100) or (!theammo) )
+    	if (edist <= 4)
+		
+		if (DistanceToLocation( goalx, goaly ) < 10)
+			RunAwayFrom(opponent);
+		else
+			RunTowardLocation(goalx, goaly);
+			RunTowardLocation(goalx, goaly);
+		endif
+
+		runaway := runaway +1;
+		if (runaway > 50)
+			runaway := 100;
+			local weaponone := GetEquipmentByLayer( me,  LAYER_HAND1 );
+			local weapontwo := GetEquipmentByLayer( me,  LAYER_HAND2 );
+
+			local mypack := 0;
+			if (!getobjproperty(me,"serial"))
+				setobjproperty(me, "serial", me.serial);
+			endif
+			mypack := FindMyPack(me.serial);
+			if (weaponone)
+				moveitemtocontainer(weaponone,mypack);
+			endif
+			if (weapontwo)
+				moveitemtocontainer(weapontwo,mypack);
+			endif
+			weaponone := CreateItemInInventory(me.backpack,0x143e,1);
+			EquipItem(me,weaponone);
+            		RunToward( opponent );
+		endif
+		return 0;
+    	else
+		runaway := 0;
+		return 1;
+    	endif
+    else
+		if (edist > 6)
+			return 2;
+		elseif (edist > 1)
+        		RunToward( opponent );
+				return 0;
+		else
+			return 1;
+		endif
+    endif
+
+endfunction

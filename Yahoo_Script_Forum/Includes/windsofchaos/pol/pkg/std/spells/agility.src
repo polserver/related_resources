@@ -1,0 +1,54 @@
+use uo;
+use os;
+use util;
+
+// Added for chaos effects
+include "include/chaoseffects";
+
+include "include/client";
+include "include/statmod";
+include "include/spellrestrictions";
+include "include/tempmod";
+program cast_AGILITY( caster )
+
+if (!can_cast(caster, 2))
+        return;
+endif
+	local cast_on := Target( caster, TGTOPT_HELPFUL + TGTOPT_CHECK_LOS );
+	if(!cast_on)
+		return;
+	endif
+
+	if (!CheckLineOfSight( caster, cast_on ))
+        SendSysMessage( caster, "You don't have line of sight to that." );
+        return;
+    endif
+	
+    // may want to check, then set, an object property to show that Agility is in force
+    // to prevent multiple castings
+
+// Chaos Effect Added Here
+
+	if (CheckForChaosEffect(caster, 10, 1, 5) = 1)
+		ChaosAlteration(caster);
+		return;
+	endif
+
+// end effect
+
+    PlaySoundEffect(caster, SFX_SPELL_AGILITY);
+    PlaySoundEffect(cast_on, SFX_SPELL_AGILITY);
+    PlayObjectCenteredEffect( cast_on, FX_BLESS_EFFECT, 7,7);
+
+    local magery := GetSkill(caster, SKILLID_MAGERY);
+       
+    local mod_amount := GetModAmount( magery );
+    local duration := GetModDuration( magery , mod_amount );
+   
+ 
+    if (can_stat_mod(cast_on, "dex"))
+        cast_on.dexterity_mod := cast_on.dexterity_mod + mod_amount;
+        do_temp_mod(cast_on, "dex", mod_amount, duration);
+        allow_stat_mod(cast_on, "dex", duration);
+    endif
+endprogram

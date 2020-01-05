@@ -1,0 +1,29 @@
+use uo;
+use util;
+
+include "../../cleric";
+
+program distract(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif
+	
+	ReleaseScript(info.pid);
+	
+	who.hidden := 1;
+	
+	Set_Critical(1);
+	var fake := CreateNPCFromTemplate("clone", who.x, who.y, who.z);
+	SetObjProperty(fake, "master", who.serial);
+	SetObjProperty( fake, "duration", (piety*2)+15 );
+	Set_Critical(0);
+	
+	who.stealthsteps := (piety*2) + 5;
+	
+endprogram

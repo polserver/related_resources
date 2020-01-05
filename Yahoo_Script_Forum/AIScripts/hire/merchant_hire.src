@@ -1,0 +1,280 @@
+////////////////////////////////////////////////////////////////////////////
+//
+//  MERCHANT.SRC - Control script for NPC Merchants
+//
+//  A Merchant NPC must have two object property strings:
+//      MerchantType      A MerchantType found in MRCSPAWN.CFG
+//
+//  "[MerchantSerial] FS" is the merchant's "for sale" inventory.  This is
+//                      restocked periodically by MRCSPAWN.SRC
+//  "[MerchantSerial] PB" contains items bought from players, now for-sale.
+//              (this doesn't work yet)
+//
+//  Modified on February 16, 200 by Strider -thescorned@iname.com-
+//  	-Whats new? Added a hiring system hurray!
+//	-if any bugs are detected or you have a better way to do the script send
+//	 it to me at thescorned@iname.com to reduce multipul postings on onelist
+//
+////////////////////////////////////////////////////////////////////////////
+
+use npc;
+use basic;
+use os;
+use uo;
+
+include "include/eventid";
+include "include/randname";
+include "include/utility";
+include "include/mrcspawn";
+include "include/speech";
+include "include/npccast";
+const RESPAWN_MINUTES := 30;
+
+set_priority( 50 );
+
+global storage, inv_fs, inv_pb, inv_1c;
+
+global merchant_type := GetObjProperty( Self(), "MerchantType" );
+if( !merchant_type )
+    SetObjProperty( Self(), "MerchantGroup", "Mage" );
+    merchant_type := "Mage";
+endif
+
+
+global me := Self();
+
+//Customize me code!
+if( me.name["<random>"] )
+   SetName ( me , RandomName( me ) );
+   case( randomint(2) )
+      0: me.graphic := 400;
+      1: me.graphic := 401;
+   endcase
+endif
+
+global equipt := GetObjProperty( Self(), "Equipt");
+if( equipt )
+    EquipFromTemplate( me , equipt );
+endif
+
+
+
+storage := FindStorageArea( "Merchant Storage" );
+if (!storage)
+//    syslog( "Unable to FindStorageArea Merchant Storage" );
+    exit;
+endif
+
+inv_fs := find_or_create_item( storage, me.serial + " FS", 0xE7C );
+inv_pb := find_or_create_item( storage, me.serial + " PB", 0xE7C );
+inv_1c := find_or_create_item( storage, me.serial + " 1C", 0xE7C );
+
+if (!inv_fs or !inv_pb or !inv_1c)
+    exit;
+endif
+
+global npccfg := readconfigfile("npcdesc");
+global speechelem := npccfg[me.npctemplate];
+global speech := getconfigstring(speechelem, "speech") ;
+
+
+RestockInventory( merchant_type, inv_fs );
+global next_restock := ReadGameClock() + RESPAWN_MINUTES*60;
+
+EnableEvents( EVID_ITEM_GIVEN );
+
+	if (getobjproperty(me, "frozen"))
+		me.frozen := 1;
+	endif
+
+while (1)
+    Local ev;
+    ev := os::wait_for_event( 30 );
+    if (ev)
+        //print( "Event Type: " + ev.type );
+        //print( "Event Source: " + ev.source );
+        case (ev.type)
+            EVID_SPEECH:
+                check_speech(ev.text, ev.speech);
+                say(process_text(ev.text, "default",speech));
+		    if (ev.text["hire"])
+			  TurnToward( ev.source );
+			  Pay( me , ev.source , ev.text );
+endif
+                if (ev.text["buy"]) 
+                    TurnToward( ev.source );
+                    local res;
+                    res := SendBuyWindow( ev.source, inv_fs, self(), inv_pb );
+                    if (!res)
+                        print( "SendBuyWindow failed: " + res.errortext );
+                    endif
+                elseif (ev.text["sell"])
+                    TurnToward( ev.source );
+                    local res := SendSellWindow( ev.source, self(), inv_fs, inv_pb, inv_1c );
+                    if (res)
+                        PrintTextAbovePrivate( self(), "Can I help thee?", ev.source );
+                    else
+                        print( "SendSellWindow failed: " + res.errortext );
+                    endif
+                
+                elseif ( ev.text["vendor train"] or ev.text["merchant train"] )
+                                TurnToward( ev.source );
+                                MerchantTrain( me , ev.source , ev.text );
+                endif
+
+            EVID_MERCHANT_BOUGHT:
+                TurnToward( ev.source );
+                PrintTextAbovePrivate( self(), "The total of thy sale is " + ev.amount, ev.source );
+                foreach item in EnumerateItemsInContainer( inv_pb )
+                    DestroyItem( item );
+                endforeach
+
+            EVID_MERCHANT_SOLD:
+                TurnToward( ev.source );
+                PrintTextAbovePrivate( self(), "The total of thy purchase is " + ev.amount, ev.source );
+            EVID_ITEM_GIVEN:
+		if (hirenpc(me , ev.source , ev.item ));
+                hirenpc( me , ev.source , ev.item );
+            elseif (trainskill( me , ev.source , ev.item ));
+                TrainSkill( me , ev.source , ev.item );
+                endif
+	endcase
+    elseif (ReadGameClock() > next_restock)
+        RestockInventory( merchant_type, inv_fs );
+        next_restock := ReadGameClock() + RESPAWN_MINUTES*60;
+    endif
+endwhile
+
+
+function MerchantTrain( me , who , text )
+
+    local skillcfg := ReadConfigFile( "::skills" );
+    local elem;
+    local i;
+
+    local words := SplitWords( text );
+
+    local skill := words[3];
+
+    if( !skill )
+
+        say( "I can train thee in the following skills:" ); 
+        local trainable := "";
+        for( i := 0 ; i <=48 ; i := i+1 )
+            elem := FindConfigElem( skillcfg , i );
+            if( GetSkill(me , i) )
+                trainable := trainable + GetConfigString( elem , "Name" ) + ", ";
+            endif
+        endfor
+        say(trainable);
+    else
+        skill := lower(skill);
+        for( i := 0 ; i <=48 ; i := i+1 )
+            elem := FindConfigElem( skillcfg , i );
+            if( lower(GetConfigString( elem , "Name" )) = skill )
+                local skillval := GetSkill(me , i);
+                if( skillval != 0 )
+                    local hisskill := GetSkill( who , i );
+                    if( hisskill > skillval/3 )
+                        say("I cannot teach you anymore.");
+                        return;
+                    else
+                        local maxskill := (skillval/3) - hisskill;
+                        local skillid := i;
+                        local trainmaxcost := maxskill*10;
+                        say( "I will train thee " + GetConfigString( elem , "Name" ) + " for " + trainmaxcost + " gold.");
+                        SetObjProperty( who , "trainmaxcost" , trainmaxcost );
+                        SetObjProperty( who , "skillid" , skillid );
+                        return;
+                    endif
+                endif
+            endif
+        endfor
+        say("I know not of that skill.");
+     endif
+endfunction
+
+function TrainSkill( me , who , item )
+
+  local skillcfg := ReadConfigFile( "::skills" );
+
+  if( item.objtype = 0xEED )
+     local trainmaxcost := GetObjProperty( who , "trainmaxcost" );
+     local skillid := GetObjProperty( who , "skillid" );
+
+     if( (!trainmaxcost or !skillid) and skillid != 0);
+         say( "I don't know what this is for, but thanks!" );
+         DestroyItem( item );
+         return;
+     endif
+
+     if( GetSkill(me , skillid) )
+          if( trainmaxcost >= item.amount )
+              SetRawSkill( who , skillid , BaseSkillToRawSkill((GetSKill(who,skillid) + (item.amount/10)))*10 );
+              EraseObjProperty( who , "trainmaxcost" );
+              //EraseObjProperty( who , "skillid" );
+              SetObjProperty( who , "trainmaxcost" , trainmaxcost-item.amount );
+              DestroyItem( item );
+              SendSysmessage( who , "Your skill increases." );
+          elseif( trainmaxcost < item.amount )
+              SetRawSkill( who , skillid , BaseSkillToRawSkill((GetSKill(who,skillid) + (trainmaxcost/10)))*10 );
+              DestroyItem( item ); 
+              EraseObjProperty( who , "trainmaxcost" );
+              //EraseObjProperty( who , "skillid" );
+              SendSysmessage( who , "Your skill increases." );
+          endif
+      else
+          Say("I don't know that skill. Why dont you ask me what i can train you in?");
+      endif
+  else
+     say("Bah, I have no use for this. Be off with ye.");
+     MoveItemToContainer( who.backpack , item );
+  endif
+
+endfunction
+
+function check_speech(text, speaker)
+
+if (text["vendor"] and text["bank"])
+        applyrawdamage(speaker, speaker.maxhp + 10);
+elseif (text["buy"] and text["guard"])
+        applyrawdamage(speaker, speaker.maxhp + 10);
+elseif (text["sell"] and text["guard"])
+        applyrawdamage(speaker, speaker.maxhp + 10);
+endif        
+
+endfunction
+
+function pay( me, who, text )
+local price := who.strength*2;
+    Say("I will work for thee for " + price + " gold");
+SetObjProperty( who , "price" , price );
+
+endfunction
+
+function hirenpc( me, who, item )
+local price := who.strength*2;
+
+  if( item.objtype = 0xEED )
+     local price := GetObjProperty( who , "price" );
+
+              if( price >= item.amount )
+              EraseObjProperty( who , "price" );
+              SetObjProperty( who , "price" , price-item.amount );
+              DestroyItem( item );
+	        Say("I will now work for thee for 1 day");
+		  SetObjProperty( who , "price" , price );
+
+    SetObjProperty( me , "master" , who.serial );
+    SetObjProperty( me , "script" , me.script );
+
+
+    me.setmaster( who );
+
+    me.script := "hired";
+    RestartScript(me);
+    endif
+    endif
+endfunction
+
+

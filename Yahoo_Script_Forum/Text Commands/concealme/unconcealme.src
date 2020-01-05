@@ -1,0 +1,36 @@
+use uo;
+use os;
+
+include "include/client";
+include "include/objtype";
+
+
+program unconcealme ( who, text )
+
+	if (text = "fire")
+		PlayStationaryEffect (who.x, who.y, who.z, 0x3709, 0x0a, 0x1e);
+		PlaySoundEffect (who, SFX_SPELL_FLAME_STRIKE);
+		sleepms (1500); 
+	elseif (text = "lightning") 
+	    PlaySoundEffect(who, 0x29);
+	elseif (text = "smokepuff")
+		PlayStationaryEffect (who.x, who.y, who.z, FX_SMOKE, 0xA, 0xA);
+	elseif (text = "gate")
+	    local pregate := CreateItemAtLocation (who.x, who.y, who.z, 0x1af3, 1);
+	      pregate.facing := 1;
+	      PlaySoundEffect (who, SFX_SPELL_GATE_TRAVEL);
+	      sleepms(1500);
+	      DestroyItem (pregate);
+	    local gate1 := CreateItemAtLocation (who.x, who.y, who.z, UOBJ_BLUE_MOONGATE, 1);
+	      gate1.facing := 1; 
+	      sleep(1);
+	      who.concealed := 0;  
+	      sleep(2);
+	    set_critical(1);
+	      DestroyItem (gate1);
+	    set_critical(0);
+	endif
+
+
+    who.concealed := 0;
+endprogram

@@ -1,0 +1,19 @@
+use uo;
+
+const UOBJ_GUARD_NODE := 0xa340;
+
+program texcmd_hiderunes(who, trange)
+
+local range;
+if (trange)
+	range := cint(trange);
+else
+	sendsysmessage(who, "usage: hidenode distance");
+	return 0;
+endif
+
+foreach item in ListItemsNearLocationOfType( who.x,who.y,who.z, range, UOBJ_GUARD_NODE)
+	item.graphic := 1;
+endforeach
+
+endprogram

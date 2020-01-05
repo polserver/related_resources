@@ -1,0 +1,52 @@
+
+
+use uo;
+use os;
+use cfgfile;
+include "include/math";
+
+program checkScroll(caster, spellbook, scroll)
+
+	if ((scroll.objtype >= 0x1f2d) and (scroll.objtype <= 0x1f6c))
+		ReserveItem(scroll);
+		var itemdesc := ReadConfigFile("::itemdesc");
+		var magicid := itemdesc[scroll.objtype].spellid;
+		
+		var circle := 0;
+		var iter := 1;
+		while (!circle)
+			if (magicid <= 8)
+				circle := iter;
+			else
+				iter := iter + 1;
+				magicid := magicid - 8;
+			endif
+		endwhile
+
+		var spellcircles := GetObjProperty(spellbook, "Circles");
+		var circlespells := BitOut(spellcircles[circle]);
+				
+		if (circlespells[magicid])
+			PrintTextAbovePrivate(caster, "You already have this spell in your spellbook.", caster);
+			return 0;
+		endif
+
+		circlespells[magicid] := 1;
+		spellcircles[circle] := BitIn(circlespells);
+		SetObjProperty(spellbook, "Circles", spellcircles);
+		
+		if (GetAmount(scroll) = 1)
+			return 1;
+		else
+			SubtractAmount(scroll, 1);
+			return 0;
+		endif
+
+		return 0;
+
+	else
+		SendSysMessage(caster, "That is not a spell scroll!");
+		return 0;
+	endif	
+	
+endprogram

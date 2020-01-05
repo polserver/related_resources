@@ -1,0 +1,40 @@
+List of Actions related to UO
+Compiled by Zadius (linkage@xmission.com)
+
+Hex	Action
+--------------------------------------------------------------------
+01	Walk
+02	Run
+03	Run
+04	???
+05	Look Around
+06	Stammer
+07	Take Offensive
+08	Take Offensive
+09	Swing High
+0A	Swing Low
+0B	Swing High
+0C	Pole Swing High
+0D	Pole Swing Low      *chop tree*
+0E	Pole Jab            *Pitchfork thrust*
+0F	Pole Thrust
+10	Cast Forward
+11	Cast Upwards
+12	Shoot Bow
+13	Do something and give
+14	Take Hit
+15	Fall down backwards
+16	Fall foreward
+17	Mounted
+18	Mounted
+19	Mounted
+1A	Mounted attack
+1B	Mounted shoot
+1C	Mounted shoot
+1D	Mounted shoot
+1E	Pole swing
+1F	Pole butt swing
+20	Bow
+21	Salute
+22	Drink
+23	Stance

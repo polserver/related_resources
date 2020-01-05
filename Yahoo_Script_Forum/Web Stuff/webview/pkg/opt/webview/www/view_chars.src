@@ -1,0 +1,313 @@
+/* view_chars.src
+ * Last Modified: 06/28/04
+ * 
+ * This will display character information on all characters based
+ * on the WebProfile array. Possibly some broken code in there because
+ * of all the features I just _had_ to have... It's pretty confusing
+ * now that I look at it. Sorry.
+*/
+
+use http;
+use uo;
+use os;
+use basic;
+
+include "include/string";
+include ":utilsdate:utilsDate";
+include ":webview:webProfile";
+include ":webview:webLocation";
+
+if (QueryParam("serial"))
+  ViewWebProfile(QueryParam("serial"));
+  exit;
+endif
+
+const REQ		:= CHAR_SCR + "?";
+
+const VIEW		:= 1;
+const START		:= 2;
+const SORT		:= 3;
+const QUERY		:= 4;
+const PAGE		:= 5;
+const REVERSE		:= 6;
+
+const NAME_VAL		:= 1;
+const SERIAL_VAL	:= 2;
+const ONLINE_VAL	:= 3;
+const TIME_ONLINE_VAL	:= 4;	// CSecToTime()
+const LAST_LOGIN_VAL	:= 5;	// CDateTimeStr()
+const LAST_LOGOFF_VAL   := 6;	// CDateTimeStr()
+
+var opt       := array;
+var pcharlist := array;
+var slist     := array;
+
+opt           := GetParams();
+pcharlist     := GetCharlist();
+
+var get := { "", "", "", "", "", "" };
+
+if (opt[VIEW])
+  get[VIEW] := "&view="  + opt[VIEW];
+endif
+
+if (opt[START])
+  get[START] := "&start=" + opt[START];
+endif
+
+if (opt[SORT])
+  get[SORT] := "&sort="  + opt[SORT];
+endif
+
+if (opt[QUERY])
+  get[QUERY] := "&query=" + opt[QUERY];
+endif
+
+if (opt[PAGE])
+  get[PAGE] := "&page="  + opt[PAGE];
+endif
+
+if (opt[REVERSE])
+  get[REVERSE] := "&reverse=1";
+endif
+
+
+program ViewChars()
+
+  var i;
+
+  // Output letter selection
+  WriteHtml("<div align=\"center\">\n<font size=\"+1\">");
+  for (i := CAsc("A"); i <= CAsc("Z"); i := i + 1)
+    if (QueryParam("start") && CChr(i) == QueryParam("start"))
+      WriteHtml("<a href=\"" + REQ + get[VIEW] + "&start=" + CChr(i) + "\"><b>" + CChr(i) + "</b></a>");
+    else
+      WriteHtml("<a href=\"" + REQ + get[VIEW] + "&start=" + CChr(i) + "\">" + CChr(i) + "</a>");
+    endif
+    sleepms(10);
+  endfor
+  WriteHtml("</font><br>");
+
+  var view_loc := "";
+
+  if (SHOW_PLAYER_LOC)
+    view_loc := " - [ <a href=\"" + LOC_SCR + "\?players=1\" target=\"_blank\">Player Locations</a> ]";
+  endif
+
+  if (QueryParam("view") == "all" || !QueryParam("view"))
+    WriteHtml("<font size=\"-1\">[ <a href=\"" + REQ + "view=all\"><b>View All</b></a> ] - " +
+      "[ <a href=\"" + REQ + "&view=online\">View Online</a> ]" + view_loc + "</font>\n</div>");
+  elseif (QueryParam("view") == "online")
+    WriteHtml("<font size=\"-1\">[ <a href=\"" + REQ + "view=all\">View All</a> ] - " +
+      "[ <a href=\"" + REQ + "&view=online\"><b>View Online</b></a> ]" + view_loc + "</font>\n</div>");
+  endif
+
+  WriteHtml("<br>");
+  WriteHtml("\n\n<p>&nbsp;</p>\n\n");
+
+  OutputOpts();
+
+  // Make sorted character array list
+  var splist := array;
+  splist := SortCharlist(opt[VIEW], opt[SORT], opt[START], opt[QUERY], opt[PAGE], opt[REVERSE]);
+
+  OutputPages(slist, MAX_PAGE_P);
+
+
+  // Output main charinfo table
+  WriteHtml("<div align=\"center\">\n");
+  WriteHtml("<table width=\"100%\" bordercolor=\"#9c3010\" border=\"1\">\n");
+
+  // Give reverse option
+  if (opt[REVERSE])
+    WriteHtml("<div align=\"right\">\n<a href=\"" + REQ + get[VIEW] + get[START] + get[SORT] +
+      get[PAGE] + get[QUERY] + "\">Unreverse Order</a>\n</div>\n\n");
+  else
+    WriteHtml("<div align=\"right\">\n<a href=\"" + REQ + get[VIEW] + get[START] + get[SORT] +
+      get[PAGE] + get[QUERY] + "&reverse=1\">Reverse Order</a>\n</div>\n\n");
+  endif
+
+
+  WriteHtml("<tr bgcolor=\"#ffffff\">\n" +
+    "  <td align=\"center\">#\n" +
+    "  <td align=\"center\"><a href=\"" +
+         REQ + get[VIEW] + get[START] + get[QUERY] + "&sort=name\">Name</a></td>\n" +
+    "  <td align=\"center\"><a href=\"" +
+         REQ + get[VIEW] + get[START] + get[QUERY] + "&sort=online\">Online</a></td>\n" +
+    "  <td align=\"center\"><a href=\"" +
+         REQ + get[VIEW] + get[START] + get[QUERY] + "&sort=time_online\">Time Online</a></td>\n" +
+    "  <td align=\"center\"><a href=\"" +
+         REQ + get[VIEW] + get[START] + get[QUERY] + "&sort=last_logon\">Last Logon</a></td>\n" +
+    "  <td align=\"center\"><a href=\"" +
+         REQ + get[VIEW] + get[START] + get[QUERY] + "&sort=last_logoff\">Last Logoff</a></td>\n" +
+    "</tr>\n");
+
+  // Output dynamic section of charinfo table
+  var spelm;
+  for (i := 1; i <= len(splist); i := i + 1)
+    spelm := splist[i];
+    WriteHtml("<tr>");
+    WriteHtml("  <td>" + (i + MAX_PAGE_P * (CInt(opt[PAGE]) - 1)) +"</td>");
+    WriteHtml("  <td><a href=\"" + CHAR_SCR + "?serial=" + spelm[SERIAL_VAL] + "\">" + spelm[NAME_VAL] + "</a></td>");
+    if (spelm[ONLINE_VAL])
+      WriteHtml("  <td>Yes</td>");
+    else
+      WriteHtml("  <td>No</td>");
+    endif
+    WriteHtml("  <td>" + CSecToTime(spelm[TIME_ONLINE_VAL], 1) + "</td>");
+    WriteHtml("  <td>" + CDateTimeStr(spelm[LAST_LOGIN_VAL]) + "</td>");
+    WriteHtml("  <td>" + CDateTimeStr(spelm[LAST_LOGOFF_VAL]) + "</td>");
+    WriteHtml("</tr>\n");
+    sleepms(10);
+  endfor
+
+  WriteHtml("</table>\n</div>\n");
+
+  // Output search form
+  WriteHtml("<div align=\"right\">\n" +
+    "<form name=\"search\" method=\"get\" action=\"" + CHAR_SCR + "\">" +
+    "  <table>\n" +
+    "    <tr>\n" +
+    "      <td>\n" +
+    "        Search names for:<br>\n" +
+    "        <input name=\"query\" type=\"text\" value=\"" + opt[QUERY] + "\" size=\"30\">\n" +
+    "      </td>\n" +
+    "      <td valign=\"bottom\"><input type=\"submit\" name=\"submit\" value=\"Search\"></td>\n" +
+    "    </tr>\n" +
+    "  </table>\n" +
+    "</form>\n" +
+    "</div>");
+
+  WriteHtml("<br><br>\n");
+
+  OutputPages(slist, MAX_PAGE_P);
+
+  WriteHtml("\n\n<p>&nbsp;</p>\n\n");
+
+endprogram
+
+
+function GetCharlist()
+
+  var accts := ListAccounts();
+  var acct, chr, i;
+  var retarray := array;
+
+  foreach nme in accts
+    acct := FindAccount(nme);
+    if (acct)  
+      for (i := 1; i <= 5; i := i + 1)
+        chr := acct.getcharacter(i);
+        if (chr && chr.cmdlevel <= MAX_CMD_LVL)
+          retarray[NAME_VAL] := chr.name;
+          retarray[SERIAL_VAL] := chr.serial;
+          if (GetObjProperty(chr, "LoggedIn"))
+            retarray[ONLINE_VAL] := 1;
+            retarray[TIME_ONLINE_VAL] := ReadGameClock() - GetObjProperty(chr, "logontime");
+          else
+            retarray[ONLINE_VAL] := 0;
+            retarray[TIME_ONLINE_VAL] := 0;
+          endif
+          retarray[LAST_LOGIN_VAL] := GetWebProp(chr, LAST_LOGIN);
+          retarray[LAST_LOGOFF_VAL] := GetWebProp(chr, LAST_LOGOFF);
+          pcharlist.append(retarray);
+          sleepms(10);
+        endif
+      endfor
+    endif
+  endforeach
+
+  return pcharlist;
+
+endfunction
+
+
+function SortCharlist(view, sort, start, query, page, reverse)
+
+  var retlist := array;
+  var temparray := array;
+  var temparray2 := array;
+  var pelm := array;
+  var i, c := 1;
+
+  // Search for string
+  for (i := 1; i <= len(pcharlist); i := i + 1)
+    pelm := pcharlist[i];
+
+    if (find(lower(pelm[NAME_VAL]), lower(query), 1))
+      temparray.append(pelm);
+    endif
+
+    sleepms(10);
+  endfor
+  pcharlist := temparray;
+  
+  // Sort based on view (all, online)
+  if (view == "online")
+
+    for (i := 1; i <= len(pcharlist); i := i + 1)
+      pelm := pcharlist[i];
+
+      if (pelm[ONLINE_VAL])
+        slist.append(pelm);
+      endif
+
+      sleepms(10);
+    endfor
+  else
+    // View all
+    slist := pcharlist;
+  endif
+
+  // Sort based on sort type (name, online, time_online, last_logon, last_logoff)
+  if (sort == "online")
+    slist := SortMultiArrayByIndex(slist, ONLINE_VAL);
+  elseif (sort == "time_online")
+    slist := SortMultiArrayByIndex(slist, TIME_ONLINE_VAL);
+  elseif (sort == "last_logon");
+    slist := SortMultiArrayByIndex(slist, LAST_LOGIN_VAL);
+  elseif (sort == "last_logoff");
+    slist := SortMultiArrayByIndex(slist, LAST_LOGOFF_VAL);
+  else
+    slist := SortMultiArrayByIndex(slist, NAME_VAL);
+  endif
+
+  // Sort based on starting letter
+  temparray := array;
+  if (start)
+
+    for (i := 1; i <= len(slist); i := i + 1)
+      pelm := slist[i];
+      pelm := CStr(pelm[1]);
+      pelm := pelm[1];
+
+      if (lower(pelm) == lower(start))
+        temparray.append(slist[i]);
+        print(slist[i]);
+      endif
+
+      sleepms(10);
+    endfor
+
+    slist := temparray;
+  endif
+  
+  if (sort != "name" && !reverse)
+    slist.reverse();
+  elseif (sort == "name" && reverse)
+    slist.reverse();
+  endif
+
+  // Return the current page
+  for (i := 1; i <= MAX_PAGE_P; i := i + 1)
+
+    if (slist[i + (MAX_PAGE_P * (CInt(page) - 1))])
+      retlist[i] := slist[i + (MAX_PAGE_P * (CInt(page) - 1))];
+    endif
+
+    sleepms(10);
+  endfor
+
+  return retlist;
+
+endfunction

@@ -1,0 +1,54 @@
+include "include/modules";
+
+program fillspellbook(who)
+	var i, j, k, newk, circlearray := {}, spellarray := {}, spellinfo := {};
+	var spell_id, spell_name, circle;
+	var cfg := ReadConfigFile( "../pkg/opt/thaumaturgy/spells" );
+	var high_spell := GetConfigMaxIntKey( cfg );
+	var spellbook := Target(who);
+	if (spellbook.objtype != 0xa2b0)
+		SendSysMessage(who, "That is not a thaumaturgical spellbook!");
+		return;
+	endif
+	for( i := 1; i <= 5; i := i + 1 )
+		output( who, "I is: " + i );
+		k := 109;
+		for( j := 1; j <= 8; j := j + 1 )
+				output( who, "J is: " + j );
+				if( newk )
+					k := newk;
+				endif
+				output( who, "newk is: " + newk );
+				output( who, "k is: " + k );
+				inner:
+					repeat
+						spell_id := cfg[k].SpellID;
+						spell_name := cfg[k].Name;
+						circle := cfg[k].Circle;
+						spellinfo[1] := CInt(spell_id);
+						spellinfo[2] := CStr(spell_name);
+						spellinfo[3] := CInt(circle);
+						if( spellinfo[3] == i )
+							spellarray[j] := spellinfo;
+							newk := k + 1;
+							output( who, "newk is: " + newk );
+							break inner;
+						endif
+						k := k + 1;
+						sleepms(5);
+					until( k == high_spell );
+				sleepms(2);
+		endfor
+		circlearray[i] := spellarray;
+		output( who, "Circle array ["+i+"] is: " + circlearray[i] );
+		newk := 0;
+		sleepms(1);
+	endfor
+	SetObjProperty( spellbook, "Circles", circlearray );
+endprogram
+
+function output( who, msg )
+	if( who.cmdlevel )
+		SendSysMessage( who, msg );
+	endif
+endfunction

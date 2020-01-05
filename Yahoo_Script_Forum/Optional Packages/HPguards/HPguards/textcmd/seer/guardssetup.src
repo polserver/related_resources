@@ -1,0 +1,88 @@
+/*
+GPROP FORMAT:
+ - ARRAY WHERE EACH ELEMENT INDICATES IF THE CITY ARE PROTECTED OR NOT.
+ ARRAY INDEX EQUAL TO CITYid
+*/
+
+use uo;
+
+include "../pkg/system/guards/guarded";
+var layout :=   {
+                    "page 0",
+                    "nodispose",
+                    "nomove",
+                    "resizepic 0 0 5054 250 440",            // Fundo
+                    "resizepic 10 10 3000 230 420",            // Fundo2
+                    "text 20 30 0 0",
+                    "text 20 45 0 1",
+                    // city list
+                    "text 40 80 0 2",
+                    "text 40 100 0 3",
+                    "text 40 120 0 4",
+                    "text 40 140 0 5",
+                    "text 40 160 0 6",
+                    "text 40 180 0 7",
+                    "text 40 200 0 8",
+                    "text 40 220 0 9",
+                    "text 40 240 0 10",
+                    "text 40 260 0 11",
+                    "text 40 280 0 12",
+                    "text 40 300 0 13",
+                    "text 40 320 0 14",
+                    "text 40 340 0 15",
+                    "text 40 360 0 16",
+                    "text 40 380 0 17",
+                    "text 40 400 0 18",
+                    "button 170 400 247 248 1 0 0",           // Ok
+                };
+
+var data :=     {   "Choose which cities will be",
+                    "protected by guards",
+
+                    "Britain",
+                    "Yew",
+                    "Skara Brae",
+
+                    "Magincia",
+                    "Moonglow",
+                    "Buccaneer's",
+                    "Nujelm",
+                    "Ocllo",
+
+                    "Minoc",
+                    "Vesper",
+                    "Cove",
+
+                    "Trinsic",
+                    "Serpent's",
+                    "Jehlom",
+
+					"Wind",
+					"Papua",
+					"Delucia"
+                };
+
+const NUM_CITIES := 17;
+
+program guardssetup_textcmd(who)
+    
+    var guardsys := GetGlobalProperty("Guardsys");
+    if (!guardsys)
+        guardsys := {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    endif
+    var y := 0;
+    for i:= 1 to NUM_CITIES
+        layout.append("checkbox 20 "+(80+y)+" 210 211 "+guardsys[i]+" "+i);
+        y := y+20;
+    endfor
+    var res := SendDialogGump( who, layout, data );
+
+    for i := 1 to NUM_CITIES
+        if (i in (res.keys))
+            guardsys[i] := i;
+        else
+            guardsys[i] := 0;
+        endif
+    endfor
+    SetGlobalProperty("Guardsys", guardsys);
+endprogram

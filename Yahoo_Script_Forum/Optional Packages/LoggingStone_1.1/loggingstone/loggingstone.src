@@ -1,0 +1,81 @@
+use uo;
+use os;
+
+include "../pkg/gumps/gumps";
+include "include/requestgump";
+
+const StdColor := 1890;
+const SelectedColor := 1720;
+
+program SetStone(who, stone)
+	if (who.cmdlevel > 1)
+		SendSysMessage(who, "Only gms can set logging stones.");
+		return;
+	elseif (!ReserveItem(stone))
+		SendSysMessage(who, "That stone is already being set up by someone else.");
+		return;
+	endif
+	
+	if (!GetObjProperty(stone, "StoneName"))
+		var StoneName := requestgump(who, "Enter stone name", "", preval := stone.serial, cancelbutton := 0);
+		while(StoneName[" "])
+			StoneName[" "] := "_";
+		endwhile
+		
+		SetObjProperty(stone, "StoneName", StoneName);
+		SetName(stone, "Logging Stone [" + StoneName + "]");
+	endif
+	
+	GFInitGump();
+	
+	GFResizePic(0, 0, 3600, 320, 150);
+	GFResizePic(15, 15, 5054, 290, 120);
+	
+	GFTextMid(15, 25, 290, StdColor, "Settings for Logging Stone");
+	GFTextMid(15, 45, 290, StdColor, "[" + GetObjProperty(stone, "StoneName") + "]");	
+	
+	if (GetObjProperty(stone, "Enabled"))
+		GFTextLine(40, 80, SelectedColor, "Enabled");
+		GFTextLine(40, 100, StdColor, "Disabled");
+	else
+		GFTextLine(40, 80, StdColor, "Enabled");
+		GFTextLine(40, 100, SelectedColor, "Disabled");
+	endif
+	
+	GFButtonID(20, 83, 2117, 2118, 1, 1);
+	GFButtonID(20, 103, 2117, 2118, 1, 2);	
+	
+	var input := GFSendGump(who);
+	input := input[0];
+	
+	if (input == 1)
+		SetObjProperty(stone, "Enabled", 1);
+		Start_Script("listener", stone);
+		SendSysMessage(who, "Logger is enabled");
+		
+		FixName(stone, 1);
+	elseif (input == 2)
+		SetObjProperty(stone, "Enabled", 0);
+		GetProcess(GetObjProperty(stone, "#ListenPid")).kill();
+		SendSysMessage(who, "Logger is disabled");
+		
+		FixName(stone, 2);
+	endif
+	
+	ReleaseItem(stone);
+endprogram
+
+function FixName(stone, type)
+	var name := stone.name;
+	if (!name["Enabled"] && !name["Disabled"])
+		name := name + " [Enabled]";
+	endif
+	
+	if (type == 1)
+		name["[Disabled]"] := "[Enabled]";
+	elseif (type == 2)
+		name["[Enabled]"] := "[Disabled]";
+	endif
+	
+	SetName(stone, name);
+endfunction

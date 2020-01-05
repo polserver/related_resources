@@ -1,0 +1,104 @@
+use uo;
+use os;
+use util;
+use cfgfile;
+
+var itemdesc := ReadConfigFile(":combat:itemdesc");
+
+include "sench";
+
+program destroySithMagicItem( item )
+
+	var who;
+
+	if (!GetObjProperty( item, "a_equipped"))
+	  return 1;
+	endif
+	
+	if( !GetObjProperty(item, "smi_eq") )
+            return 1;
+        endif
+        
+        who := SystemFindObjectBySerial( GetObjProperty(item,"smi_eq") );
+	
+	var skilladv := GetObjProperty( item, "skill_adj" );
+	if( skilladv )
+		ModifySkillTemporaryMod( who, item.skillid, 0-Cint(skilladv) );
+	endif
+
+	var oldunEquip := GetObjProperty( item, "oldUnequipScript" );
+	if( oldunEquip )
+	  start_script( oldunEquip, {who,item} );
+	endif
+
+	//Check for armour-equip. Add your other unequip script checks here!!!
+	if( cint(itemdesc[item.objtype].DexPenalty) ) //Needs the armor unequip!
+	  uneqarmor( who, item );
+	endif
+
+	//This bit handles skill stuff
+	var cEnch := GetObjProperty( item, "Enchantments" );
+	var toSkills;
+	var newSkill;
+	var toStats;
+	var newStat;
+	foreach ench in cEnch
+	    toSkills := getEnchConfigProp( ench, "toSkill", "stringarray" );
+	    foreach toSkill in toSkills
+		toSkill := SplitWords( toSkill );
+		if( len(toSkill) == 2 )
+		    if( toSkill[1] != "wepSkill" )
+		        if( cInt(toSkill[1]) )
+			    toSkill[1] := toSkill[1];
+			elseif( !GetSkillIdByAttributeId(toSkill[1]) )
+			    toSkill[1] := GetObjProperty( item, toSkill[1] );
+			endif
+		    else
+			toSkill[1] := item.attribute;
+		    endif
+		    if( !cInt(toSkill[2]) )
+			toSkill[2] := GetObjProperty( item, toSkill[2] );
+		    else
+			toSkill[2] := cInt(toSkill[2]);
+		    endif
+		    if( cInt(toSkill[1]) )
+		        ModifySkillTemporaryMod( who, cInt(toSkill[1]), (0-toSkill[2]) );
+		    else
+		    	ModifyAttributeTemporaryModBaseValue( who, toSkill[1], (0-toSkill[2])*10 );
+		    endif
+		endif
+	    endforeach
+	    toStats := getEnchConfigProp( ench, "toStat", "stringarray" );
+	    foreach toStat in toStats
+		toStat := SplitWords( toStat );
+		toStat[2] := cInt(toStat[2]);
+		case( lower(toStat[1]) )
+                        "str": SetStrengthMod( who, GetStrengthMod( who ) - toStat[2] );
+			"dex": SetDexterityMod( who, GetDexterityMod(who) - toStat[2] );
+			"int": SetIntelligenceMod( who, GetIntelligenceMod(who) - toStat[2] );
+		endcase
+	    endforeach
+	endforeach
+
+        EraseObjProperty( item, "a_equipped" );
+        EraseObjProperty( item, "smi_eq" );
+	EraseObjProperty( item, "w_equipped");
+
+endprogram
+
+//This handles the unequipping of armour (Dex penalties!)
+function uneqarmor(who,item)
+        var whoserial := GetObjProperty(item,"a_equipped");
+        set_critical(1);
+        if( whoserial != error );
+                var who := SystemFindObjectBySerial( whoserial );
+                if (!who or who.npctemplate)
+                        return 1;
+                endif
+                var dex := GetDexterity(who);
+                var penalty := cint(itemdesc[item.objtype].DexPenalty);
+                if (!penalty) return 1; endif
+                GetDexterityMod(who) := GetDexterityMod(who) + penalty;
+        endif
+        return 1;
+endfunction

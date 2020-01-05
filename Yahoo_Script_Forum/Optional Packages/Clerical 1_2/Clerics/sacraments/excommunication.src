@@ -1,0 +1,24 @@
+use uo;
+include "../cleric";
+
+program excommunication(params)
+	var who := params[1];
+	var ritenum := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	
+	SendSysMessage(who, "Select who you wish to excommunicate");
+	var targ := target(who);
+	
+	if (GetObjProperty(targ, "Devotion") == devotion)
+		if (IsCleric(targ) && !hpboost(who))
+			SendSysMessage(who, "Only the high priest can cast other clerics out");
+			return;
+		else
+			PlaySoundEffect(targ, 519);
+			SetObjProperty(targ, "Devotion", "Faithless");
+			SendSysMessage(targ, "You have been cast out of " + devotion);
+			SendSysMessage(who, targ.name + " has been cast out of " + devotion);
+		endif
+	endif
+endprogram

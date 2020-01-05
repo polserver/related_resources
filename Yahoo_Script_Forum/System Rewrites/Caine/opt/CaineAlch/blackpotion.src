@@ -1,0 +1,30 @@
+use os;
+use uo;
+use util;
+use cfgfile;
+include "drinkpotion";
+const SFX_1E4   :=  0x01e4; // c_light.wav
+
+const SFX_SPELL_NIGHT_SIGHT         :=  SFX_1E4;
+const FX_BLESS_EFFECT   :=  0x373a; //
+
+
+
+program drink_blue (character, potion)
+if (!checkifcandrink(character,potion))
+        return;
+endif
+    local potion_strength := get_potion_strength(potion);
+
+
+    if (is_poison(potion))
+        do_poison(character, potion);
+    else
+           empty_bottle(character, potion);
+           PlaySoundEffect(character, SFX_SPELL_NIGHT_SIGHT );
+           PlayObjectCenteredEffect( character, FX_BLESS_EFFECT, 10,10);
+           character.setlightlevel( 0, 1800 );
+
+    endif
+
+endprogram

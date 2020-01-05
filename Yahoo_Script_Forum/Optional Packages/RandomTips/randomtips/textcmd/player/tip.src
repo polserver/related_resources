@@ -1,0 +1,44 @@
+// Random Tips
+// Version 1.0 13 Nov 00
+// Displays a random tip from tips.cfg at logon.
+// Code partially based on Myr's MOTD package.
+
+use uo;
+use util;
+use cfgfile;
+var me;
+
+program textcmd_tip( who )
+
+// Check to see if it's ICP calling this script
+// if so, who[1] holds "ICP"
+// and... who[2] holds <player> or '-1' (test run)
+//
+
+if ( who[1] = "ICP" )
+  me := who[2];
+else
+  me := who;
+endif
+
+// Check for ICP doing a "test run". If so, return "I'm here!" :-)
+
+if ( me = -1 )
+  return 1;
+endif
+
+local tipcfg := readconfigfile(":randomtips:textcmd/player/tips");
+
+if (!tipcfg)
+  print( "[ERROR] No tips.cfg file found!" );
+  return;
+endif
+
+local maxtips  := FindConfigElem( tipcfg, "tips");
+local numtips  := GetConfigInt( maxtips, "number");
+local tipnumb  := RandomInt(numtips) + 1;
+local tipelem  := FindConfigElem( tipcfg, tipnumb);
+local tiptext := GetConfigString( tipelem, "tip");
+var res := SendStringAsTipWindow( me, tiptext );
+return;
+endprogram

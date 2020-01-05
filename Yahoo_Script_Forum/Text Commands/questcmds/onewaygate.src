@@ -1,0 +1,15 @@
+use uo;
+include "include/objtype";
+
+program onewaygate( who, text )
+	var words := SplitWords( text );
+	var x := CInt(words[1]);
+	var y := CInt(words[2]);
+	var gate := CreateItemInBackpack( who, UOBJ_BLUE_MOONGATE, 1);
+	SetObjProperty( gate, "GateDestX", x );
+	SetObjProperty( gate, "GateDestY", y );
+	SetObjProperty( gate, "GateDestZ", GetMapInfo( x, y ).z );
+	gate.decayAt := 0;
+	gate.saveonexit := 1;
+endprogram
+

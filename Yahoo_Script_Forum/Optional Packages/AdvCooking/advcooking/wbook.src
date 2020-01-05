@@ -1,0 +1,33 @@
+use uo;
+use os;
+
+Program Write_Recipe(chr,item)
+  Local use_on := Target( chr );
+  Local NewRecipe;
+  if (!use_on)
+      SendSysMessage(chr, "Target Canceled");
+      return 0;
+  endif
+
+  if ( use_on.objtype=0xc100 )
+    Local FoodID:= GetObjProperty( item, "FoodID");
+    Local Recipes:= GetObjProperty( use_on, "recipes");
+    If (!Recipes)
+      Recipes := {};
+    Endif
+    If (FoodID in Recipes)
+      PrintTextAbovePrivate(chr, "This recipe is already on the book", chr);
+      return 0;
+    Else
+      Recipes[Recipes.Size()+1] := FoodID ;
+      Recipes.sort();
+      Setobjproperty(use_on, "recipes", Recipes);
+      SubtractAmount(item, 1);
+      PrintTextAbovePrivate(chr, "You added the recipe to your Cooking Book", chr);
+    endif
+
+  Else
+    PrintTextAbovePrivate(chr, "I can only use this on Cooking Books!", chr);
+    return 0;
+  endif
+endprogram

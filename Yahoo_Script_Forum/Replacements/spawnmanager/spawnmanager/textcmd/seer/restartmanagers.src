@@ -1,0 +1,33 @@
+use datafile;
+use os;
+use uo;
+
+include "../../inc/datatypes";
+include "../../specialeventid";
+
+program RestartManagers(who)
+
+   var restarted := 0;
+   
+   var regionfile := OpenDataFile(REGION_DATAFILE);
+   var elem;
+   var keys := regionfile.keys();
+   var proc;
+   var ev := struct;
+   ev.+type;
+   ev.type := EV_CLEAR_REGION;
+   
+   foreach key in keys
+      proc := GetGlobalProperty("#regionmanager"+key);
+      if(!proc)
+         continue;
+      endif
+      proc := GetProcess(proc);
+      restarted := restarted + CInt(proc.SendEvent(ev));
+   endforeach
+
+   var cout := "Restarted "+restarted+" out of "+keys.size()+" managers.";
+   Syslog(who.name + " "+cout);
+   SendSysMessage(who, cout);
+
+endprogram

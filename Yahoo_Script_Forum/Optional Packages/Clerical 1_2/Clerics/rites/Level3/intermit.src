@@ -1,0 +1,33 @@
+use uo;
+use os;
+
+include "../../cleric";
+
+program intermit(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif
+
+	var targ := ClericalTarget(who, info.npctarget);
+	
+	if (!targ.ip && !targ.npctemplate)
+		SendSysMessage(who, "Cancelled");
+		return;
+	elseif (!distancecheck(who, targ, piety+3))
+		SendSysMessage(who, "Too far away.");
+		return;
+	endif
+	
+	ReleaseScript(info.pid);
+	PlaySoundEffect(targ, 517);
+	
+	targ.paralyzed := 1;
+	sleep(piety*45);
+	targ.paralyzed := 0;
+endprogram	

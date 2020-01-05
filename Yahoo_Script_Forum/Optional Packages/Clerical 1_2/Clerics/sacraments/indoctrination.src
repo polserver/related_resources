@@ -1,0 +1,29 @@
+use uo;
+include "../cleric";
+include "include/yesno2";
+
+program indoctrinate(params)
+	var who := params[1];
+	var devotion:= GetObjProperty(who, "Devotion");
+	
+	SendSysMessage(who, "Who do you wish to indoctrinate?");
+	var targ := target(who);
+	
+	if (!targ.ip || targ==who)
+		SendSysMessage(who, "Cancelled");
+		return;
+	elseif (GetObjProperty(targ, "Devotion") == devotion)
+		SendSysMessage(who, targ.name + " is already a member of " + devotion);
+		return;
+	endif
+	
+	if (!yesno(targ, "Do you wish to join " + devotion + "?", "Yes I am devout.", "No, I follow another."))
+		SendSysMessage(who, "The aspirant has declined");
+		return;
+	else
+		SetObjProperty(targ, "Devotion", devotion);
+		SetObjProperty(targ, "FaithMod", 1);
+		SendSysMessage(who, targ.name + " is now a member of " + devotion);
+		SendSysMessage(targ, "You are now a member of " + devotion);
+	endif
+endprogram

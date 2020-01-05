@@ -1,0 +1,12 @@
+use uo;
+
+program setemup()
+
+setglobalproperty("onlinecouncil", 0);
+setglobalproperty("onlineseer", 0);
+setglobalproperty("onlinegm", 0);
+setglobalproperty("onlineadmin", 0);
+setglobalproperty("onlinedeveloper", 0);
+
+
+endprogram

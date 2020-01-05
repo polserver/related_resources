@@ -1,0 +1,17 @@
+use uo;
+use os;
+use cfgfile;
+
+include "include/newpoisons";
+
+program poisonhim(who, type)
+
+local what := target(who, TGTOPT_NOCHECK_LOS);
+if (!what)
+	return;
+endif
+
+addpoison(what,type, 30);
+sendsysmessage(who, what.name + " has been poisoned with 30 seconds of a lesser poison");
+printtextaboveprivate(who, "PID: " + getobjproperty(who , "poisonscript"), who);
+endprogram

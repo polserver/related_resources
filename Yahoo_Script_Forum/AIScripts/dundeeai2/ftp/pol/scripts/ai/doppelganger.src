@@ -1,0 +1,118 @@
+/////////////////////////////////////////////////////////////////////////////
+//
+//  killpcs.src: Kill player-characters
+//
+//  TODO: Some server support for only paying attention to 'enteredarea'
+//        and 'leftarea' events from PCs would be nice.
+//        we just use the graphic at the moment, so we'd fight
+//        NPCs too.  Oh well.
+//
+//  Author: ENS
+//
+//  Created: 4/98
+//
+//  Modified week of 6/15/99 by DW to allow speech and ranged attacks
+//
+/////////////////////////////////////////////////////////////////////////////
+
+use npc;
+use os;
+use uo;
+use cfgfile;
+
+include "include/eventid";
+include "include/randname";
+include "include/npcutil";
+include "include/npccast";
+include "include/objtype";
+include "include/anchors";
+include "include/dist";
+include "include/client";
+include "ai/main/killpcsloop";
+include "ai/combat/fight";
+include "ai/combat/dgangercombatevent";
+include "ai/setup/setup";
+include "ai/main/loot";
+include "ai/main/sleepmode";
+
+const HALT_THRESHOLD := 8; // how close before he attacks?
+
+global runaway := 100;
+global spellcast := 0;
+
+program KillPlayers()
+me.hidden := 1;
+
+    EnableEvents( EVID_ENGAGED );
+    EnableEvents( EVID_DISENGAGED );
+    EnableEvents( EVID_DAMAGED );
+    EnableEvents( EVID_ENTEREDAREA + EVID_LEFTAREA, HALT_THRESHOLD );
+    EnableEvents( EVID_OPPONENT_MOVED );
+
+    SetWarMode( 0 );
+
+    main_AI_loop();
+
+endprogram
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//  These types fight singlemindedly, until the quarry is dead.
+//  There is no way out but death.
+//
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//  CloseDistance - close the distance between self and an opponent.
+//  Returns: 1 if distance is 0 or 1 (no move necessary)
+//           0 if distance is >= 2 (may still need to move)
+//
+//  This is a .EM-file candidate.
+//
+/////////////////////////////////////////////////////////////////////////////
+function CloseDistance( opponent )
+
+    if (runaway < 100)
+    	if (distance(me, opponent) <= 4)
+		RunAwayFrom(opponent);
+		runaway := runaway +1;
+		if (runaway > 50)
+			runaway := 100;
+			local weaponone := GetEquipmentByLayer( me,  LAYER_HAND1 );
+			local weapontwo := GetEquipmentByLayer( me,  LAYER_HAND2 );
+
+			local mypack := 0;
+			if (!getobjproperty(me,"serial"))
+				setobjproperty(me, "serial", me.serial);
+			endif
+			mypack := FindMyPack(me.serial);
+			if (weaponone)
+				moveitemtocontainer(weaponone,mypack);
+			endif
+			if (weapontwo)
+				moveitemtocontainer(weapontwo,mypack);
+			endif
+			weaponone := CreateItemInInventory(me.backpack,0x143e,1);
+			EquipItem(me,weaponone);
+            		RunToward( opponent );
+		endif
+		return 0;
+    	else
+		runaway := 0;
+		return 1;
+    	endif
+    else
+	case Distance( me, opponent )
+        	1:
+        	0:
+            		return 1;
+        	default:
+            		RunToward( opponent );
+            		return 0;
+    	endcase
+    endif
+
+endfunction

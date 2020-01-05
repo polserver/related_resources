@@ -1,0 +1,103 @@
+use os;
+use uo;
+use cfgfile;
+
+
+
+const HEAL:="heal";
+const POISON:="poison";
+const EXPLOSION:="explosion";
+const NIGHTSIGHT:="nightsight";
+const REFRESH:="refresh";
+const CURE:="cure";
+const AGILITY:="agility";
+const STRENGTH:="strength";
+const BLESS:="bless";
+const POISONPROTECT:="poisonprotect";
+
+global makep; 
+global backpack;
+
+
+program makepotion( who, makep)
+ var cfgfile :=readconfigfile("::skills\advalchemy\itemdesc");   
+set_debug(1);
+
+
+        
+ 
+ backpack := CreateItemInBackpack( who , "backpack" , 1 ); 
+ 
+var makepotion:=0;
+
+
+var potion:=CStr(makep);
+case (potion)
+HEAL:
+makepotion:=0xDC03;
+backpack.color := 1674;
+backpack.name:="heal";
+
+POISON:
+backpack.color := 77;
+makepotion:=0xdc17;
+backpack.name:="poison";
+
+EXPLOSION:
+makepotion:=0xdc07;
+backpack.name:="poison";
+backpack.color := 25;
+
+NIGHTSIGHT:
+makepotion:=0xdce6;
+backpack.name:="nightsight";
+backpack.color := 1205;
+
+REFRESH:
+makepotion:=0xdc0f;
+backpack.name:="refresh";
+backpack.color := 37;
+
+CURE:
+makepotion:=0xdc16;
+backpack.name:="cure";
+backpack.color := 43;
+
+AGILITY:
+makepotion:=0xdc0d;
+backpack.name:="agility";
+backpack.color := 99;
+
+STRENGTH:
+makepotion:=0xdc12;
+backpack.name:="strength";
+backpack.color := 33921;
+
+BLESS:
+makepotion:=0x9404;
+backpack.name:="bless";
+backpack.color := 1675;
+
+POISONPROTECT:
+makepotion:=0x9410;
+backpack.name:="poisonprotect";
+backpack.color := 1111;
+
+default:
+return;
+
+endcase
+
+local amount := 20;
+local i;
+for(i:=1;i<=amount;i:=i+1)
+createitemincontainer(backpack,makepotion,1);
+endfor
+
+endprogram
+   
+    
+    
+    
+
+

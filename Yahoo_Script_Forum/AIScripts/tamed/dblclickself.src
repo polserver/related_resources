@@ -1,0 +1,45 @@
+use os;
+use uo;
+
+program dblclickself( who )
+
+local mount := GetEquipmentByLayer( who, 25 );
+
+if (!mount)
+	OpenPaperdoll( who, who );
+	return;
+endif
+
+if(GetObjProperty(mount,"summoned"))
+	destroyitem(mount);
+	return;
+endif
+
+local critter := "";
+case (mount.graphic)
+	0x3ea2: critter := "horse";
+	0x3e9f: critter := "horse2";
+	0x3ea0: critter := "horse3";
+	0x3ea1: critter := "horse4";
+	0x3ea6:	critter := "llama";
+	0x3ea3:	critter := "desertostard";
+	0x3ea4:	critter := "frenziedostard";
+	0x3ea5:	critter := "forestostard";
+endcase
+
+local animal := CreateNPCFromTemplate (critter, who.x, who.y, who.z);
+animal.facing := who.facing;
+animal.color := mount.color;
+animal.name := GetObjProperty (mount, "petname");
+SetObjProperty(animal, "happyness", GetObjProperty(mount,"happyness") );
+SetObjProperty(animal, "friends", GetObjProperty(mount,"friends") );
+SetObjProperty(animal, "friends_name",GetObjProperty(mount,"friends_name") );
+SetObjProperty(animal, "master", GetObjProperty(mount,"master") );
+SetObjProperty(animal, "script", GetObjProperty(mount,"script") );
+SetObjProperty (animal, "prevtamed", 1);
+
+animal.script := "tamed";
+RestartScript (animal);
+DestroyItem( mount );
+
+endprogram

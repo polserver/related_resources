@@ -1,0 +1,65 @@
+// Created by GMTalos. Ver .5  gmtalos@bughunt.net
+// Type .web command - to create a random spiderweb lair
+// Items created with this command will not decay or move.
+//
+use uo;
+use util;
+
+program textcmd_web( who )
+
+local ttemplate;
+local objtype;
+local i;
+for ( i:=1; i <= 10; i := i + 1)
+
+local which := randomint(20) + 1;
+
+case (which)
+1: objtype:= 0x0E75;
+2: objtype:= 0xe76;
+3: objtype:= 0xecb;
+4: objtype:= 0xecd;
+5: objtype:= 0xecf;
+6: objtype:= 0xed2;
+7: objtype:= 0xee3;
+8: objtype:= 0xee4;
+9: objtype:= 0xee5;
+10: objtype:= 0xee6;
+11: objtype:= 0x122b;
+12: objtype:= 0x1b0b;
+13: objtype:= 0x10da;
+14: objtype:= 0x10d6;
+15: objtype:= 0x10d5;
+16: objtype:= 0x10d7;
+17: objtype:= 0x10d4;
+18: objtype:= 0x10d3;
+19: objtype:= 0x10d2;
+20: objtype:= 0x10d6;
+endcase   
+
+
+local item := CreateItemAtLocation((RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z, objtype, 1);
+        item.decayat := 0;
+	item.movable := 0;
+
+endfor
+
+for ( i:=1; i <= 6; i := i + 1)
+
+local which := randomint(8) + 1;
+
+case (which)
+1 : ttemplate := "spider";
+2: ttemplate := "phasespider";
+3: ttemplate := "rockspider";
+4: ttemplate := "frostspider";
+5: ttemplate := "flamingspider";
+6: ttemplate := "spider";
+7: ttemplate := "spider";
+8: ttemplate := "rat";
+endcase        
+
+local result := CreateNpcFromTemplate( ttemplate, (RandomInt(5)-RandomInt(10))+who.x, (RandomInt(5)-RandomInt(10))+who.y, who.z );
+
+endfor
+endprogram

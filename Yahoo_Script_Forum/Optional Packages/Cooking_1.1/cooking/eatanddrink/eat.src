@@ -1,0 +1,36 @@
+//
+// 1.1
+// 
+// ear.src
+//
+// By Austin Heilman
+// Aheilman@home.com
+//
+// Eat and get fat? :P
+//
+// Created 6/19/2001 12:45PM
+// Modified 6/19/2001 12:45PM
+//
+
+use uo;
+use cfgfile;
+use util;
+
+var EAT_SOUNDS:= {0x3b, 0x3c, 0x3d};
+const ACTION_EAT := 0x22;
+
+program eat(who, food)
+	var config := ReadConfigFile(":*:itemdesc");
+	config := config[food.objtype];
+	var nutrition := config.nutrition;
+	
+	if (!nutrition)
+		nutrition := 1;
+	endif
+	
+	//Put in your own hunger system plug here.
+	
+	PlaySoundEffect(who, EAT_SOUNDS[randomint(EAT_SOUNDS.size())+1]);
+	PerformAction(who, ACTION_EAT);
+	SubtractAmount(food, 1);
+endprogram

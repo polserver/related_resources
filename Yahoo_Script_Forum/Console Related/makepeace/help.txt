@@ -1,0 +1,3 @@
+makepeace_cmd.zip                                     ==>                pol\scripts\console
+pol\config\console.cfg |  // CMD p                 ==>               CMD p makepeace Send EVID_PEACEMADE
+makepeace_textcmd.zip                               ==>                pol\scripts\textcmd\admin

@@ -1,0 +1,39 @@
+use os;
+use uo;
+use util;
+use cfgfile;
+include "drinkpotion";
+
+program drink_blue (character, potion)
+
+if (!checkifcandrink(character,potion))
+        return;
+endif
+    local potion_strength := get_potion_strength(potion);
+
+
+    if (is_poison(potion))
+        do_poison(character, potion);
+    else
+           empty_bottle(character, potion);
+           local poison_level := Cint(GetObjProperty(character, "poison_level"));
+                if (poison_level > 0 ) 
+                        poison_level := poison_level - potion_strength;
+                        PlaySoundEffect( character,  SOUND_EFFECT_CURE );
+                        PlayObjectCenteredEffect( character, EFFECT_SPARKLE, 10,10);   
+                        SendSysMessage( character, "You feel better!");
+                        if (poison_level < 0) then
+        	                poison_level := 0;
+                        	SendSysMessage( character, "You have cured yourself completely!");
+                        	setpoison(character, 0);
+                        endif
+
+                        SetObjProperty (character, "poison_level",cint(poison_level));
+
+                endif
+
+
+    endif
+
+
+endprogram

@@ -1,0 +1,216 @@
+//Raid Defender AI v0.7
+//GM Scull
+
+use npc;
+use os;
+use cfgfile;
+use math;
+
+include "include/eventid";
+include "include/randname";
+include "include/anchors";
+include "include/dist";
+include "ai/combat/raiderfight";
+include "ai/combat/raidcombatevent";
+include "include/vetement";
+
+var me:=self();
+
+const HALT_THRESHOLD := 3; // how close before he attacks?
+
+var goalx, goaly;
+var PiD:=GetProperty("#towndefender");
+
+program RaidDefendPlayers()
+
+	var settings := GetGlobalProperty("raidsettings"+PiD);
+	if (!settings[1] or !settings[2] or !GetGlobalProperty("raidname"+PiD) or (!pid))
+		KillMe();
+	else
+		goalx:=settings[1];
+		goaly:=settings[2];
+	endif
+	settings:={ };
+
+	if (getobjproperty(me, "frozen"))
+		me.frozen := 1;
+	endif
+
+	
+	SetMeUp();
+
+    SetWarMode( 0 );
+    EnableMainEvents();
+
+	local ev;
+	local next_wander := 0;
+	
+	SetAnchor( goalx, goaly, 10, 0 );
+	WalkTowardLocation(goalx, goaly);
+	WalkTowardLocation(goalx, goaly);
+	WalkTowardLocation(goalx, goaly);
+
+
+    while (1)
+
+		if (readgameclock() > next_wander)
+       		wander();
+			ev := os::wait_for_event( 1 );
+			next_wander := readgameclock() + 15;
+
+			if (!GetGlobalProperty("raidname"+PiD)) //check for finished raid (note if they are fighting, they dun stop)
+				KillME();
+				return;
+			endif	
+		endif
+
+        repeat
+
+            case (ev.type)
+                EVID_ENGAGED:
+                EVID_DAMAGED:
+					Fight( ev.source );
+                EVID_ENTEREDAREA:
+					if ( (ev.source.npctemplate) and (ev.source.script["raid"]) and (ev.source.script != "raiddefendpcs") )
+						say ("Die!");
+						Fight( ev.source );
+						next_wander:=readgameclock()+15;
+					endif
+            endcase
+
+        until (!(ev := os::wait_for_event(1)) );
+
+   endwhile      
+
+
+endprogram
+
+
+function CloseDistance( opponent )
+ 
+	if (DistanceToLocation( goalx, goaly ) > 10)
+		RunTowardLocation( goalx,goaly );
+		RunTowardLocation( goalx,goaly );
+		return 2;
+	endif
+
+    case Distance( me, opponent )
+        1:              // the most likely, so first 
+        0:
+            return 1;
+        default:
+            RunToward( opponent );
+            return 0;
+    endcase
+
+endfunction
+
+
+function EnableMainEvents()
+    DisableEvents( EVID_SPEECH + EVID_DISENGAGED + EVID_LEFTAREA + EVID_OPPONENT_MOVED );
+    EnableEvents( EVID_ENGAGED + EVID_DAMAGED + EVID_ENTEREDAREA, HALT_THRESHOLD );
+endfunction
+
+
+function DisableMainEvents()
+
+    DisableEvents( EVID_ENGAGED + EVID_DAMAGED + EVID_ENTEREDAREA);
+
+endfunction
+
+
+function cleareventque()
+	local ev;
+	repeat
+	until (! (ev := os::wait_for_event(0)) );
+endfunction
+
+function KillME()
+	//NOT NEAR PLAYERS	
+
+	DisableMainEvents();
+	MoveCharacterToLocation(me,5288 , 1176 , 0,MOVECHAR_FORCELOCATION);
+	SetObjProperty(me,"guardkill",1);
+	damage( me, me.maxhp + 3 );
+endfunction
+
+function DistanceToLocation ( locx, locy )
+
+	Var xdiff := abs(me.x - locx);
+	var ydiff := abs(me.y - locy);
+
+	if (xdiff > ydiff)
+		return xdiff;
+	else
+		return ydiff;
+	endif
+
+endfunction
+
+function RemoveDEXUpgd()
+//compatible with fight
+endfunction
+
+function Look_around()
+//compatible with fight
+endfunction
+
+
+function SetMeUp()
+
+	var npccfg := readconfigfile("npcdesc");
+
+	case( randomint(2) )
+		0: me.graphic := 400; me.gender := 0;
+		1: me.graphic := 401; me.gender := 1;
+	endcase
+
+	setname(me, RandomName( me ) + " the " + GetGlobalProperty("raidname"+PiD) + " defender");
+
+	if (!me.backpack)
+		var newbackpack := CreateItemAtLocation(me.x, me.y, me.z, 0xe75,1);
+		EquipItem(me, newbackpack);
+		if (npccfg[me.npctemplate].colorrange)
+			var parms := splitwords(npccfg[me.npctemplate].colorrange);
+			me.color := randomint(cint(parms[2]) - cint(parms[1]))+cint(parms[1]);
+		endif
+
+		var equiptm := GetObjProperty( me, "Equipt");
+
+		if( equiptm)
+		   set_priority(50);
+		   Habille( me , equiptm );
+		   set_priority(1);
+		elseif (npccfg[me.npctemplate].dress)
+			var parms := {};
+			parms[1]:= me;
+			parms[2]:= npccfg[me.npctemplate].dress;
+			start_script("::/misc/dressme", parms);
+		elseif (npccfg[me.npctemplate].equip)
+    			EquipFromTemplate(me, npccfg[me.npctemplate].equip);
+		endif
+
+	endif
+
+	if ( npccfg[me.npctemplate].mount )
+		local mymount := CreateItemAtLocation(5288,1176,0,0xF021,1);
+		local mountparms := splitwords(npccfg[me.npctemplate].mount);
+		mymount.graphic := cint(mountparms[1]);
+		mymount.color := cint(mountparms[2]);
+		EquipItem(me, mymount);
+	endif
+
+
+endfunction
+
+
+
+
+
+
+
+
+
+
+
+

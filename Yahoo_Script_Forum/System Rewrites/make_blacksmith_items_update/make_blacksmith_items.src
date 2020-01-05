@@ -1,0 +1,528 @@
+/////////////////
+// make_blacksmith_items.src
+//
+// Use a smithy hammer or tongs to either repair arms & armor or to work with metal to 
+// create new items. You need to be more skillful to work with the rarer metals.
+//
+// TODO: remove hardcoding of skill pointvalue
+//
+// Author: DreamWeaver: original
+//         Racalac: colored items
+// 
+// Updates: Dream Weaver 6/3/99 handled item quality an HP to new specs.
+//          Ignatius     99/06/10 added name of maker to exceptional items.		
+//          DarkFyre 11/16/99 Added support for colored ores to be better/worse than normal.
+//          Astral 27/01/2001 Tweaked colored ore AR and HP, added maker's mark support.
+//
+////////////////
+
+use uo;
+use cfgfile;
+use os;
+use util;
+use basicio;
+
+include "util/repair";
+include "include/client";
+include "include/objtype";
+include "../pkg/std/gumps/gumps";
+
+Global itemcfg   := ReadConfigFile(":combat:itemdesc");
+Global smith_cfg := ReadConfigFile( "blacksmithy" );    
+
+// called when a player double-clicks a hammer or other blacksmith tool
+program use_hammer( character, hammer )
+
+    SendSysmessage( character, "What would you like to use that on?" );
+    Local use_on := Target( character, "" );
+    if( !use_on )
+        SendSysmessage( character, "Targetting cancelled" );
+        return;
+    endif
+    
+    if( is_weapon_armor(use_on.objtype) )
+        repair_item( character, use_on, SKILLID_BLACKSMITHY );
+        return;
+    endif
+    
+    if( (use_on.objtype < UOBJ_INGOTS_START) or  (use_on.objtype > UOBJ_INGOTS_END))
+        SendSysMessage( character, "You can only use that on ingots!" );       
+        return;
+    endif
+
+    if( !checkskillfordifferentmetals( character , use_on ) )
+        SendSysmessage( character, "You have no chance to successfully work with that metal." );
+        return;
+    endif
+
+//   **Anvil finding snippet.  Inserted by Ingot Head
+     Local Near_Items := ListItemsNearLocation(character.x, character.y, character.z,3);
+     foreach item in Near_Items
+          if ((item.objtype = UOBJ_ANVIL1) or (item.objtype = UOBJ_ANVIL2))
+               makeblacksmithitems(character, use_on);
+               Return;
+          endif
+     endforeach
+SendSysmessage( character, "You must be near an anvil to smith items!" );
+endprogram
+// End of Anvil Finding, original code below.
+
+
+function is_weapon_armor(what)
+    local elem := FindConfigElem(itemcfg, what);
+    if (elem)
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+function makeblacksmithitems( character, ingots )
+    local skill;          //skill needed to create the item
+    local element;        // entry in smith_config
+    local material;       //amount of material needed to create the item
+    local points;
+    local retval;
+    local maxhp;
+    local quality;
+    local itemname;
+    
+    
+    if ( !Accessible( character, ingots))
+        SendSysmessage( character, "You don't have any ingots!" );
+        return;
+    endif
+    
+    if (!smith_cfg)
+        SendSysmessage (character, "Could not open blacksmith.cfg");
+        return;
+    endif
+    
+    local what := SelectMenuItem2( character, "blacksmith" );
+    if ( !what )
+          SendSysmessage( character, "Targetting cancelled" );
+          return;
+    endif
+
+    what := what.objtype;
+    maxhp := itemcfg[what].maxhp;
+    element := FindConfigElem( smith_cfg,what ); //need to make sure the key reflects the menu return value
+    
+    if (element)
+        material := GetConfigInt( element, "material" );
+        skill := GetConfigInt( element, "skill" );
+        itemname := GetConfigString( element, "Name") ;
+        points := GetConfigInt( element , "points" );
+    else
+        print("Bad stuff going on!");
+    endif
+    
+    //first, check to see that they have enough ingots
+     if ( GetAmount(ingots)  > material )
+            retval := PlaySoundEffect(character, SFX_ANVIL);
+            sleep (2);
+            retval := PlaySoundEffect(character, SFX_ANVIL);
+            sleep (2);
+            retval := PlaySoundEffect(character, SFX_ANVIL);
+            sleep (2);
+
+        if( ingots.color != 0 )
+            points := points * 2;
+        endif
+
+        if (CheckSkill( character, SKILLID_BLACKSMITHY, skill, points ))
+            Local theitem := CreateItemInBackpack( character, what, 1 );
+        
+
+            if (theitem) //they successfully create the item
+                theitem.color := ingots.color; //for colored ingots!
+
+                SubtractAmount( ingots, material );
+                local tname;
+
+                if (CheckHisSkill( character, 100 ) and randomint(100) < 8)  //check2
+                    //they make an exceptional item. for now only gm smiths can create exceptional items
+                    if (ingots.objtype == UOBJ_GOLD_INGOT)
+                      quality := 1.4;
+                      theitem.quality := quality;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create an exceptional item!");
+                      if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Exceptional Gold " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Exceptional Gold " + itemname ;
+		           endif
+		       else
+		       	 tname := "Exceptional Gold " + itemname ; 
+		       endif
+		      SetName(theitem, tname);
+                    endif
+                    
+                    if (ingots.objtype == UOBJ_COPPER_INGOT)
+                      quality := 1.4;
+                      theitem.quality := quality;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create an exceptional item!");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Exceptional Copper " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Exceptional Copper " + itemname ;
+		           endif
+		       else
+		       	 tname := "Exceptional Copper " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+                    
+                    if (ingots.objtype == UOBJ_BRONZE_INGOT)
+                      quality := 1.4;
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 1.2;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create an exceptional item!");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Exceptional Bronze " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Exceptional Bronze " + itemname ;
+		           endif
+		       else
+		       	 tname := "Exceptional Bronze " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+                    
+                    if (ingots.objtype == UOBJ_IRON_INGOT)
+                      quality := 1.5;
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 1.5;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create an exceptional item!");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Exceptional Iron " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Exceptional Iron " + itemname ;
+		           endif
+		       else
+		       	 tname := "Exceptional Iron " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+                    
+                    if (ingots.objtype == UOBJ_DULLCOPPER_INGOT)
+                      quality := 1.6;
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 2;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create an exceptional item!");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Exceptional Dullcopper " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Exceptional Dullcopper " + itemname ;
+		           endif
+		       else
+		       	 tname := "Exceptional Dullcopper " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+                    
+                    if (ingots.objtype == UOBJ_PYRITE_INGOT)
+                      quality := 1.7;
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 2.5;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create an exceptional item!");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Exceptional Pyrite " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Exceptional Pyrite " + itemname ;
+		           endif
+		       else
+		       	 tname := "Exceptional Pyrite " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_ONYX_INGOT)
+                      quality := 1.7;
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 3;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create an exceptional item!");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Exceptional Onyx " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Exceptional Onyx " + itemname ;
+		           endif
+		       else
+		       	 tname := "Exceptional Onyx " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_MALACHITE_INGOT)
+                      quality := 1.8;
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 3.5;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create an exceptional item!");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Exceptional Malachite " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Exceptional Malachite " + itemname ;
+		           endif
+		       else
+		       	 tname := "Exceptional Malachite " + itemname ; 
+		       endif                      
+		      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_AZURITE_INGOT)
+                      quality := 1.8;
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 4;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create an exceptional item!");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Exceptional Azurite " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Exceptional Azurite " + itemname ;
+		           endif
+		       else
+		       	 tname := "Exceptional Azurite " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+                    SetObjProperty(theitem, "type","b");
+                    SendSysmessage (character, "You put the exceptional item in your pack.");
+                else  //check2
+                    //regular quality
+                    if (ingots.objtype == UOBJ_GOLD_INGOT)
+                      quality := (0.9 * ((60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0));
+                      theitem.quality := quality;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create a regular quality item.");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Gold " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Gold " + itemname ;
+		           endif
+		       else
+		       	 tname := "Gold " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_COPPER_INGOT)
+                      quality := (0.9 * ((60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0));
+                      theitem.quality := quality;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create a regular quality item.");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Copper " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Copper " + itemname ;
+		           endif
+		       else
+		       	 tname := "Copper " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_BRONZE_INGOT)
+                      quality := (0.9 * ((60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0));
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 1.2;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create a regular quality item.");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Bronze " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Bronze " + itemname ;
+		           endif
+		       else
+		       	 tname := "Bronze " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                   endif
+
+                    if (ingots.objtype == UOBJ_IRON_INGOT)
+                      quality := (1.0 * ((60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0));
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 1.5;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create a regular quality item.");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Iron " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Iron " + itemname ;
+		           endif
+		       else
+		       	 tname := "Iron " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_DULLCOPPER_INGOT)
+                      quality := (1.1 * ((60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0));
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 2;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create a regular quality item.");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Dullcopper " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Dullcopper " + itemname ;
+		           endif
+		       else
+		       	 tname := "Dullcopper " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_PYRITE_INGOT)
+                      quality := (1.2 * ((60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0));
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 2.5;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create a regular quality item.");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Pyrite " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Pyrite " + itemname ;
+		           endif
+		       else
+		       	 tname := "Pyrite " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_ONYX_INGOT)
+                      quality := (1.3 * ((60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0));
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 3;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create a regular quality item.");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Onyx " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Onyx " + itemname ;
+		           endif
+		       else
+		       	 tname := "Onyx " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_MALACHITE_INGOT)
+                      quality := (1.4 * ((60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0));
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 3.5;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create a regular quality item.");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Malachite " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Malachite " + itemname ;
+		           endif
+		       else
+		       	 tname := "Malachite " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+
+                    if (ingots.objtype == UOBJ_AZURITE_INGOT)
+                      quality := (1.4 * ((60 + (randomint(getskill(character, SKILLID_BLACKSMITHY))/2))/100.0));
+                      theitem.quality := quality;
+                      theitem.maxhp := theitem.maxhp * 4;
+                      theitem.hp := theitem.maxhp;
+                      SendSysmessage (character, "You create a regular quality item.");
+                       if (CheckHisSkill( character, 100))
+                           if (makersmark(character) = 1)
+			       tname := "Azurite " + itemname + " [Crafted by " + character.name + "]" ;
+		           else
+                               tname := "Azurite " + itemname ;
+		           endif
+		       else
+		       	 tname := "Azurite " + itemname ; 
+		       endif
+                      SetName(theitem, tname);
+                    endif
+                    SetObjProperty(theitem, "type","b");
+                    SendSysmessage( character, "You place the item in your pack." );
+                endif //check2
+            endif //theitem
+        else  //checkskill
+            SubtractAmount( ingots, 1 );
+            SendSysmessage( character, "You destroy some ingots." );
+        endif //checkskill
+    else 
+        SendSysmessage (character, "You don't have enough ingots!");
+        return;
+    endif  //getamount
+  
+endfunction
+
+
+function checkskillfordifferentmetals( character , ingot )
+
+    case( ingot.objtype )
+        UOBJ_GOLD_INGOT: return (checkhisskill( character , 50 ));
+        UOBJ_IRON_INGOT: return (checkhisskill( character , 1 ));
+        UOBJ_BRONZE_INGOT: return (checkhisskill( character , 40 ));
+        UOBJ_DULLCOPPER_INGOT: return (checkhisskill( character , 60 ));
+        UOBJ_COPPER_INGOT: return (checkhisskill( character , 30 ));
+        UOBJ_ONYX_INGOT: return (checkhisskill( character , 70 ));
+        UOBJ_PYRITE_INGOT: return (checkhisskill( character , 80 ));
+        UOBJ_MALACHITE_INGOT: return (checkhisskill( character , 90 ));
+        UOBJ_AZURITE_INGOT: return (checkhisskill( character , 99 ));
+        default: SendSysmessage( character , "You can't smelt that." );
+    endcase
+endfunction
+
+function checkhisskill( character , skill )
+
+    local his_skill := GetSkill( character , SKILLID_BLACKSMITHY );
+
+    if( his_skill >= skill )
+        return 1;
+    else
+        return 0;
+    endif
+endfunction
+
+//displays a small gump and asks if the smith wants to place a maker's mark on the item
+function makersmark(character)
+
+    GFInitGump(290, 210);
+    GFNoClose();
+    GFGumpPic(0, 0, 0x816);
+    GFTextLine(30, 25, 55, "Place a Maker's");
+    GFTextLine(30, 45, 55, "Mark on this?");
+    
+    local okay := GFButtonID(35, 72, 0x81c, 0x81b, 1);
+    local cancel := GFButtonID(85, 72, 0x819, 0x818, 1);
+    local keys := GFSendGump(character);
+    
+    if (keys[0] = okay.keyid)
+	return 1;
+    else
+	return 0;
+    endif
+endfunction

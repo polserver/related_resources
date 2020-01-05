@@ -1,0 +1,51 @@
+
+use uo;
+use os;
+
+include "../../cleric";
+
+program chant(params)
+	var who := params[1];
+	var info := params[2];
+	
+	var devotion := GetObjProperty(who, "Devotion");
+	var piety := DevotionPiety(devotion, who);
+	var pietyboost := cint(GetConcentratingClerics(who, 5)/2);
+	if (pietyboost + piety <= 7)
+		piety := piety + pietyboost;
+	endif	
+	
+	var mobilelist := {};
+	var arboost := cint(piety*2);
+	var temp;
+	if (arboost < 1)
+		arboost := 1;
+	endif
+	
+	while (CheckMana(who, cint(10/piety)))
+		foreach person in ListMobilesNearLocation(who.x, who.y, who.z, piety*4)
+			temp := GetObjProperty(person, "#chant");
+			if (!temp)
+				temp := 1;
+			else
+				temp := temp+1;
+			endif
+			if (temp <= 5 && GetObjProperty(person, "Devotion") == devotion && checklineofsight(person, who))
+				mobilelist.append(person);
+				person.ar_mod := person.ar_mod + arboost;
+				PlayObjectCenteredEffect(person, 0x375a, 10, 10);
+				SetObjProperty(person, "#chant", temp);
+			endif
+		endforeach
+		sleep(2);
+	endwhile
+	
+	ReleaseScript(info.pid);
+	sleep(piety*60);
+	
+	foreach person in mobilelist
+		person.ar_mod := person.ar_mod - arboost;
+		PlayObjectCenteredEffect(who, 0x374a, 10, 10);
+		EraseObjProperty(person, "#chant");
+	endforeach
+endprogram

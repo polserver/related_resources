@@ -1,0 +1,15 @@
+include "include/modules";
+
+program textcmd_destroytype( who )
+	var radius := SendTextEntryGump( who, "What radius would you like to wipe?" );
+	radius := CInt( radius );
+	if ( !radius )
+		radius := 1;
+	endif
+	SendSysMessage( who, "Select item of type you wish to destroy." );
+	var trgt := Target( who );
+      foreach item in ListItemsNearLocationOfType( trgt.x, trgt.y, trgt.z, radius, trgt.objtype )
+           	DestroyItem( item );
+		sleepms(2);
+      endforeach
+endprogram

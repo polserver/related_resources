@@ -1,0 +1,93 @@
+////////////////////////////////////////////////////////////////////////////////////////
+//  RANGERECT.SRC - ingame command
+//  This is a "fastbuild" command you supply itemnumber start, itemnumber end and Z height as
+//  arguments. If Z is left out it takes the first coordinates Z as
+//  the Z to be built on. This command is great for putting down floors
+//  Todo://   Clean up the code when abs() is avail. and C-style for loops
+//   don't require initialization.
+//  Author: ens 1999/01/02
+//  Recent Modifications:]
+//      1999/01/25 Ignatius Created the command TILE.
+//      2000/02/15 Angreal modified into rangerect.
+/////////////////////////////////////////////////////////////////////////////////////////
+include "include/modules";
+include "include/math";
+include "include/gumps";
+
+var argarray, rangestart, rangeend, altitude, zvalid, i, j, res;
+
+program textcmd_rangerect( who, input )
+	if( input )  
+		argarray	:= SplitWords( input ); // split the arguments.
+	else
+		argarray	:= DoGump( who );
+	endif
+	rangestart	:= CInt( argarray[ 1 ] );
+	rangeend	:= CInt( argarray[ 2 ] );   
+	altitude	:= CInt( argarray[ 3 ] );   
+	zvalid	:= 1;  // assume z is correct for now.
+    	SendSysMessage( who, "Select left corner coordinate" );
+    	var coords1 := TargetCoordinates( who );
+      SendSysMessage( who, "Select right corner coordinate" );
+    	var coords2 := TargetCoordinates( who );
+    	if ( !coords1 || !coords2 )
+        	SendSysMessage( who, "Missing coordinate. Aborting." );
+        	return;
+    	endif
+      if( !altitude )
+        	SendSysMessage( who, "No Z supplied. Using target #1 Z instead." );
+		if ( coords1.z < -127 || coords1.z > 128 )
+			SendSysMessage( who, "Z is out of bounds. Aborting." );
+            	return;
+        	endif
+		altitude := coords1.z;
+    	else
+        	if( (altitude  < -127) || (altitude > 128) )
+            	SendSysMessage( who, "Z is out of bounds. Using target #1 Z instead." );
+      		if ( coords1.z < -127 || coords1.z > 128 )
+            		SendSysMessage( who, "Z is out of bounds. Aborting." );
+            		return;
+        		endif
+			altitude := coords1.z;
+        	endif
+    	endif
+    	var startx, starty, endx, endy;
+	startx	:= Min( coords1.x, coords2.x );
+	endx		:= Max( coords1.x, coords2.x );
+	starty	:= Min( coords1.y, coords2.y );
+	endy		:= Max( coords1.y, coords2.y );
+	for( i := startx; i <= endx; i := i + 1 )
+        	for( j := starty; j <= endy; j := j + 1 )
+           		var rint := RandomInt(rangeend - rangestart) + 1;
+           		var tileitem := rangestart + rint;
+           		CreateItemAtLocation( startx, starty, altitude, tileitem, 1 );
+			sleepms(1);
+        	endfor
+    	endfor
+    	SendSysMessage( who, "Command completed." );
+endprogram
+
+function DoGump( who )
+	GFSetRef( 50, 50 );
+	GFPage( 0 );
+	GFNoDispose();
+	GFResizePic( 0, 0, BKGND_GOLDTRIM, 210, 220 );
+	GFGumpPic( 10, 71, 0x462 );
+	GFGumpPic( 10, 116, 0x462 );
+	GFGumpPic( 10, 161, 0x462 );
+	GFTextMid( 0, 15, 210, 4, "Enter Create Variables" );
+	GFTextLine( 10,  50, 4, "Enter Objtype for Start of Range" );
+	GFTextLine( 10,  95, 4, "Enter Objtype for End of Range" );
+	GFTextLine( 10, 140, 4, "Enter Altitude to Create Range at" );
+	GFButtonID( 50, 170, 0x992, 0x993, 1 );
+	GFButtonID( 120, 170, 0x995, 0x996, 1 );
+	rangestart := GFTextEntry( 11, 70, 175, 16, 4 );
+	rangeend := GFTextEntry( 11, 115, 175, 16, 4 );
+	altitude := GFTextEntry( 11, 160, 175, 16, 4 );
+	res := GFSendGump( who );
+	rangestart := GFExtractData( rangestart.keyid, res );
+	rangeend := GFExtractData( rangeend.keyid, res );
+	altitude := GFExtractData( altitude.keyid, res );
+	var params := { CInt(res[0]-1024), rangestart, rangeend, altitude };
+	return params;
+endfunction

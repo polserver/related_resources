@@ -1,0 +1,27 @@
+///////////////////////////////////////////////////////////
+// Logon.src
+//
+// Logon script.
+//
+// Creator: Oroborous
+// Contact: mkow@sympatico.ca
+//
+// Created: Dec-2000
+///////////////////////////////////////////////////////////
+
+use uo;
+
+include "include/client";
+include "include/gumps";
+include "include/gumputil";
+include "CharLimit";
+
+program Logon(who)
+	var idx := GetCharIdx(who);
+	
+	if (!CanLogonWithChar(who, idx))
+		ShowDenyLoginGump(who);
+		DisconnectClient(who);
+		return 0;
+	endif
+endprogram

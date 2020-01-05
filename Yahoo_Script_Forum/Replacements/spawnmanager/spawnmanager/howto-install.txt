@@ -1,0 +1,63 @@
+If you are using Pol 095 Distro, find the following lines at your death.src:
+
+  set_critical(1);
+  dismount(corpse);
+  Run_Script_To_Completion(":spawnregion:death", corpse);
+  if(GetObjProperty(corpse, "regspawn"))
+	var spawnname := GetObjProperty(corpse, "regspawn");
+	var numspawns := CInt(GetGlobalProperty(spawnname))-1;
+=>	SetGlobalProperty(spawnname,numspawns);
+=>endif
+  set_critical(0);
+
+Change it to:
+
+=>	SetGlobalProperty(spawnname,numspawns);
+  else
+    CheckSpawnManager(GetObjProperty(corpse, "spmanager"));
+=>endif
+
+And add the following function to the .src:
+
+function CheckSpawnManager(prop)
+
+   if(!prop)
+      return 0;
+   endif
+   
+   var regionproc := GetProcess(Cint(GetGlobalProperty("#regionmanager"+prop.regnum)));
+   
+   var ev := struct;
+   ev.+type;
+   ev.+groupid;
+   ev.type := prop.type * 0x4;
+   ev.groupid := prop.num;
+
+   regionproc.SendEvent(ev);
+   return 1;
+
+endfunction
+
+Recompile death.src, and compile all the sources in this package.
+Also, you may want to extend respawn to tamed creatures. To do so, find the following lines at your taming.src:
+
+  if(CheckSkill(who, SKILLID_TAMING, difficulty + 10, points))
+    SendSysMessage(who, "You successfully tame the " + thename);
+=>  Run_Script_To_Completion(":spawnregion:death", thecreature);
+=>  thecreature.script := "tamed";
+    SetObjProperty(thecreature, "master", who.serial);
+    SetObjProperty(thecreature,"script",thecreature.script);
+    SetObjProperty(thecreature,"prevtamed",1);
+    SetObjProperty(thecreature,"happiness", 30);
+    RestartScript(thecreature);
+  else
+
+And change it to 
+
+=>  Run_Script_To_Completion(":spawnregion:death", thecreature);
+    CheckSpawnManager(GetObjProperty(thecreature, "spmanager"));
+    EraseObjProperty(thecreature, "spmanager");
+=>  thecreature.script := "tamed";
+
+
+Then, add the same function which was added to death.src to this script. Recompile the script.

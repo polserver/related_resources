@@ -1,0 +1,196 @@
+
+use npc;
+use os;
+use uo;
+
+include "include/npccast";
+//include "include/npcbackpacks";
+include "include/randname";
+include "include/eventid";
+include "include/anchors";
+include "include/speech";
+include "include/res";
+include "include/respenalty";
+
+Const SOUND_EFFECT_RES := 0x215;
+Const ACTION_EFFECT_CAST2 := 0x11;
+Const REACT_THRESHOLD := 2;
+
+global speech := 99;
+global me:= self();
+global summons := 1;
+global saywords := 1;
+if( me.name["<random>"] )
+	SetName ( me , RandomName( me ) );
+	var parms := {};
+	parms[1]:= me;
+	parms[2]:= "mage";
+	start_script("::/misc/dressme", parms);
+endif
+
+program HealerAI()
+
+	GrantPrivilege( me, "seeghosts" );
+	me.enable( "seeghosts" );
+	GrantPrivilege( me, "hearghosts" );
+	me.enable( "hearghosts" );
+
+	if (getobjproperty(me, "frozen"))
+		me.frozen := 1;
+	endif
+
+	drop_anchor();
+	SetAnchor( me.x, me.y, 5, 20 );
+	local next_wander := ReadGameClock() + 10;
+
+    EnableEvents( EVID_ENGAGED + EVID_DISENGAGED + EVID_DAMAGED );
+    EnableEvents( EVID_ENTEREDAREA, REACT_THRESHOLD );
+    DisableEvents( EVID_SPEECH );
+    EnableEvents( EVID_ITEM_GIVEN );
+
+	if (getobjproperty(me, "frozen"))
+		me.frozen := 1;
+	endif
+
+    SetWarMode( 0 );
+
+    local ev;
+    while (1)
+        ev := os::wait_for_event( 10 );
+
+        repeat
+            // print( "event type: " + ev.type );
+            case (ev.type)
+            EVID_SPEECH:
+		next_wander := readgameclock()+60;
+                check_speech(ev.text, ev.source);
+		HealerStuff(ev.source);
+
+                EVID_ENGAGED:
+                EVID_DAMAGED:
+                    if (ev.source)
+                        Fight( ev.source );
+                    endif
+
+                EVID_ENTEREDAREA:
+                    if ( !ev.source.npctemplate )
+                        HealerStuff(ev.source);
+                    endif
+                EVID_ITEM_GIVEN:
+		    next_wander := readgameclock()+60;
+		    TakeItem(ev.source,ev.item);
+            endcase
+
+        until (! (ev := os::wait_for_event(4)) );
+        if (ReadGameClock() >= next_wander)
+                wander();
+                next_wander := ReadGameClock() + 10;
+        endif
+    endwhile
+endprogram
+
+
+function Fight( opponent )
+
+    local oldprio := set_priority(50);
+    DisableEvents( /*EVID_ENTEREDAREA + */ EVID_LEFTAREA );
+    SetOpponent( opponent );
+
+    local waittime;
+outer:
+    while (opponent and not (opponent.dead or opponent.hidden or opponent.concealed) and (distance(me,opponent) < 15))
+        waittime := CloseDistance( opponent ) * 15;
+
+        local ev := wait_for_event( waittime );
+
+        //print( "event type: " + ev.type );
+        repeat
+            case (ev.type)
+                EVID_DISENGAGED:
+                EVID_ENGAGED:
+                EVID_DAMAGED:
+			if ( me.hp < (me.maxhp/2) )			
+                    		CastSpell( me , me, "gheal");
+			endif
+                EVID_OPPONENT_MOVED:
+                    break; // just waking up is enough
+                EVID_ENTEREDAREA:
+                    if ( !ev.source.npctemplate )
+                        HealerStuff(ev.source);
+                    endif
+            endcase
+        until (! (ev := wait_for_event(0)) );
+    endwhile
+
+    EnableEvents( EVID_ENTEREDAREA + EVID_LEFTAREA, REACT_THRESHOLD );
+    SetWarMode( 0 );
+    set_priority( oldprio );
+endfunction
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//  CloseDistance - close the distance between self and an opponent.
+//  Returns: 1 if distance is 0 or 1 (no move necessary)
+//           0 if distance is >= 2 (may still need to move)
+//
+//  This is a .EM-file candidate.
+//
+/////////////////////////////////////////////////////////////////////////////
+function CloseDistance( opponent )
+
+  local sleepdelay := 300 - (CInt(me.dexterity) * 1.5);
+  if (sleepdelay < 0) sleepdelay := 0; endif
+
+    case Distance( me, opponent )
+        1:              // the most likely, so first 
+        0:
+            return 1;
+        
+        2:
+            WalkToward( opponent );
+            Sleepms(sleepdelay);
+            return 0;
+
+        default:
+            RunToward( opponent );
+            Sleepms(sleepdelay);
+            return 0;
+    endcase
+
+endfunction
+
+
+function HealerStuff(mobile)
+
+	local poison_level := Cint(GetObjProperty(mobile, "poison_level"));
+//	local mobile_color := Cint(GetObjProperty(mobile, "mobile_color"));
+
+	if ( (!mobile.warmode) and (mobile.dead) )
+	say(mobile.name + ", you must manifest yourself so that I can resurrect you!!");
+	return;
+	endif
+	if( len(ListHostiles(me)) > 0 )
+	Say("I cannot help thee until I escape this danger!");
+	else
+	if( mobile.dead and CheckLineOfSight(me,mobile))
+	TurnToward(mobile);
+	Say( "Live again by the Virtues!" );
+	PerformAction( me, ACTION_EFFECT_CAST2 );
+	PlaySoundEffect( me,  SOUND_EFFECT_RES );
+	Resurrect( mobile );
+	elseif( poison_level > 0 and CheckLineOfSight(me,mobile) and (!len(ListHostiles(mobile))))
+
+		TurnToward(mobile);
+		Say("Sacrifice Purifies the Body and Soul!");
+		CastSpell( me , mobile, "archcure" );
+
+	elseif( (mobile.hp < mobile.maxhp) and CheckLineOfSight(me,mobile) and (!len(ListHostiles(mobile))) )
+
+		TurnToward(mobile);
+		Say("Compassion heals all!");
+		CastSpell( me , mobile, "gheal" );
+	endif
+    endif
+
+endfunction

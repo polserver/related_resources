@@ -1,0 +1,27 @@
+use uo;
+use os;
+
+include "include/spellRestrictions";
+
+program specialHitScript(attacker, defender, weapon, armor, basedamage, rawdamage)
+
+  // Just to be sure... (probably not needed)
+  if(defender == attacker)
+    SendSysMessage(attacker, "No Cheating");
+    ApplyRawDamage(attacker, 1000);
+    return;
+  endif
+
+  // Get the weapon "type"
+  var type := GetObjProperty(weapon, "type");
+  
+  // This is where we check for the type of weapon it is
+  if (type == "explosion")
+    PlaySoundEffect(defender, SFX_SPELL_EXPLOSION);
+    PlayStationaryEffect(defender.x, defender.y, defender.z, FX_EXPLODE_3, 7, 0x10 );
+  elseif (type == "lightning")
+    PlaySoundEffect(defender, SFX_SPELL_LIGHTNING);
+    PlayLightningBoltEffect(defender);
+  endif
+
+endprogram

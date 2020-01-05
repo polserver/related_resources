@@ -1,0 +1,178 @@
+use datafile;
+use os;
+use uo;
+use util;
+
+include "specialeventid";
+include "regionmanager";
+include "./inc/datatypes";
+include "include/attributes";
+
+const DEFAULT_DELAY := 86400; //one day... sort of forever
+
+var manager;
+var prop := struct;
+var ev;
+var reqev := struct;
+var groupmanager;
+var groups;
+var specials;
+var rects;
+var reload;
+var enabled;
+
+program RegionManager(item)
+
+   manager := item;
+   
+   GetProps();
+   SetProps();
+   
+   var delay;
+   
+   repeat
+      if(reload)
+         load_region_data();
+      endif
+      delay := GetNewDelay();
+      if(GetMessage(delay))
+         ProcessMessage();
+      endif
+   until(ev.type == EV_MANAGER_DESTROYED);
+
+   EraseGlobalProperty("#regionmanager"+prop.regnum);
+
+endprogram
+
+function GetMessage(delay)
+   ev := wait_for_event(delay);
+   if(ev)
+      return 1;
+   endif
+   return 0;
+endfunction
+
+function ProcessMessage()
+
+   case(ev.type)
+   EV_REGION_UPDATED:
+      reload := 1;
+   EV_ANSWER_REQUEST:
+      DoGroupRespawn();
+   EV_GROUP_DEATH:
+      AddToGroupQueue();
+   EV_SPECIAL_DEATH:
+      AddToSpecialQueue();
+   EV_FLASH_SPAWN:
+      FlashSpawnQueues();
+   EV_CLEAR_REGION:
+   EV_MANAGER_DESTROYED:
+      ClearRegionSpawn();
+   endcase
+
+endfunction
+
+function DoGroupRespawn()
+
+   MoveManager();
+   var npc := CreateNpcFromTemplate(ev.template, manager.x, manager.y, manager.z, 0);
+   if(npc)
+      prop.type := 1;
+      prop.num := ev.group;
+      SetObjProperty(npc, "spmanager", prop);
+      SetGroupsArray();
+   endif
+
+endfunction
+
+function AddToGroupQueue()
+
+   if((groups[ev.groupid].total - groups[ev.groupid].resqueue.size()) > 0)
+      var clock := ReadGameClock();
+      var timer := clock + groups[ev.groupid].restime;
+      groups[ev.groupid].resqueue.append(timer);
+      SetGroupsArray();
+   endif
+
+endfunction
+
+function AddToSpecialQueue()
+
+   if((specials[ev.groupid].total - specials[ev.groupid].resqueue.size()) > 0)
+      specials[ev.groupid].resqueue.append(ReadGameClock() + specials[ev.groupid].restime);
+      SetSpecialsArray();
+   endif
+
+endfunction
+
+function GetNewDelay()
+
+   var delay := DEFAULT_DELAY;
+   var clock := ReadGameClock();
+   var timer;
+   
+   if(!enabled)
+      return delay;
+   endif
+   
+   for i := 1 to groups.size()
+      if(groups[i].resqueue.size())
+         timer := groups[i].resqueue[1] - clock;
+         if(timer < 10)
+            DoTemplateRequest(i);
+            timer := groups[i].resqueue[1] - clock;
+            if(timer == error)
+               continue;
+            endif
+         endif
+         if(timer < delay)
+            delay := timer;
+         endif
+      endif
+      if(GetMessage(0))
+         ProcessMessage();
+      endif
+   endfor
+   
+   for i := 1 to specials.size()
+      if(specials[i].resqueue.size())
+         timer := specials[i].resqueue[1] - clock;
+         if(timer < 10)
+            DoSpecialRespawn(i);
+            timer := specials[i].resqueue[1] - clock;
+            if(timer == error)
+               continue;
+            endif
+         endif
+         if(timer < delay)
+            delay := timer;
+         endif
+      endif
+   endfor
+   SetSpecialsArray();
+
+   return delay;
+
+endfunction
+
+function DoTemplateRequest(groupnum)
+
+   reqev.group := groupnum;
+   reqev.groupid := groups[groupnum].groupid;
+   groups[groupnum].resqueue.erase(1);
+   groupmanager.SendEvent(reqev);
+
+endfunction
+
+function DoSpecialRespawn(specialnum)
+
+   MoveManager();
+   var npc := CreateNpcFromTemplate(specials[specialnum].name, manager.x, manager.y, manager.z, 0);
+   if(npc)
+      prop.type := 2;
+      prop.num := specialnum;
+      SetObjProperty(npc, "spmanager", prop);
+      specials[specialnum].resqueue.erase(1);
+   endif
+
+endfunction

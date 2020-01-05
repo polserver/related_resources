@@ -1,0 +1,5 @@
+11/15/99 - [Dundee]	Made healing work more like on OSI shards:  Start healing, fingers slippage, 
+			apply healing at end of wait period, faster healing of others than self,
+			bonus to healing amount based on anatomy.
+	
+9/20/99 Used this script to split off to veterinary skill

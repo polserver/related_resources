@@ -1,0 +1,43 @@
+OSI housing system
+
+By Developer Link
+
+
+I started to create this house system a long time ago, it took a long time because of all the features, they include:
+
+-Physically banning someone from entering your house due to a ban tile placed at the door.
+
+-Viewable Friends, Co-owner and house enemy list
+
+-Viewable Delete List for friends , co-owners and enemies of the house
+
+-you can change the sign graphic to either a guild sign or a store sign, if it is public.
+
+-secure a bag feature, "I wish to secure this", you can secure any bag and unsecure it and take it away,
+
+-Same old features "i ban thee", "remove thyself", 
+
+DOWNSIDE:
+
+you will NOT be able to use this system with tents, i didn't add tents to this because i have always seen tents as useless houses, 
+
+
+INSTALLATION:
+
+place key.src in scripts\items
+
+this has the code so a player can't lock a public house
+
+place the rest of the files in pkg\std\housing
+
+
+
+
+
+I am releasing this code with out comments, and some re-used code because of the lack of time.
+
+it is fully functional, pretty well tested, 
+
+all i ask in return is that you will not take this code and say you wrote it, give credit where credit is due
+
+-Link

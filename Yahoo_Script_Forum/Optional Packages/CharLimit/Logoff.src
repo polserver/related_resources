@@ -1,0 +1,23 @@
+///////////////////////////////////////////////////////////
+// Logoff.src
+//
+// Logoff script.
+//
+// Creator: Oroborous
+// Contact: mkow@sympatico.ca
+//
+// Created: Dec-2000
+///////////////////////////////////////////////////////////
+
+use os;
+
+include "CharLimit";
+
+program Logoff(who)
+	if (!GetObjProperty(who, "FailedLogin"))
+		print("Loging off: " + who.name);
+		
+		var idx := GetCharIdx(who);
+		SetLastOnlineInfo(who, idx);	
+	endif
+endprogram

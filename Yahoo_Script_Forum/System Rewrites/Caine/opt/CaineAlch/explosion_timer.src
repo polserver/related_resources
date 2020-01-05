@@ -1,0 +1,26 @@
+use os;
+use uo;
+use util;
+use cfgfile;
+include "explosion";
+
+program exlosion_timer ( params )
+	local character := params[1];
+	local potion := params[2];
+	local timer := params[3];
+	local i := 0;
+	
+	repeat
+		i := i + 1;
+		sleep(1);
+		PrintTextAbove( potion, cstr(i));
+				
+	until (( i >= timer ) || ( !GonnaBlow( potion ) ));
+	
+	if ( !GonnaBlow ( potion ) )
+		PrintTextAbove( potion, "Fizzle" );
+	else
+		start_script( "explosion_det", params );
+	endif
+
+endprogram

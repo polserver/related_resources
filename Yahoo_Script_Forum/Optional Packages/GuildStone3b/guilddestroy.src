@@ -1,0 +1,54 @@
+// updated November 4, 2000
+// zulu (zulu@zuluhotel.com)
+
+use uo;
+use os;
+
+program guild_destroy(stone)
+
+local guild_id:=getobjproperty(stone,"guild_id");
+local guild:=FindGuild(guild_id);
+
+local i,all:=guild.members;
+
+for(i:=1;i<=all.size();i:=i+1)
+guild.removemember(all[i]);
+eraseobjproperty(all[i],"guild_id");
+eraseobjproperty(all[i],"fealty");
+fixname(all[i]);
+eraseobjproperty(all[i],"abv");
+eraseobjproperty(all[i],"talkchat");
+eraseobjproperty(all[i],"hearchat");
+all[i].title_guild:="";
+SendSysMessage(all[i],"You are no longer a member of "+guild.getprop("guildname"),3,34);
+endfor
+
+// ally
+all:=guild.allyguilds;
+
+if (all.size()<>0)
+for(i:=1;i<=all.size();i:=i+1)
+guild.removeallyguild(all[i]);
+endfor
+endif
+
+// enemy
+all:=guild.enemyguilds;
+
+if (all.size()<>0)
+for(i:=1;i<=all.size();i:=i+1)
+guild.removeenemyguild(all[i]);
+endfor
+endif
+
+DestroyGuild(guild);
+
+endprogram
+
+function fixname(who)
+local abv:=getobjproperty(who,"abv"),result:=find(who.name," ["+abv+"]",1),name:=who.name;
+
+result:=result-1;
+name:=name[1,result];
+who.name:=name;
+endfunction

@@ -1,0 +1,15 @@
+//
+// RECONNECT.SRC
+//
+// Called when a player reconnects...
+// Shows a random tip
+
+use uo;
+use os;
+
+program reconnect( who )
+
+	print( "[RECON] TIP Tip-window Shown" );
+	run_script_to_completion( ":randomtips:textcmd/player/tip", who );
+
+endprogram

@@ -1,0 +1,25 @@
+Find the following lines at your death.src:
+
+  set_critical(1);
+  dismount(corpse);
+  Run_Script_To_Completion(":spawnregion:death", corpse);
+  if(GetObjProperty(corpse, "regspawn"))
+	var spawnname := GetObjProperty(corpse, "regspawn");
+	var numspawns := CInt(GetGlobalProperty(spawnname))-1;
+=>	SetGlobalProperty(spawnname,numspawns);
+  else
+    CheckSpawnManager(GetObjProperty(corpse, "spmanager"));
+=>endif
+  set_critical(0);
+
+And change to
+
+=>	SetGlobalProperty(spawnname,numspawns);
+=>endif
+
+Remove the function CheckSpawnManager(prop) from the script, also.
+Then, you can delete the files at pol/data/ds/spawnmanager.
+If you don´t delete the files, you can use .removemanagers to remove all region managers. Only after all region managers are removed you can remove the package.
+Also, if you extended spawnmanager to tamed creatures, you will have to remove the line
+CheckSpawnManager(GetObjProperty(thecreature, "spmanager"));
+and the function CheckSpawnManager(prop).

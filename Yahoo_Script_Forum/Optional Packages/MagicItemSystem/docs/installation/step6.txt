@@ -1,0 +1,25 @@
+If you want to have spell resistences and bonuses (w00t):
+
+Open your pol\scripts\include\spellRestrictions.inc file
+ -At the top, put:
+
+
+include "../pkg/systems/sithmagicitems/sench";
+
+
+ -Scroll down to the "Resisted" function,
+ -Change the top to to:
+
+
+
+function Resisted(circle, caster, cast_on, amt, spellType := "")
+  if( spellType )
+    amt := calculateMagikool( caster, cast_on, amt, spellType );
+  endif
+
+
+
+ -In the spells you want to use, pass the ID (string) onto the end of the Resisted function, ie:
+
+
+    Resisted(circle,caster,cast_on,dmg,"fstrike")

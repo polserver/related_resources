@@ -1,0 +1,33 @@
+///////////////////////////////////////////////////////////
+// Orc.src
+//
+// Orc AI.
+//
+// Creator: Mercy
+// Contact: mkow@sympatico.ca
+//
+// Created: 12-Sept-2000
+// Updated: 12-Sept-2000
+//
+///////////////////////////////////////////////////////////
+
+include "include/AiMain";
+include "speech/DefaultSpeech";
+include "combat/OrcCombat";
+include "noncombat/OrcNonCombat";
+include "consider/OrcConsider";
+
+///////////////////////////////////////////////////////////
+// Customize AI.
+///////////////////////////////////////////////////////////
+ai.HearDist	 		:= 4;
+ai.FleePoint		:= 20;
+ai.Run				:= 1;
+ai.AttackNpc		:= 1;
+ai.GrabLoot			:= 1;
+ai.LootCorpses		:= 1;
+ai.Bravery			:= 30;
+
+program Orc()
+	MainAILoop();
+endprogram

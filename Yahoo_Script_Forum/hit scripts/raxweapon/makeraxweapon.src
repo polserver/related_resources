@@ -1,0 +1,57 @@
+use uo;
+use os;
+use basic;
+
+include "include/client";
+
+program createraxweapon(char)
+
+local item;
+
+SendSysMessage( char, "Select a weapon to enhance." );
+item := target(char, TGTOPT_CHECK_LOS);
+if (!item)
+        SendSysmessage(char, "Targetting cancelled.");
+        return;
+endif
+if (item.intelligence)
+        sendsysmessage(char, "That's not an item!");
+        return;
+endif
+if (item.effect)
+	sendsysmessage(char, "That has already been enhanced!");
+	return;
+endif
+local name := SendTextEntryGump( char, "Enter receivers name" , 50);
+if(!name)
+	SendSysMessage(char, "Canceled");
+	return;
+endif
+local effect := SendTextEntryGump( char, "What effect would you like?" , 50);
+if(!effect)
+	SendSysMessage(char, "Canceled");
+	return;
+endif
+SetObjProperty(item,"effect",effect);
+local erase := find( item.desc, "c", 1 );
+local currdesc := item.desc;
+local newname := currdesc[erase+1,len(item.desc)];
+SetName( item, name + "'s " + newname );
+
+var onhit := getobjproperty(item,"OnHit");
+if(!onhit or !len(onhit))
+	onhit := {};
+endif
+onhit.append ("raxweapon");
+SetObjProperty (item, "OnHit", onhit);
+
+endprogram
+
+
+
+
+
+
+
+
+

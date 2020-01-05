@@ -1,0 +1,175 @@
+//////////////////////////////////////////////////////////////////////
+//
+//   Scrolls - sprechen oder ins Buch schreiben
+//
+//   Modifications:
+//     2000/08/04 Shinigami: ueberarbeitet
+//     2001/02/28 Bihinos:   ueberarbeitet
+//                           angepasst an neues MagieSystem
+//     2002/01/02 Shinigami: ReFormat & Bugfixing
+//     2002/01/21 Bihinos:   ueberarbeitet
+//     2002/02/17 Shinigami: Umstellung SpellContainer -> SpellsMask
+//     2002/02/17 Shinigami: Das Buch wird automatisch gesucht
+//
+//////////////////////////////////////////////////////////////////////
+
+// 2002/08/10 Check for "Shinigami" statements to locate modifications needed by rewritten Spellbook
+
+/////////////////
+// Bibliotheken
+/////////////////
+
+Use uo;
+Use os;
+Use cfgfile;
+
+/////////////
+// Includes
+/////////////
+
+Include "spellbook";
+Include "spelldefs";
+Include "include/client";
+
+//////////////////
+// Hauptprogramm
+//////////////////
+
+// <Shinigami>
+// @ Pergon it isn't an Insertion Script, it's an Use Script
+//Program Use_Scroll(who, scroll)
+Program Use_Scroll(who, book, scroll)
+// </Shinigami>
+  ReserveItem(scroll);
+
+  If (CanReadScroll(who))
+    Local spells:=ReadConfigFile("::spells"); // load spells.cfg
+    If (spells)
+      Local spellid:=GetSpellId(scroll);            // read spellid from scroll
+      Local spell:=FindConfigElem(spells, spellid); // look up spell to spellid
+      If (spell)
+        Local scrollobjtype:=scroll.objtype;
+        If ((MIN_SPELL_ITEM<=scrollobjtype) And (scrollobjtype<=MAX_SPELL_ITEM)) // scroll is inscription scroll
+          Local bookobjtype:=0; // In welches Buch soll der Spruch eingetragen werden?
+          Local bookdesc;       // Fuer die Fehlermeldung benutzt
+          If ((MIN_MAGE_SPELL_ITEM<=scrollobjtype) And (scrollobjtype<=MAX_MAGE_SPELL_ITEM))
+            bookobjtype:=UOBJ_SPELLBOOK_MAGE;   // Grimoire
+            bookdesc:="kein Grimoire, in das";
+          ElseIf ((MIN_CLERIC_SPELL_ITEM<=scrollobjtype) And (scrollobjtype<=MAX_CLERIC_SPELL_ITEM))
+            bookobjtype:=UOBJ_SPELLBOOK_CLERIC; // Liber Castus
+            bookdesc:="keinen Liber Castus, in den";
+          ElseIf ((MIN_NECRO_SPELL_ITEM<=scrollobjtype) And (scrollobjtype<=MAX_NECRO_SPELL_ITEM))
+            bookobjtype:=UOBJ_SPELLBOOK_NECRO;  // paq mu'qaDmey
+            bookdesc:="kein paq mu'qaDmey, in das";
+          EndIf
+
+          If (bookobjtype) // Ist es ein gueltiger Spruch?
+            Local spellbook:=SearchSpellBookInBackpack(who, bookobjtype); // get spellbook for inscription
+            If (spellbook)
+              If (Accessible(who, spellbook))
+                Case (bookobjtype) // check if scroll can be inscribed in spellbook
+                  UOBJ_SPELLBOOK_MAGE: // check Grimoire
+                    // <Shinigami>
+                    // Pergon use the old pre Pol094 Skill Ranges with Raw Values
+                    //If ((GetSkillPergon(who, SKILLID_MAGIE)+20>=GetConfigInt(spell, "Skill")) Or
+                    //    (GetSkillPergon(who, SKILLID_MAGISCHEGEGENST)+20>=GetConfigInt(spell, "Skill")))
+                      SendSysMessage(who, "Ihr schreibt den Spruch in das Grimoire.");
+                      PlaySoundEffect(who, SFX_24A);
+
+                      CreateSpellInBook(spellbook, scrollobjtype);
+                    //Else
+                    //  SendSysMessage(who, "Ihr seid nicht geuebt genug, um diesen Spruch zu lernen.");
+                    //  PlaySoundEffect(who, SFX_50);
+                    //  SendSysMessage(who, "Bei Euren stuemperhaften Versuchen zerstoert Ihr die Rolle.");
+                    //EndIf
+                    // </Shinigami>
+
+                  UOBJ_SPELLBOOK_CLERIC: // check Liber Castus
+                    // <Shinigami>
+                    // Pergon use the old pre Pol094 Skill Ranges with Raw Values
+                    //If ((GetSkillPergon(who, SKILLID_SEGNEN)+20>=GetConfigInt(spell, "Skill")) Or
+                    //    (GetSkillPergon(who, SKILLID_GESEGNETEGEGENST)+20>=GetConfigInt(spell, "Skill")))
+                      SendSysMessage(who, "Ihr schreibt den Spruch in das Liber Castus.");
+                      PlaySoundEffect(who, SFX_24A);
+
+                      CreateSpellInBook(spellbook, scrollobjtype);
+                    //Else
+                    //  SendSysMessage(who, "Ihr seid nicht geuebt genug, um diesen Spruch zu lernen.");
+                    //  PlaySoundEffect(who, SFX_50);
+                    //  SendSysMessage(who, "Bei Euren stuemperhaften Versuchen zerstoert Ihr die Rolle.");
+                    //EndIf
+                    // </Shinigami>
+
+                  UOBJ_SPELLBOOK_NECRO: // check paq mu'qaDmey
+                    // <Shinigami>
+                    // Pergon use the old pre Pol094 Skill Ranges with Raw Values
+                    //If ((GetSkillPergon(who, SKILLID_FLUCHEN)+20>=GetConfigInt(spell, "Skill")) Or
+                    //    (GetSkillPergon(who, SKILLID_VERFLUCHTEGEGENST)+20>=GetConfigInt(spell, "Skill")))
+                      SendSysMessage(who, "Ihr schreibt den Spruch in das paq mu'qaDmey");
+                      PlaySoundEffect(who, SFX_24A);
+
+                      CreateSpellInBook(spellbook, scrollobjtype);
+                    //Else
+                    //  SendSysMessage(who, "Ihr seid nicht geuebt genug, um diesen Spruch zu lernen.");
+                    //  PlaySoundEffect(who, SFX_50);
+                    //  SendSysMessage(who, "Bei Euren stuemperhaften Versuchen zerstoert Ihr die Rolle.");
+                    //EndIf
+                    // </Shinigami>
+                EndCase
+
+                SubtractAmount(scroll, 1);
+              Else
+                SendSysMessage(who, "Ihr kommt da nicht ran!");
+              EndIf
+            Else
+              SendSysMessage(who, "Ihr habt "+bookdesc+" Ihr hineinschreiben koenntet!");
+            EndIf
+          Else
+            SendSysMessage(who, "Die Spruchrolle ist fehlerhaft!");
+            PlaySoundEffect(who, SFX_55);
+            SendSysMessage(who, "Die Rolle faengt vor Euren Augen Feuer und verbrennt.");
+          EndIf
+        Else
+          SendSysMessage(who, "Ihr koennt diese Rolle nicht benutzen.");
+          SysLog("FEHLER: Nicht brauchbare Scroll ("+Lower(Hex(scrollobjtype))+") bei Player "+who.name);
+        EndIf
+      Else
+        SendSysMessage(who, "Dieser Spruch existert nicht.");
+        SysLog("FEHLER: Scroll mit nichtexistenter SpellId ("+spellid+") bei Player "+who.name);
+      EndIf
+    Else
+      SysLog("FEHLER: Spells-ConfigFile nicht gefunden!");
+    EndIf
+  EndIf
+
+  ReleaseItem(scroll);
+EndProgram
+
+///////////////////////////////////////////////////////////////
+// CanReadScroll - Kann der Spieler die Rolle jetzt benutzen?
+///////////////////////////////////////////////////////////////
+
+Function CanReadScroll(who)
+  If (GetEquipmentByLayer(who, LAYER_HAND1) Or GetEquipmentByLayer(who, LAYER_HAND2))
+    SendSysMessage(who, "Eure Haende muessen frei sein, um die Rolle lesen zu koennen!");
+  Else
+    Return (1);
+  EndIf
+EndFunction
+
+/****************
+ * GetSpellId() *
+ ****************/
+
+Function GetSpellId(magicitem)
+  Local result:=-1;
+
+  Local itemdesc:=ReadConfigFile(":newmagic:itemdesc");
+  If (itemdesc)
+    result:=itemdesc[magicitem.objtype].spellid;
+  Else
+    SysLog("GetSpellID: ConfigFile nicht gefunden!");
+  EndIf
+
+  Return (result);
+EndFunction

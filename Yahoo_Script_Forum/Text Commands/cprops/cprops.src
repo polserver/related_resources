@@ -1,0 +1,49 @@
+/////////////////////////////////////////////////////////////
+// CPROPS.SRC                                              //
+//                                                         //
+// Author: olor                                            //
+// Date: 23.03.2001                                        //
+//                                                         //
+// Description: List all custom properties of an object    //
+/////////////////////////////////////////////////////////////
+
+use uo;
+use os;
+
+// Get all CProp names of the targeted object
+
+program textcmd_listCProps (me)
+    var i := 0;
+    var sCProp := "";
+
+    SendSysMessage (me, "Select an object");
+    var obj :=  Target (me, TGTOPT_NOCHECK_LOS);    
+
+    if (obj)
+       var arr := GetObjPropertyNames (obj);
+       var lenarr := len(arr);
+
+       if (lenarr >=1)
+          if (typeof(obj)=="ItemRef")
+ 	     SendSysMessage (me, "Custom properties for " + obj.desc);
+          elseif (typeof(obj)=="MobileRef")
+ 	     SendSysMessage (me, "Custom properties for " + obj.name);
+          endif;
+          for (i := 1; i <= lenarr; i := i+1)
+             sCProp := GetObjProperty (obj, arr[i]);
+             SendSysMessage (me, "" + arr[i] + ": " + sCProp);
+          endfor
+       else
+          SendSysMessage (me, "No custom properties found");
+       endif
+
+    elseif (obj = error)
+       SendSysMessage (me, "Error: " + obj.errortext);
+       return; 
+    else
+      SendSysMessage (me, "Cancelled");
+    endif
+
+endprogram
+
+

@@ -1,0 +1,43 @@
+include "include/modules";
+include "include/gumps";
+
+var stuff, range, objtype, res;
+
+program replacerad(who, params);
+	if( params )
+		stuff := SplitWords(params);
+	else
+		stuff := DoGump( who );
+		if( stuff[3] == 2 )
+			return;
+		endif
+	endif
+	SendSysMessage(who, "Select the tile type to replace");
+	var it := Target(who, TGTOPT_NOCHECK_LOS);
+	foreach thing in ListItemsNearLocationOfType( who.x, who.y, who.z, CInt(stuff[1]), it.objtype)
+		thing.graphic := CInt(stuff[2]);
+	endforeach
+endprogram
+
+function DoGump( who )
+	GFSetRef( 50, 50 );
+	GFPage( 0 );
+	GFNoDispose();
+	GFResizePic( 0, 0, BKGND_GOLDTRIM, 210, 220 );
+	GFGumpPic( 10, 71, 0x462 );
+	GFGumpPic( 10, 116, 0x462 );
+	GFTextMid( 0, 15, 210, 4, "Enter Create Variables" );
+	GFTextLine( 10, 50, 4, "Enter Range of Replacement" );
+	GFTextLine( 10, 95, 4, "Enter New Graphic/Objtype" );
+	GFTextLine( 10, 180, 4, "Or use the create menu" );
+	GFButtonID( 50, 140, 0x992, 0x993, 1 );
+	GFButtonID( 120, 140, 0x995, 0x996, 1 );
+	GFButtonID( 180, 186, 0x939, 0x938, 1 );
+	range := GFTextEntry( 11, 70, 175, 16, 4 );
+	objtype := GFTextEntry( 11, 115, 175, 16, 4 );
+	res := GFSendGump( who );
+	range := GFExtractData( range.keyid, res );
+	objtype := GFExtractData( objtype.keyid, res );
+	var params := { range, objtype, CInt(res[0]-1024) };
+	return params;
+endfunction

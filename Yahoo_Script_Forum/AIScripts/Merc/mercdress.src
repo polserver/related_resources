@@ -1,0 +1,350 @@
+use uo;
+use os;
+use util;
+include "include/client";
+
+program Dress (me)
+
+	local beard := GetEquipmentByLayer( me, LAYER_BEARD );
+	DestroyItem( beard );
+	local hair := GetEquipmentByLayer( me, LAYER_HAIR );
+	DestroyItem( hair );
+
+	foreach thing in listequippeditems(me)
+		if (thing.objtype != 0x0E75)
+			if (me.backpack)
+				MoveItemToContainer(thing, me.backpack);
+			else
+			       	DestroyItem(thing);
+			endif
+		endif
+	endforeach
+
+
+	PlaceHair(me);
+	CreateAndEquiptWeapon(me);
+	DressWar(me);
+	
+	if (randomInt(10) = 1)
+		CreateAndEquiptHorse(me);
+	endif
+
+endprogram
+
+
+function CreateAndEquiptWeapon(me)
+
+	local weap;
+	local nosheild := 0;
+	local maxstr := me.strength;
+
+	if (maxstr < 16)
+		weap := 0x1402; //shortsp, 15
+	elseif ((maxstr < 35) or (randomint(25)=1))
+		case(Randomint(3))
+			0: weap := 0x0f5c; //maxe, 20
+			1: weap := 0x143a; //maul, 20
+			2: weap := 0x13B2; nosheild := 2; //bow, 2handed, 20
+		endcase
+	elseif ((maxstr < 45) or (randomint(15)=1))
+		case(Randomint(2))
+			0:weap := 0x0F60; //longsword, 25
+			1:weap := 0x0f5e; //broadswrd, 25
+		endcase
+	elseif ((maxstr < 55) or (randomint(10)=1))
+		case(Randomint(5))
+			0:weap := 0x1438; //warmaxe, 30
+			1:weap := 0x13AF; //waraxe, 35
+			2:weap := 0x0f49; nosheild := 1; //axe, 2handed, 35
+			3:weap := 0x0f4b; nosheild := 1; //DoubleAxe, 2han, 35
+			4:weap := 0x0f45; nosheild := 1; //exeaxe, 2han, 35
+		endcase
+	elseif ((maxstr < 60) or (randomint(5)=1))
+		case(Randomint(2))
+			0:weap := 0x1442; nosheild := 1; //2axe, 2han, 40
+			1:weap := 0x0f4e; nosheild := 1; //bardy, 2han, 40
+		endcase
+	else
+		case(Randomint(2))
+			0:weap := 0x0f47; nosheild := 1; //bataxe, 2han, 45
+			1:weap := 0x13fa; //largebaxe, 45
+		endcase
+	endif
+
+	CreateAndEquip(me, weap, 0);
+
+	if ((!nosheild) and (Randomint(3)=1))
+		if (!GetEquipmentByLayer(me,LAYER_HAND2)) 
+			CreateAndEquiptSheild(me);
+		endif
+	elseif (nosheild=2)
+		CreateItemInBackpack( me, 0xf3f , (RandomInt(8)*10)+10);
+	endif
+
+endfunction
+
+
+function CreateAndEquiptSheild(me)
+
+	local sheildtype;
+
+	case (randomint(5))	
+		0: sheildtype := 0x1B72;		// BronzeShield
+		1: sheildtype := 0x1B73;		// Buckler
+		2: sheildtype := 0x1B74;		// KiteShield
+		3: sheildtype := 0x1B7A;		// WoodenShield
+		4: sheildtype := 0x1B7B;		// MetalShield
+	endcase
+
+	if (sheildtype) 
+	    CreateAndEquip(me, sheildtype, 0);
+	endif
+
+endfunction
+
+
+//FIXME: when a horse is dismounted, the template uses the default horse template
+
+function CreateAndEquiptHorse(me)
+
+
+	if(GetEquipmentByLayer( me, 25 ))
+		return 0;
+	endif
+
+	local mounttype := 0;
+	case (randomInt(5))
+		1: //dark brown/horse
+				mounttype := 0x3ea6;
+		2: //lightbrown/horse2
+				mounttype := 0x3e9f;
+		3: //light grey/horse3
+				mounttype := 0x3ea0;
+		4: //greybrown/horse4
+				mounttype := 0x3ea1;
+		default: //Llama:
+				mounttype := 0x3ea2;
+	endcase
+
+	set_critical(1);
+		local mount := CreateItemAtLocation(5288 , 1176 , 0, 0xF021,1);
+		setobjproperty(mount,"petname",me.name + "s horse");
+		setobjproperty(mount,"freetime",ReadGameClock()+1200);
+		mount.graphic := mounttype;
+		EquipItem(me,mount);
+	set_critical(0);
+
+
+endfunction
+
+
+function CreateAndEquip(me,item,color)
+
+	if (item)
+		local theitem := CreateItemAtLocation(5288 , 1176, 0,item,1);
+		if (theitem)
+			if (EquipItem(me,theitem))
+				theitem.color := color;
+			else
+				DestroyItem(theitem);
+			endif
+		endif
+	endif
+
+endfunction
+
+function PlaceHair(me)
+
+	local haircolor := MakeHairColor();
+	local hair := 0;
+	if (!me.gender)
+		PlaceBeard(me, haircolor);
+		case (RandomInt(11))
+			0:	Hair := 0x203b;
+			1:	Hair := 0x203b;
+			2:	Hair := 0x203C;
+			3:	Hair := 0x203d;
+			4:	Hair := 0x2044;
+			5:	Hair := 0x2045;
+			6:	Hair := 0x2047;
+			7:	Hair := 0x2048;
+			8:	Hair := 0x204a;
+			9:	Hair := 0x203b;
+			10:	Hair := 0;
+		endcase
+	else
+		case (RandomInt(10))
+			0:	Hair := 0x203b;
+			1:	Hair := 0x203C;
+			2:	Hair := 0x203C;
+			3:	Hair := 0x203d;
+			4:	Hair := 0x2045;
+			5:	Hair := 0x2046;
+			6:	Hair := 0x2047;
+			7:	Hair := 0x2049;
+			8:	Hair := 0x204a;
+			9:	Hair := 0x203C;
+		endcase
+	endif
+
+	local thehair;
+	CreateAndEquip(me,hair,haircolor);
+
+endfunction
+
+function PlaceBeard(me,haircolor)
+
+	local hair;
+	local Beard := 0;
+	case (RandomInt(18))
+	0:	Beard := 0x203e;//longbeard
+	1:	Beard := 0x203f;//shorbeard
+	2:	Beard := 0x2040;//goatee
+	3:	Beard := 0x2041;//mustache
+	4:	Beard := 0x204b;//shortbeardnstache
+	5:	Beard := 0x204c;//longbeardnstache
+	6:	Beard := 0x204d;//vandyke
+	7:	Beard := 0x2041;//mustache
+	8:	Beard := 0x204b;//shortbeardnstache
+	9:	Beard := 0x204d;//vandyke
+	endcase
+
+	CreateAndEquip(me,Beard,haircolor);
+		
+endfunction
+
+function MakeHairColor()
+	return RandomInt(46)+1102;
+endfunction
+
+function DressWar(me)
+
+	local item;
+	local gender := me.gender;
+
+	case RandomInt(2)
+	0:	item := 0x170B;		//LeatherBoots
+	1:	item := 0x1711;		//ThighBoots
+	endcase
+	CreateAndEquip(me,item,0);
+
+	//leather
+	if (me.strength < 40)
+		item := 0x13C7;		//LeatherGorget
+		CreateAndEquip(me,item,0);
+		item := 0x13C5;		//LeatherSleeves
+		CreateAndEquip(me,item,0);
+		item := 0x13C6;		//LeatherGloves
+		CreateAndEquip(me,item,0);
+		if (RandomInt(4)=1)
+			item := 0x1DB9;		//LeatherCap
+			CreateAndEquip(me,item,0);
+		endif
+		if (!gender)
+			item := 0x13CB;		//LeatherLeggings
+			CreateAndEquip(me,item,0);
+			item := 0x13CC;		//LeatherTunic
+			CreateAndEquip(me,item,0);
+		else
+			case (randomint(2))
+			0:
+				item := 0x13CB;		//LeatherLeggings
+			1:
+				item := 0x1C08;		//LeatherSkirt
+			endcase
+			CreateAndEquip(me,item,0);
+
+			case (RandomInt(2))
+			0:
+				item := 0x13CC;		//LeatherTunic
+			1:
+				item := 0x1C06;		//FemaleLeather
+			endcase
+			CreateAndEquip(me,item,0);
+		endif
+	return 0;
+	//studded
+	elseif (me.strength < 50)
+		item := 0x13D6;		//StuddedGorget
+		CreateAndEquip(me,item,0);
+		item := 0x13D5;		//StuddedGloves
+		CreateAndEquip(me,item,0);
+		item := 0x13D4;		//StuddedSleeves
+		CreateAndEquip(me,item,0);
+
+		if (!gender)
+			item := 0x13DA;		//StuddedLeggings
+			CreateAndEquip(me,item,0);
+			item := 0x13DB;		//StuddedTunic
+			CreateAndEquip(me,item,0);
+		else
+			case (RandomInt(2))
+			0:
+				item := 0x13DA;		//StuddedLeggings
+			1:
+				item := 0x1C00;		//LeatherShorts
+			endcase
+			CreateAndEquip(me,item,0);
+
+			case (RandomInt(2))
+			0:
+				item := 0x13DB;		//StuddedTunic
+			1:
+				item := 0x1C0C;		//StuddedBustier
+			endcase
+			CreateAndEquip(me,item,0);
+		endif
+	elseif (me.strength < 60)
+		//ring
+		item := 0x13ec;		//RingmailTunic
+		CreateAndEquip(me,item,0);
+		item := 0x13ee;		//RingmailSleeves
+		CreateAndEquip(me,item,0);
+		item := 0x13f0;		//RingmailLeggings
+		CreateAndEquip(me,item,0);
+		item := 0x13f2;		//RingmailGloves
+		CreateAndEquip(me,item,0);
+
+		case (RandomInt(5))
+			0:	item := 0x140A;		//Helmet
+			1:	item := 0x140C;		//Bascinet
+			default: item := 0;
+		endcase
+		CreateAndEquip(me,item,0);
+	elseif (me.strength < 70)
+		//chain
+		item := 0x13BB;		//ChainmailCoif
+		CreateAndEquip(me,item,0);
+		item := 0x13BE;		//ChainmailLeggings
+		CreateAndEquip(me,item,0);
+		item := 0x13BF;		//ChainmailTunic
+		CreateAndEquip(me,item,0);
+	elseif (me.strength < 80)
+		//plate
+		item := 0x1410;		//PlatemailArms
+		CreateAndEquip(me,item,0);
+		item := 0x1411;		//PlatemailLegs
+		CreateAndEquip(me,item,0);
+		item := 0x1414;		//PlatemailGloves
+		CreateAndEquip(me,item,0);
+		item := 0x1413;		//PlatemailGorget
+		CreateAndEquip(me,item,0);
+		if (!gender)
+			item := 0x1415;		//PlatemailBreastplate
+		else
+			item := 0x1c04;		//FemalePlate
+		endif
+		CreateAndEquip(me,item,0);
+
+		case (RandomInt(5))
+			0:	item := 0x140A;		//Helmet
+			1:	item := 0x1408;		//CloseHelm
+			2:	item := 0x140E;		//NoseHelm
+			3:	item := 0x1412;		//PlateHelm
+			4:	item := 0x1412;		//PlateHelm
+			default: item := 0;
+		endcase
+		CreateAndEquip(me,item,0);
+	endif
+
+endfunction

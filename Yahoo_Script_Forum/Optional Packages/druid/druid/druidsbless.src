@@ -1,0 +1,44 @@
+use uo;
+use os;
+use cfgfile;
+
+include "include/attributes";
+include "druid";
+include "include/statmod";
+
+program cast_earthenshield(caster)
+
+	if(!checkstaff(caster))
+		return;
+	endif
+	
+  checkdruidopts(caster, 2);
+
+  SendSysMessage(caster, "Select target.");
+  local cast_on := target(caster);
+  
+  usemana(caster, 2);
+  
+  PlaySoundEffect(cast_on, SFX_SPELL_PROTECTION);
+  PlayObjectCenteredEffect(cast_on, FX_BLESS_EFFECT, 7,7);
+  
+  if (!CanMod(cast_on, "ar"))
+	SendSysMessage(caster,"Already under the influence!");
+	return;
+  endif
+  
+  var lore := GetEffectiveSkill(caster, SKILLID_ANIMALLORE);
+  var mod_amount := (GetModAmount(lore) * 2);
+  var duration := GetModDuration(lore);
+  var itmcfg := ReadConfigFile(":*:itemdesc");
+  var arpoints := 0;
+  foreach thing in ListEquippedItems(cast_on)
+    arpoints := arpoints + (CInt(itmcfg[thing.objtype].AR) / 12);
+  endforeach
+  if(mod_amount > arpoints)
+    mod_amount := mod_amount - arpoints;
+  else
+    mod_amount := 0;
+  endif
+  DoTempMod(cast_on, "ar", mod_amount, duration);
+endprogram

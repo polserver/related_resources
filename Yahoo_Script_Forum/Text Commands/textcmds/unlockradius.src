@@ -1,0 +1,20 @@
+/////////////////////////
+// UNLOCKRADIUS.src - in game command
+// A quick command for unlocking a number of objects within a given radius.
+// Created by:
+//    Angreal 2/10/00
+/////////////////////////
+
+use uo;
+
+
+program lockradius( who, text )
+    local ranget := cint( text );
+    
+    foreach thingie in ListItemsNearLocation( who.x, who.y, who.z, ranget );
+        thingie.movable := 1;
+    endforeach
+    
+    SendSysMessage(who, "Locked down everything in a radius of " + ranget);
+        
+endprogram

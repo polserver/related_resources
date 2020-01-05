@@ -1,0 +1,324 @@
+use uo;
+use cfgfile;
+
+include "disguise";
+include "hairdye";
+include "hair";
+include "requestgump";
+
+//Hiding skill
+CONST DISGUISE_SKILL := 21;
+
+CONST MAKEUP_KIT := 0xFFC6;
+CONST WIG := 0XFFC5;
+CONST HAIR_DYE := 0xE27;
+CONST DISGUISE := 62;
+CONST FOLDED_CLOTH := 0x175D;
+CONST CLOTH_NEEDED := 2;
+
+program disguise_kit(who)
+
+	if (RemoveDisguise(who))
+		SendSysMessage(who, "Removing disguise");
+		return;
+	endif
+	
+	if (cint(GetObjProperty(who, "#disguise")) > readgameclock())
+		SendSysMessage(who, "You must wait to disguise again.");
+		return;
+	else
+		SetObjProperty(who, "#disguise", readgameclock()+10);
+	endif
+	
+	if (!HasInPack(who, MAKEUP_KIT))
+		SendSysMessage(who, "You need a makeup kit");
+		return;
+	elseif (!HasInPack(who, WIG))
+		SendSysMessage(who, "You need a wig");
+		return;
+	endif	
+	
+	if (CheckSkill(who, DISGUISE_SKILL, -1, 0) <= 0)
+		SendSysMessage(who, "Your sloppy disguise work falls off!");
+		return;
+	endif
+	
+	var disguise := StartGump(who);
+	
+	if (!disguise)
+		SendSysMessage(who, "Aborting");
+		return;
+	endif
+	
+	var orig_look := struct;
+	orig_look .+ name;
+	orig_look .+ gender;
+	orig_look .+ skincolor;
+	orig_look .+ hairstyle;
+	orig_look .+ haircolor;
+	orig_look .+ facialhair;
+	orig_look .+ facialhaircolor;
+	
+	orig_look.name := who.name;
+	orig_look.gender := who.graphic;
+	orig_look.skincolor := who.color;
+	orig_look.hairstyle := GetEquipmentByLayer(who, 11).graphic;
+	orig_look.haircolor := GetEquipmentByLayer(who, 11).color;
+	orig_look.facialhair := GetEquipmentByLayer(who, 16).graphic;
+	orig_look.facialhaircolor := GetEquipmentByLayer(who, 16).color;
+	
+	if (disguise.haircolor && ConsumeSubstance(who.backpack, HAIR_DYE, 1))
+		HasInPack(who, WIG).color := disguise.haircolor;
+	else
+		disguise.haircolor := 0;
+	endif
+
+	if (disguise.name)
+		SetObjProperty(who, "Name", who.name); // For use on the message boards.
+		who.name := disguise.name + " [" + GetObjProperty(who, "racename") + "]";
+	endif
+	
+	if (disguise.gender)
+		if (who.graphic != disguise.gender && ConsumeSubstance(who.backpack, FOLDED_CLOTH, 2))
+			who.graphic := disguise.gender;
+		endif
+	endif
+	
+	if (disguise.skincolor)
+		who.color := disguise.skincolor;
+	endif
+	
+	if (disguise.hairstyle)
+		if (!GetEquipmentByLayer(who, 11))
+			var hair := CreateItemInBackPack(who, disguise.hairstyle);
+			EquipItem(who, hair);
+		else
+			GetEquipmentByLayer(who, 11).graphic := disguise.hairstyle;
+		endif
+		
+		if (disguise.haircolor)
+			GetEquipmentByLayer(who, 11).color := disguise.haircolor;
+		else
+			GetEquipmentByLayer(who, 11).color := HasInPack(who, WIG).color;
+		endif
+	endif
+	
+	if (disguise.facialhair)
+		if (!GetEquipmentByLayer(who, 16))
+			var hair := CreateItemInBackPack(who, disguise.facialhair);
+			EquipItem(who, hair);
+		else
+			GetEquipmentByLayer(who, 16).graphic := disguise.hairstyle;
+		endif
+		
+		if (disguise.haircolor)
+			GetEquipmentByLayer(who, 16).color := disguise.haircolor;
+		else
+			GetEquipmentByLayer(who, 16).color := HasInPack(who, WIG).color;
+		endif
+	endif
+	
+	SetObjProperty(who, "$disguised", orig_look);
+		
+endprogram
+
+function StartGump(who)
+
+	var disguise := struct;
+	disguise .+ name;
+	disguise .+ gender;
+	disguise .+ skincolor;
+	disguise .+ hairstyle;
+	disguise .+ facialhair;
+	disguise .+ haircolor;
+
+	var input;
+	DO
+		BEGIN
+			var layout :=
+			{
+				"noclose",
+				"page 0",
+				"resizepic 200 100 3600 300 180", // Background
+			
+				"resizepic 420 180 5054 65 86", 
+				"button 440 195 1154 1155 1 0 -1", // Check button
+				"button 440 230 1151 1152 1 0 -2", // X button
+		
+				"text 300 120 500 0",
+				
+				"button 225 145 2117 2118 1 0 1",
+				"text 245 142 500 1",
+				"button 225 165 2117 2118 1 0 2",
+				"text 245 162 500 2",
+				"button 225 185 2117 2118 1 0 3",
+				"text 245 182 500 3",
+			};
+			var data :=
+			{
+				"Disguise Kit", 
+				"Name",
+				"Skin Color", 
+				"Hair Style",
+			};
+			
+			var ypos := 205;
+			
+			layout.append("button 225 " + ypos + " 2117 2118 1 0 4");
+			data.append("Facial Hair");
+			layout.append("text 245 " + (ypos-3) + " 500 " + (len(data)-1));
+			ypos := ypos + 20;
+				
+			if (HasInPack(who, HAIR_DYE))
+				layout.append("button 225 " + ypos + " 2117 2118 1 0 5");
+				data.append("Hair Color");
+				layout.append("text 245 " + (ypos-3) + " 500 " + (len(data)-1));
+				ypos := ypos + 20;
+			endif
+			
+			if (HasInPack(who, FOLDED_CLOTH).amount >= CLOTH_NEEDED)
+				layout.append("button 225 " + ypos + " 2117 2118 1 0 6");
+				data.append("Gender");
+				layout.append("text 245 " + (ypos-3) + " 500 " + (len(data)-1));
+				ypos	:= ypos + 20;
+			endif
+						
+			input := senddialoggump(who, layout, data);
+			input := input[0];
+	
+			if (input == 1)
+				disguise.name := requestgump(who, "Enter your name.", "Do not enter a race name.");
+				Trim(disguise.name);
+			elseif (input == 2)
+				disguise.skincolor := SkinGump(who);
+			elseif (input == 3)
+				disguise.hairstyle := hairgump(who);
+			elseif (input == 4)
+				disguise.facialhair := beardgump(who);
+			elseif (input == 5)
+				disguise.haircolor := hairdye(who);
+			elseif (input == 6)
+				disguise.gender := GenderGump(who);
+			endif
+		END
+	while(input > 0);
+	
+	if (input == -1)
+		return disguise;
+	elseif (input == -2)
+		return 0;
+	endif
+endfunction
+
+function Trim(byref word)
+	while (word["GM"])
+		word["GM"] := "";
+    	endwhile
+	while (word["gm"])
+		word["gm"] := "";
+	endwhile
+	while (word["Gm"])
+		word["Gm"] := "";
+	endwhile
+	while (word["gM"])
+		word["gM"] := "";
+	endwhile
+
+	while (word[1] = " ")
+		word[1] := "";
+	endwhile
+	
+	while(word["  "])
+		word["  "] := " ";
+	endwhile
+
+	while(word[len(word)] = " ")
+		word[len(word)] := "";
+	endwhile
+	word := word[1, 25];
+endfunction
+	
+function GenderGump(who)
+	var layout :=
+	{
+		"page 0",
+		"noclose",
+		"resizepic 220 140 3600 320 200",
+		"text 330 160 500 0",
+		
+		"gumppic 250 190 1263",
+		"gumppic 455 190 1264",
+		
+		"radio 265 215 4008 4009 0 400",
+		"radio 470 215 4008 4009 0 401",
+		
+		"button 360 290 2076 2075 1 0 1",
+	};
+	var data := 
+	{
+		"Pick a Gender", 	// 0 // Header
+	};
+	var userdata := SendDialogGump(who, layout, data);
+	if (userdata[400])
+		return 400;
+	elseif(userdata[401])
+		return 401;
+	endif
+endfunction
+
+function SkinGump(who)
+	var layout :=
+	{
+		"page 0",
+		"noclose",
+		"resizepic 10 10 3600 235 460",
+		"button 35 430 2076 2075 1 0 1",
+		"button 160 430 2121 2120 1 0 0",
+		
+		"text 85 30 500 0",
+		"page 1",
+	};
+	var data :=
+	{
+		"Skin Color",
+	};
+	var pagenum := 1;
+	var colornum;
+	var ypos := 65;
+	for (colornum := 1002; colornum < 1058; colornum := colornum+1)
+		layout.append("radio 35 " + ypos + " 2151 2154 0 " + colornum);
+		layout.append("text 70 " + (ypos+5) + " " + colornum + " 0");
+		ypos := ypos+30;
+		
+		if (ypos > 390)
+			ypos := 65;
+			layout.append("button 210 400 2648 2649 0 " + (pagenum+1));
+			pagenum := pagenum+1;
+			layout.append("page " + pagenum);
+			layout.append("button 210 55 2650 2651 0 " + (pagenum-1));
+		endif
+	endfor
+	
+	var input := senddialoggump(who, layout, data);
+	
+	if (input[1] == 1)
+		foreach key in (input.keys)
+			if (key >= 1000)
+				input := cint(key);
+				break;
+			endif
+		endforeach
+		
+		return input;
+	endif
+endfunction
+
+function HasInPack(who, item)
+	foreach thing in EnumerateItemsInContainer(who.backpack)
+		if (cint(thing.objtype) == cint(item))
+			return thing;
+		endif
+	endforeach
+	
+	return 0;
+endfunction

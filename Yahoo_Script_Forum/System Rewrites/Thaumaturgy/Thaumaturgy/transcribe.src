@@ -1,0 +1,94 @@
+
+use uo;
+use cfgfile;
+include "spellinc";
+include "include/math";
+include "include/client";
+
+program transcribe(caster)
+
+	const THISSPELL := 108;
+	const SPELLBOOK_OBJTYPE := 0xa237;
+
+	var x := caster.x;
+	var y := caster.y;
+	
+	SendSysMessage(caster, "Choose a scroll to transcribe.");
+	local cast_on :=  target(caster, TGTOPT_CHECK_LOS );
+	if (!cast_on)
+		SendSysMessage(caster, "That's not a scroll!");
+		CleanUp(caster);
+		return;
+	endif
+
+	if ((caster.x != x) or (caster.y != y))
+		SendSysMessage(caster, "You lost your concentration.");
+		CleanUp(caster);
+		return;
+	endif
+
+	if ((cast_on.objtype >= 0x1f2d) and (cast_on.objtype <= 0x1f6c))
+		ReserveItem(cast_on);
+		var itemdesc := ReadConfigFile("itemdesc");
+		var magicid := itemdesc[cast_on.objtype].spellid;
+		
+		magicid := magicid - 108;
+		
+		var circle := 0;
+		var iter := 1;
+		while (!circle)
+			if (magicid <= 8)
+				circle := iter;
+			else
+				iter++;
+				magicid := magicid - 8;
+			endif
+		endwhile
+
+		var spellbook;
+		foreach item in EnumerateItemsInContainer(caster.backpack)		
+			if ((item.objtype = SPELLBOOK_OBJTYPE) and (GetObjProperty(item, "ownerserial") = caster.serial))
+				spellbook := item;
+				break;
+			endif
+		endforeach
+		
+		if (!spellbook)
+			PrintTextAbovePrivate(caster, "I can't find a spellbook to record this in!", caster);
+			CleanUp(caster);
+			return;
+		endif
+		
+		var spellcircles := GetObjProperty(spellbook, "Circles");
+		var circlespells := BitOut(spellcircles[circle]);
+				
+		if (DoCast(caster, THISSPELL));
+			CleanUp(caster);
+			return;
+		endif
+		
+		if (circlespells[magicid])
+			PrintTextAbovePrivate(caster, "You already have this spell in your spellbook.", caster);
+			CleanUp(caster);
+			return;
+		endif
+
+		circlespells[magicid] := 1;
+		spellcircles[circle] := BitIn(circlespells);
+		SetObjProperty(spellbook, "Circles", spellcircles);
+		
+		PlayObjectCenteredEffect(caster, FX_GLOW, 0x0a, 0x1e );
+		if (GetAmount(cast_on) = 1)
+			DestroyItem(cast_on);
+		else
+			SubtractAmount(cast_on, 1);
+		endif
+
+		CleanUp(caster);
+		return;
+	else
+		SendSysMessage(caster, "That is not a Thaumaturgical scroll!");
+		return;
+	endif	
+	
+endprogram
