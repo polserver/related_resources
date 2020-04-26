@@ -1,5 +1,23 @@
 ##########################################################
 #                                                        #
+# PLEASE READ THE NEXT PARAGRAPH BEFORE DOWNLOADING      #
+# THESE FILES!!!                                         #
+# Some of these scripts are VERY old. Most WILL NOT      #
+# compile using the current version of POL without       #
+# EXTENSIVE modifcation! If you intend to use them you   #
+# should learn to program in eScript and be very         #
+# proficient in the language and VERY familiar with the  #
+# changes that have been made to POL over the years.     #
+# The file core-changes.txt contained within the ZIP     #
+# file of the POL Core is extremely helpful in learning  #
+# what has changed but even with this file and an        #
+# exceptional knowledge of eScript, converting a set of  #
+# scripts written for POL 092, for example, to run under #
+# the current version of POL is extremely time consuming #
+# and is not recommended. These scripts are provided for #
+# for reference and archival purposes only.              #
+#                                                        #
+#                                                        #
 # This is a collection of "complete worlds" that I have  #
 # collected from various places. I used quotes around    #
 # complete worlds because some of the server/shard       #
@@ -20,7 +38,7 @@
 # value their trust and am abiding by my promise.        #
 #                                                        #
 # These scripts sets are spread across a wide spectrum   #
-# of POL versions from POL 092 to POL 098. At least I    #
+# of POL versions from POL 092 to POL 099. At least I    #
 # think I have some as late as POL 098.                  #
 # Most of the scripts will require major updating to     #
 # be compatible with the current version of POL, 099.1   #
